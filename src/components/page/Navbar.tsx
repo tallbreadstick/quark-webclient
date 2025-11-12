@@ -1,0 +1,51 @@
+import type { Dispatch, FunctionComponent, SetStateAction } from "react";
+import type { UserSession } from "../../types/UserSession";
+
+export interface NavbarProps {
+    userSession: UserSession | null;
+    setUserSession: Dispatch<SetStateAction<UserSession | null>>;
+}
+
+const Navbar: FunctionComponent<NavbarProps> = ({ userSession, setUserSession }) => {
+    return (
+        <nav className="w-full flex items-center justify-between px-8 py-4 bg-black/30 backdrop-blur-md text-white shadow-lg">
+            {/* --- Left side: quick links --- */}
+            <div className="flex items-center gap-8 font-medium text-lg">
+                <a href="/" className="hover:text-cyan-400 transition-colors">Home</a>
+                <a href="/marketplace" className="hover:text-cyan-400 transition-colors">Marketplace</a>
+                <a href="/courses" className="hover:text-cyan-400 transition-colors">My Courses</a>
+            </div>
+
+            {/* --- Right side: session dependent --- */}
+            <div className="flex items-center gap-4">
+                {userSession ? (
+                    <div className="flex items-center gap-3 cursor-pointer hover:opacity-90 transition">
+                        <img
+                            src={userSession.profilePictureUrl || "/default-pfp.png"}
+                            alt="Profile"
+                            className="w-9 h-9 rounded-full object-cover border border-cyan-400"
+                        />
+                        <span className="font-semibold">{userSession.username}</span>
+                    </div>
+                ) : (
+                    <div className="flex items-center gap-4">
+                        <a
+                            href="/login"
+                            className="px-4 py-2 border border-cyan-400 rounded-lg hover:bg-cyan-400 hover:text-black transition font-semibold"
+                        >
+                            Login
+                        </a>
+                        <a
+                            href="/register"
+                            className="px-4 py-2 bg-cyan-400 text-black rounded-lg hover:bg-cyan-300 transition font-semibold"
+                        >
+                            Register
+                        </a>
+                    </div>
+                )}
+            </div>
+        </nav>
+    );
+};
+
+export default Navbar;
