@@ -7,15 +7,6 @@ export interface NavbarProps {
 }
 
 const Navbar: FunctionComponent<NavbarProps> = ({ userSession, setUserSession }) => {
-    const handleLogout = () => {
-        try {
-            localStorage.removeItem("session");
-        } catch (e) {
-            console.warn("Failed to remove session from localStorage", e);
-        }
-        setUserSession(null);
-        window.location.reload();
-    };
     return (
         <nav className="w-full flex items-center justify-between px-8 py-4 bg-black/30 backdrop-blur-md text-white shadow-lg">
             {/* --- Left side: quick links --- */}
@@ -35,13 +26,6 @@ const Navbar: FunctionComponent<NavbarProps> = ({ userSession, setUserSession })
                             className="w-9 h-9 rounded-full object-cover border border-cyan-400"
                         />
                         <span className="font-semibold">{userSession.username}</span>
-                        <button
-                            onClick={handleLogout}
-                            className="ml-3 px-3 py-1 text-sm rounded bg-red-600 hover:bg-red-500 transition"
-                            title="Logout (testing)"
-                        >
-                            Logout
-                        </button>
                     </div>
                 ) : (
                     <div className="flex items-center gap-4">
