@@ -2,6 +2,8 @@ import { useState } from "react";
 import { loadSessionState } from "../types/UserSession";
 import Page from "../components/page/Page";
 
+const API_BASE = (import.meta.env.VITE_API_BASE as string) || "";
+
 export default function RegisterPage() {
     const { userSession, setUserSession } = loadSessionState();
     const [error, setError] = useState<string | null>(null);
@@ -9,53 +11,9 @@ export default function RegisterPage() {
 
 
     // change to handle the thing properly !
-    const handleSubmit = async (e: any) => {
-        e.preventDefault();
-        setError(null);
-        const form = e.target as HTMLFormElement;
-        const formData = new FormData(form);
+    const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
 
-        const email = (formData.get("email") || "").toString().trim();
-        const username = (formData.get("username") || "").toString().trim();
-        const userTypeRaw = (formData.get("userType") || "").toString();
-        const password = (formData.get("password") || "").toString();
-        const confirmPassword = (formData.get("confirmPassword") || "").toString();
-        if (!email || !username || !userTypeRaw || !password || !confirmPassword) {
-            setError("Please fill out all required fields.");
-            return;
-        }
-
-        if (password !== confirmPassword) {
-            setError("Passwords do not match.");
-            return;
-        }
-
-        const userType = userTypeRaw === "educator" ? "Educator" : "Learner";
-
-        // const payload = { email, username, userType, password, remember };
-
-        try {
-            setSubmitting(true);
-            // TODO: replace with real API call
-            // Simulate network delay
-            await new Promise((r) => setTimeout(r, 700));
-
-            // On success, create a simple session and persist it
-            const session = {
-                userType: userType as "Educator" | "Learner",
-                username,
-                profilePictureUrl: "/default-pfp.png",
-            };
-
-            localStorage.setItem("session", JSON.stringify(session));
-            setUserSession(session as any);
-        } catch (err) {
-            setError("Registration failed. Please try again later.");
-        } finally {
-            setSubmitting(false);
-        }
     };
-
     return (
         <Page title="Quark | Register" userSession={userSession} setUserSession={setUserSession}>
             <div className="relative z-10 flex flex-col items-center justify-center min-h-[calc(100vh-7rem)] px-6 py-8 text-gray-200">

@@ -2,25 +2,18 @@
 import { loadSessionState } from "../types/UserSession";
 import Page from "../components/page/Page";
 
+const API_BASE = (import.meta.env.VITE_API_BASE as string) || "";
+
 export default function LoginPage() {
     const { userSession, setUserSession } = loadSessionState();
-    const isLoggedIn = userSession !== null; // adjust to your session structure
     const [showPassword, setShowPassword] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+    const [submitting, setSubmitting] = useState(false);
 
 
     // change to handle the thing properly !!!
-    const handleSubmit = (e: any) => {
-        e.preventDefault();
-        const form = e.target as HTMLFormElement;
-        const formData = new FormData(form);
-        const payload = {
-            identifier: formData.get("identifier"),
-            password: formData.get("password"),
-            remember: formData.get("remember") === "on",
-        };
-        // Replace with real auth call
-        // eslint-disable-next-line no-console
-        console.log("Login submit:", payload);
+    const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+
     };
 
     
@@ -75,7 +68,10 @@ export default function LoginPage() {
                         <a href="/forgot" className="text-sm text-[#4d538b] hover:underline text-[#bdcdff]">Forgot Password?</a>
                     </div>
                     
-                    <button type="submit" className="w-full px-4 py-2 bg-[#566fb8] text-white rounded-md font-semibold hover:bg-[#bdcdff] transition">Sign in</button>
+                            {error && <div className="mb-4 text-sm text-red-400 text-center">{error}</div>}
+                            <button type="submit" disabled={submitting} className="w-full px-4 py-2 bg-[#566fb8] text-white rounded-md font-semibold hover:bg-[#bdcdff] transition">
+                                {submitting ? 'Signing in...' : 'Sign in'}
+                            </button>
                     <p className="mt-4 text-center text-sm text-white">Don't have an account? <a href="/register" className="text-[#bccdff] font-semibold">Register</a></p>
                 </form>
             </div>

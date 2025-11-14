@@ -17,13 +17,6 @@ export function loadSessionState() {
                 setUserSession(storedSession);
             }
 
-            // const fake: UserSession = {
-            //     userType: 'Learner', 
-            //     username: 'nigga',
-            //     profilePictureUrl: 'something'
-            // };
-            // setUserSession(fake);
-
         } catch (e) {
             console.error("Failed to load session:", e);
             setUserSession(null);
