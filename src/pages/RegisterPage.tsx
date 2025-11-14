@@ -2,8 +2,6 @@ import { useState } from "react";
 import { loadSessionState } from "../types/UserSession";
 import Page from "../components/page/Page";
 
-const API_BASE = (import.meta.env.VITE_API_BASE as string) || "";
-
 export default function RegisterPage() {
     const { userSession, setUserSession } = loadSessionState();
     const [error, setError] = useState<string | null>(null);

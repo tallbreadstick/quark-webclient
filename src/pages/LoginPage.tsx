@@ -2,8 +2,6 @@
 import { loadSessionState } from "../types/UserSession";
 import Page from "../components/page/Page";
 
-const API_BASE = (import.meta.env.VITE_API_BASE as string) || "";
-
 export default function LoginPage() {
     const { userSession, setUserSession } = loadSessionState();
     const [showPassword, setShowPassword] = useState(false);
