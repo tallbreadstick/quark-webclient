@@ -31,13 +31,13 @@ const Navbar: FunctionComponent<NavbarProps> = ({ userSession, setUserSession })
                     <div className="flex items-center gap-4">
                         <a
                             href="/login"
-                            className="px-4 py-2 border border-cyan-400 rounded-lg hover:bg-[#bccdff] hover:text-black transition font-semibold"
+                            className="px-4 py-2 border border-[#566fb8] rounded-lg hover:bg-[#bccdff] hover:text-white transition font-semibold"
                         >
                             Login
                         </a>
                         <a
                             href="/register"
-                            className="px-4 py-2 bg-cyan-400 text-black rounded-lg hover:bg-[#bccdff] transition font-semibold"
+                            className="px-4 py-2 bg-[#566fb8] text-white rounded-lg hover:bg-[#bccdff] transition font-semibold"
                         >
                             Register
                         </a>
