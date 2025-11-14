@@ -75,7 +75,7 @@ export default function LoginPage() {
                         <a href="/forgot" className="text-sm text-[#4d538b] hover:underline text-[#bdcdff]">Forgot Password?</a>
                     </div>
                     
-                    <button type="submit" className="w-full px-4 py-2 bg-[#bdcdff] text-white rounded-md font-semibold hover:bg-[#3f3f6b] transition">Sign in</button>
+                    <button type="submit" className="w-full px-4 py-2 bg-[#566fb8] text-white rounded-md font-semibold hover:bg-[#bdcdff] transition">Sign in</button>
                     <p className="mt-4 text-center text-sm text-white">Don't have an account? <a href="/register" className="text-[#bccdff] font-semibold">Register</a></p>
                 </form>
             </div>

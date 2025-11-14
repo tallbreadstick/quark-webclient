@@ -93,9 +93,9 @@ export default function RegisterPage() {
                                     required
                                     className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-[#4d538b] appearance-none"
                                 >
-                                    <option value="" disabled className="text-left">Select User Type</option>
-                                    <option value="learner" className="text-left">Learner</option>
-                                    <option value="educator" className="text-left">Educator</option>
+                                    <option value="" disabled className="text-left text-black">Select User Type</option>
+                                    <option value="learner" className="text-left text-black">Learner</option>
+                                    <option value="educator" className="text-left text-black">Educator</option>
                                 </select>
                                 <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center">
                                     <svg className="w-4 h-4 text-gray-500" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -124,7 +124,7 @@ export default function RegisterPage() {
                         <a href="/forgot" className="text-sm text-[#4d538b] hover:underline text-[#bdcdff]">Forgot Password?</a>
                     </div>
                     
-                    <button type="submit" disabled={submitting} className="w-full px-4 py-2 bg-[#bdcdff] text-white rounded-md font-semibold hover:bg-[#3f3f6b] transition">
+                    <button type="submit" disabled={submitting} className="w-full px-4 py-2 bg-[#566fb8] text-white rounded-md font-semibold hover:bg-[#bdcdff] transition">
                         {submitting ? "Creating..." : "Create account"}
                     </button>
                     <p className="mt-4 text-center text-sm text-white">Already have an account? <a href="/login" className="text-[#bccdff] font-semibold">Sign in</a></p>
