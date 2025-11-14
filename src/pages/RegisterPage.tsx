@@ -75,15 +75,6 @@ export default function RegisterPage() {
                             <input name="username" required className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-[#4d538b]" />
                         </div>
 
-                        <div>
-                            <label className="block mb-2 text-sm font-medium text-[#bdcdff]">First Name</label>
-                            <input name="firstName" className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-[#4d538b]" />
-                        </div>
-
-                        <div>
-                            <label className="block mb-2 text-sm font-medium text-[#bdcdff]">Last Name</label>
-                            <input name="lastName" className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-[#4d538b]" />
-                        </div>
 
                         <div>
                             <label className="block mb-2 text-sm font-medium text-[#bdcdff]">User Type</label>
