@@ -1,9 +1,11 @@
-﻿import { loadSessionState } from "../types/UserSession";
+﻿import { useState } from "react";
+import { loadSessionState } from "../types/UserSession";
 import Page from "../components/page/Page";
 
 export default function LoginPage() {
     const { userSession, setUserSession } = loadSessionState();
     const isLoggedIn = userSession !== null; // adjust to your session structure
+    const [showPassword, setShowPassword] = useState(false);
 
 
     // change to handle the thing properly !!!
@@ -34,7 +36,36 @@ export default function LoginPage() {
                     <input name="identifier" required className="w-full px-4 py-2 mb-4 border rounded-md focus:outline-none focus:ring-2 focus:ring-[#4d538b]" />
 
                     <label className="block mb-2 text-sm font-medium text-[#bdcdff]">Password</label>
-                    <input name="password" type="password" required className="w-full px-4 py-2 mb-4 border rounded-md focus:outline-none focus:ring-2 focus:ring-[#4d538b]" />
+                    <div className="relative w-full">
+                        <input
+                            name="password"
+                            type={showPassword ? "text" : "password"}
+                            required
+                            className="w-full px-4 pr-10 py-2 mb-4 border rounded-md focus:outline-none focus:ring-2 focus:ring-[#4d538b]"
+                        />
+                        <div className="absolute inset-y-0 right-6 flex items-center">
+                            <button
+                                type="button"
+                                onClick={() => setShowPassword((s) => !s)}
+                                aria-pressed={showPassword}
+                                aria-label={showPassword ? "Hide password" : "Show password"}
+                                title={showPassword ? "Hide password" : "Show password"}
+                                className="h-5 w-5 translate-y-[-8px] flex items-center justify-center text-gray-300 hover:text-white focus:outline-none"
+                            >
+                                {showPassword ? (
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                        <path strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" d="M13.875 18.825A10.05 10.05 0 0 1 12 19c-5 0-9-4-9-7s4-7 9-7c1.29 0 2.52.24 3.66.67" />
+                                        <path strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" d="M2 2l20 20" />
+                                    </svg>
+                                ) : (
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                        <path strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" d="M1.5 12S5.5 5 12 5s10.5 7 10.5 7-4 7-10.5 7S1.5 12 1.5 12z" />
+                                        <circle cx="12" cy="12" r="3" strokeWidth="1.5" />
+                                    </svg>
+                                )}
+                            </button>
+                        </div>
+                    </div>
                     
                     <div className="flex items-center justify-between mb-6">
                         <label className="flex items-center gap-2 text-sm">

@@ -8,7 +8,7 @@ export default function RegisterPage() {
     const [submitting, setSubmitting] = useState(false);
 
 
-    // change to handle the thing properly !!!
+    // change to handle the thing properly !
     const handleSubmit = async (e: any) => {
         e.preventDefault();
         setError(null);
