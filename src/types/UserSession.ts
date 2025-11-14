@@ -16,6 +16,7 @@ export function loadSessionState() {
                 const storedSession = JSON.parse(raw) as UserSession;
                 setUserSession(storedSession);
             }
+
         } catch (e) {
             console.error("Failed to load session:", e);
             setUserSession(null);

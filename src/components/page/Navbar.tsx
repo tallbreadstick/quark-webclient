@@ -11,9 +11,9 @@ const Navbar: FunctionComponent<NavbarProps> = ({ userSession, setUserSession })
         <nav className="w-full flex items-center justify-between px-8 py-4 bg-black/30 backdrop-blur-md text-white shadow-lg">
             {/* --- Left side: quick links --- */}
             <div className="flex items-center gap-8 font-medium text-lg">
-                <a href="/" className="hover:text-cyan-400 transition-colors">Home</a>
-                <a href="/marketplace" className="hover:text-cyan-400 transition-colors">Marketplace</a>
-                <a href="/courses" className="hover:text-cyan-400 transition-colors">My Courses</a>
+                <a href="/" className="hover:text-[#bccdff] transition-colors">Home</a>
+                <a href="/marketplace" className="hover:text-[#bccdff] transition-colors">Marketplace</a>
+                <a href="/courses" className="hover:text-[#bccdff] transition-colors">My Courses</a>
             </div>
 
             {/* --- Right side: session dependent --- */}
@@ -31,13 +31,13 @@ const Navbar: FunctionComponent<NavbarProps> = ({ userSession, setUserSession })
                     <div className="flex items-center gap-4">
                         <a
                             href="/login"
-                            className="px-4 py-2 border border-cyan-400 rounded-lg hover:bg-cyan-400 hover:text-black transition font-semibold"
+                            className="px-4 py-2 border border-[#566fb8] rounded-lg hover:bg-[#bccdff] hover:text-white transition font-semibold"
                         >
                             Login
                         </a>
                         <a
                             href="/register"
-                            className="px-4 py-2 bg-cyan-400 text-black rounded-lg hover:bg-cyan-300 transition font-semibold"
+                            className="px-4 py-2 bg-[#566fb8] text-white rounded-lg hover:bg-[#bccdff] transition font-semibold"
                         >
                             Register
                         </a>
