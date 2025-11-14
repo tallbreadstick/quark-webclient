@@ -1,60 +1,95 @@
+import { useState } from "react";
 import { loadSessionState } from "../types/UserSession";
 import Page from "../components/page/Page";
 
 export default function RegisterPage() {
     const { userSession, setUserSession } = loadSessionState();
-    const isLoggedIn = userSession !== null; // adjust to your session structure
+    const [error, setError] = useState<string | null>(null);
+    const [submitting, setSubmitting] = useState(false);
 
-    const handleSubmit = (e: any) => {
+
+    // change to handle the thing properly !!!
+    const handleSubmit = async (e: any) => {
         e.preventDefault();
+        setError(null);
         const form = e.target as HTMLFormElement;
         const formData = new FormData(form);
-        const payload = {
-            identifier: formData.get("identifier"),
-            password: formData.get("password"),
-            remember: formData.get("remember") === "on",
-        };
-        // Replace with real auth call
-        // eslint-disable-next-line no-console
-        console.log("Login submit:", payload);
+
+        const email = (formData.get("email") || "").toString().trim();
+        const username = (formData.get("username") || "").toString().trim();
+        const userTypeRaw = (formData.get("userType") || "").toString();
+        const password = (formData.get("password") || "").toString();
+        const confirmPassword = (formData.get("confirmPassword") || "").toString();
+        if (!email || !username || !userTypeRaw || !password || !confirmPassword) {
+            setError("Please fill out all required fields.");
+            return;
+        }
+
+        if (password !== confirmPassword) {
+            setError("Passwords do not match.");
+            return;
+        }
+
+        const userType = userTypeRaw === "educator" ? "Educator" : "Learner";
+
+        // const payload = { email, username, userType, password, remember };
+
+        try {
+            setSubmitting(true);
+            // TODO: replace with real API call
+            // Simulate network delay
+            await new Promise((r) => setTimeout(r, 700));
+
+            // On success, create a simple session and persist it
+            const session = {
+                userType: userType as "Educator" | "Learner",
+                username,
+                profilePictureUrl: "/default-pfp.png",
+            };
+
+            localStorage.setItem("session", JSON.stringify(session));
+            setUserSession(session as any);
+        } catch (err) {
+            setError("Registration failed. Please try again later.");
+        } finally {
+            setSubmitting(false);
+        }
     };
 
-    
-
     return (
-        <Page title="Quark | Login" userSession={userSession} setUserSession={setUserSession}>
+        <Page title="Quark | Register" userSession={userSession} setUserSession={setUserSession}>
             <div className="relative z-10 flex flex-col items-center justify-center min-h-[calc(100vh-7rem)] px-6 py-8 text-gray-200">
                 <form onSubmit={handleSubmit} className="w-full max-w-md bg-black/20 backdrop-blur-lg border border-white/10 shadow-2xl rounded-2xl p-8">
                     <h1 className="text-2xl font-semibold mb-6 text-center text-[#bdcdff]">Create your account</h1>
 
+                    {error && <div className="mb-4 text-sm text-red-400 text-center">{error}</div>}
+
                     <label className="block mb-2 text-sm font-medium text-[#bdcdff]">Email</label>
-                    <input name="identifier" required className="w-full px-4 py-2 mb-4 border rounded-md focus:outline-none focus:ring-2 focus:ring-[#4d538b]" />
+                    <input name="email" type="email" required className="w-full px-4 py-2 mb-4 border rounded-md focus:outline-none focus:ring-2 focus:ring-[#4d538b]" />
 
                     <label className="block mb-2 text-sm font-medium text-[#bdcdff]">Username</label>
-                    <input name="identifier" required className="w-full px-4 py-2 mb-4 border rounded-md focus:outline-none focus:ring-2 focus:ring-[#4d538b]" />
+                    <input name="username" required className="w-full px-4 py-2 mb-4 border rounded-md focus:outline-none focus:ring-2 focus:ring-[#4d538b]" />
 
                     <label className="block mb-2 text-sm font-medium text-[#bdcdff]">User Type</label>
 
-                    <select 
-                        name="userType"
-                        required 
-                        // --- START SELECT STYLING ---
-                        className="w-full px-4 py-2 mb-4 border rounded-md 
-                                   focus:outline-none focus:ring-2 focus:ring-[#4d538b]
-                                   text-gray-800 appearance-none text-white" // Use white background for visibility on glass, text-gray-800 for contrast, and remove native styling
-                        // --- END SELECT STYLING ---
-                    >
-                        <option value="" disabled>Select User Type</option>
-                        <option value="learner">Learner</option>
-                        <option value="educator">Educator</option>
-                    </select>
+                    <div className="relative">
+                        <select
+                            name="userType"
+                            required
+                            className="w-full px-4 py-2 mb-4 border rounded-md focus:outline-none focus:ring-2 focus:ring-[#4d538b]"
+                        >
+                            <option value="" disabled className="text-black text-center">Select User Type</option>
+                            <option value="learner" className="text-black text-center">Learner</option>
+                            <option value="educator" className="text-black text-center">Educator</option>
+                        </select>
+                    </div>
 
 
                     <label className="block mb-2 text-sm font-medium text-[#bdcdff]">Password</label>
-                    <input name="identifier" required className="w-full px-4 py-2 mb-4 border rounded-md focus:outline-none focus:ring-2 focus:ring-[#4d538b]" />
+                    <input name="password" type="password" required className="w-full px-4 py-2 mb-4 border rounded-md focus:outline-none focus:ring-2 focus:ring-[#4d538b]" />
 
                     <label className="block mb-2 text-sm font-medium text-[#bdcdff]">Confirm Password</label>
-                    <input name="password" type="password" required className="w-full px-4 py-2 mb-4 border rounded-md focus:outline-none focus:ring-2 focus:ring-[#4d538b]" />
+                    <input name="confirmPassword" type="password" required className="w-full px-4 py-2 mb-4 border rounded-md focus:outline-none focus:ring-2 focus:ring-[#4d538b]" />
                     
                     <div className="flex items-center justify-between mb-6">
                         <label className="flex items-center gap-2 text-sm">
@@ -64,8 +99,10 @@ export default function RegisterPage() {
                         <a href="/forgot" className="text-sm text-[#4d538b] hover:underline text-[#bdcdff]">Forgot Password?</a>
                     </div>
                     
-                    <button type="submit" className="w-full px-4 py-2 bg-[#bdcdff] text-white rounded-md font-semibold hover:bg-[#3f3f6b] transition">Sign in</button>
-                    <p className="mt-4 text-center text-sm text-white">Don't have an account? <a href="/register" className="text-[#bccdff] font-semibold">Register</a></p>
+                    <button type="submit" disabled={submitting} className="w-full px-4 py-2 bg-[#bdcdff] text-white rounded-md font-semibold hover:bg-[#3f3f6b] transition">
+                        {submitting ? "Creating..." : "Create account"}
+                    </button>
+                    <p className="mt-4 text-center text-sm text-white">Already have an account? <a href="/login" className="text-[#bccdff] font-semibold">Sign in</a></p>
                 </form>
             </div>
         </Page>

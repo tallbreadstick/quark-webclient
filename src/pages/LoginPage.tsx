@@ -5,6 +5,8 @@ export default function LoginPage() {
     const { userSession, setUserSession } = loadSessionState();
     const isLoggedIn = userSession !== null; // adjust to your session structure
 
+
+    // change to handle the thing properly !!!
     const handleSubmit = (e: any) => {
         e.preventDefault();
         const form = e.target as HTMLFormElement;
