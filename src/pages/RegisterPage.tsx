@@ -64,32 +64,57 @@ export default function RegisterPage() {
 
                     {error && <div className="mb-4 text-sm text-red-400 text-center">{error}</div>}
 
-                    <label className="block mb-2 text-sm font-medium text-[#bdcdff]">Email</label>
-                    <input name="email" type="email" required className="w-full px-4 py-2 mb-4 border rounded-md focus:outline-none focus:ring-2 focus:ring-[#4d538b]" />
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label className="block mb-2 text-sm font-medium text-[#bdcdff]">Email</label>
+                            <input name="email" type="email" required className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-[#4d538b]" />
+                        </div>
 
-                    <label className="block mb-2 text-sm font-medium text-[#bdcdff]">Username</label>
-                    <input name="username" required className="w-full px-4 py-2 mb-4 border rounded-md focus:outline-none focus:ring-2 focus:ring-[#4d538b]" />
+                        <div>
+                            <label className="block mb-2 text-sm font-medium text-[#bdcdff]">Username</label>
+                            <input name="username" required className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-[#4d538b]" />
+                        </div>
 
-                    <label className="block mb-2 text-sm font-medium text-[#bdcdff]">User Type</label>
+                        <div>
+                            <label className="block mb-2 text-sm font-medium text-[#bdcdff]">First Name</label>
+                            <input name="firstName" className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-[#4d538b]" />
+                        </div>
 
-                    <div className="relative">
-                        <select
-                            name="userType"
-                            required
-                            className="w-full px-4 py-2 mb-4 border rounded-md focus:outline-none focus:ring-2 focus:ring-[#4d538b]"
-                        >
-                            <option value="" disabled className="text-black text-left">Select User Type</option>
-                            <option value="learner" className="text-black text-left">Learner</option>
-                            <option value="educator" className="text-black text-left">Educator</option>
-                        </select>
+                        <div>
+                            <label className="block mb-2 text-sm font-medium text-[#bdcdff]">Last Name</label>
+                            <input name="lastName" className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-[#4d538b]" />
+                        </div>
+
+                        <div>
+                            <label className="block mb-2 text-sm font-medium text-[#bdcdff]">User Type</label>
+                            <div className="relative">
+                                <select
+                                    name="userType"
+                                    required
+                                    className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-[#4d538b] appearance-none"
+                                >
+                                    <option value="" disabled className="text-left">Select User Type</option>
+                                    <option value="learner" className="text-left">Learner</option>
+                                    <option value="educator" className="text-left">Educator</option>
+                                </select>
+                                <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center">
+                                    <svg className="w-4 h-4 text-gray-500" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                        <path d="M6 8l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                                    </svg>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="sm:col-span-2">
+                            <label className="block mb-2 text-sm font-medium text-[#bdcdff]">Password</label>
+                            <input name="password" type="password" required className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-[#4d538b]" />
+                        </div>
+
+                        <div className="sm:col-span-2">
+                            <label className="block mb-2 text-sm font-medium text-[#bdcdff]">Confirm Password</label>
+                            <input name="confirmPassword" type="password" required className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-[#4d538b]" />
+                        </div>
                     </div>
-
-
-                    <label className="block mb-2 text-sm font-medium text-[#bdcdff]">Password</label>
-                    <input name="password" type="password" required className="w-full px-4 py-2 mb-4 border rounded-md focus:outline-none focus:ring-2 focus:ring-[#4d538b]" />
-
-                    <label className="block mb-2 text-sm font-medium text-[#bdcdff]">Confirm Password</label>
-                    <input name="confirmPassword" type="password" required className="w-full px-4 py-2 mb-4 border rounded-md focus:outline-none focus:ring-2 focus:ring-[#4d538b]" />
                     
                     <div className="flex items-center justify-between mb-6">
                         <label className="flex items-center gap-2 text-sm">

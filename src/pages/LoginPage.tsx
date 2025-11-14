@@ -38,12 +38,12 @@ export default function LoginPage() {
                     <label className="block mb-2 text-sm font-medium text-[#bdcdff]">Password</label>
                     <div className="relative w-full">
                         <input
-                            name="password"
-                            type={showPassword ? "text" : "password"}
-                            required
-                            className="w-full px-4 pr-10 py-2 mb-4 border rounded-md focus:outline-none focus:ring-2 focus:ring-[#4d538b]"
+                        name="confirmPassword"
+                        type="password"
+                        required
+                        className="w-full px-4 py-2 mb-8 border rounded-md focus:outline-none focus:ring-2 focus:ring-[#4d538b]"
                         />
-                        <div className="absolute inset-y-0 right-6 flex items-center">
+                        <div className="absolute inset-y-0 right- flex items-center">
                             <button
                                 type="button"
                                 onClick={() => setShowPassword((s) => !s)}
@@ -67,7 +67,7 @@ export default function LoginPage() {
                         </div>
                     </div>
                     
-                    <div className="flex items-center justify-between mb-6">
+                    <div className="flex items-center justify-between mb-8">
                         <label className="flex items-center gap-2 text-sm">
                             <input type="checkbox" name="remember" className="w-4 h-4" />
                             <p className="text-[#bdcdff]">Remember me</p>
