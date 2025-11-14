@@ -78,9 +78,9 @@ export default function RegisterPage() {
                             required
                             className="w-full px-4 py-2 mb-4 border rounded-md focus:outline-none focus:ring-2 focus:ring-[#4d538b]"
                         >
-                            <option value="" disabled className="text-black text-center">Select User Type</option>
-                            <option value="learner" className="text-black text-center">Learner</option>
-                            <option value="educator" className="text-black text-center">Educator</option>
+                            <option value="" disabled className="text-black text-left">Select User Type</option>
+                            <option value="learner" className="text-black text-left">Learner</option>
+                            <option value="educator" className="text-black text-left">Educator</option>
                         </select>
                     </div>
 
