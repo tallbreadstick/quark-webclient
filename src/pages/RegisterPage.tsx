@@ -1,16 +1,50 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { loadSessionState } from "../types/UserSession";
 import Page from "../components/page/Page";
 
 export default function RegisterPage() {
     const { userSession, setUserSession } = loadSessionState();
+    const navigate = useNavigate();
     const [error, setError] = useState<string | null>(null);
     const [submitting, setSubmitting] = useState(false);
 
 
-    // change to handle the thing properly !
+    // submit registration to backend
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+        e.preventDefault();
+        setSubmitting(true);
+        setError(null);
 
+        const form = e.currentTarget;
+        const formData = new FormData(form);
+        const body = {
+            username: String(formData.get('username') || ''),
+            email: String(formData.get('email') || ''),
+            password: String(formData.get('password') || ''),
+            userType: String(formData.get('userType') || ''),
+        };
+
+        try {
+            const res = await fetch('http://localhost:8080/api/auth/register', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body),
+            });
+
+            if (!res.ok) {
+                const text = await res.text();
+                throw new Error(text || 'Registration failed');
+            }
+
+            await res.json();
+            // registration successful — redirect to login page
+            navigate("/login");
+        } catch (err: any) {
+            setError(err?.message || 'An error occurred');
+        } finally {
+            setSubmitting(false);
+        }
     };
     return (
         <Page title="Quark | Register" userSession={userSession} setUserSession={setUserSession}>
