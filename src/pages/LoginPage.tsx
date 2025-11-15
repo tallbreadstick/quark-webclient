@@ -1,17 +1,50 @@
 ﻿import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { loadSessionState } from "../types/UserSession";
 import Page from "../components/page/Page";
 
 export default function LoginPage() {
     const { userSession, setUserSession } = loadSessionState();
+    const navigate = useNavigate();
     const [showPassword, setShowPassword] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [submitting, setSubmitting] = useState(false);
 
 
-    // change to handle the thing properly !!!
+    // send login request to backend
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+        e.preventDefault();
+        setSubmitting(true);
+        setError(null);
 
+        const form = e.currentTarget;
+        const formData = new FormData(form);
+        const body = {
+            identifier: String(formData.get('identifier') || ''),
+            password: String(formData.get('password') || '')
+        };
+
+        try {
+            const res = await fetch('http://localhost:8080/api/auth/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body),
+            });
+
+            if (!res.ok) {
+                const text = await res.text();
+                throw new Error(text || 'Login failed');
+            }
+
+            const data = await res.json();
+            // store session in parent state and navigate to home
+            setUserSession(data);
+            navigate("/");
+        } catch (err: any) {
+            setError(err?.message || 'An error occurred');
+        } finally {
+            setSubmitting(false);
+        }
     };
 
     
