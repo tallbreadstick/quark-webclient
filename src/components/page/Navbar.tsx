@@ -23,7 +23,7 @@ const Navbar: FunctionComponent<NavbarProps> = ({ userSession, setUserSession })
             <div className="flex items-center gap-8 font-medium text-lg">
                 <a href="/" className="hover:text-[#bccdff] transition-colors">Home</a>
                 <a href="/marketplace" className="hover:text-[#bccdff] transition-colors">Marketplace</a>
-                <a href="/courses" className="hover:text-[#bccdff] transition-colors">My Courses</a>
+                <a href="/my-courses" className="hover:text-[#bccdff] transition-colors">My Courses</a>
             </div>
 
             {/* --- Right side: session dependent --- */}

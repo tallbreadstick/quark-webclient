@@ -2,6 +2,7 @@
 import { useNavigate } from "react-router-dom";
 import { loadSessionState } from "../types/UserSession";
 import Page from "../components/page/Page";
+import api from "../scripts/api";
 
 export default function LoginPage() {
     const { userSession, setUserSession } = loadSessionState();
@@ -25,29 +26,29 @@ export default function LoginPage() {
         };
 
         try {
-            const res = await fetch('http://localhost:8080/api/auth/login', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(body),
+            const res = await api.post("/auth/login", body);
+            const data = res.data;
+
+            // store session including token and expiration
+            setUserSession({
+                id: data.id,
+                username: data.username,
+                email: data.email,
+                userType: data.userType,
+                token: data.token,
+                expiration: data.expiration,
             });
 
-            if (!res.ok) {
-                const text = await res.text();
-                throw new Error(text || 'Login failed');
-            }
-
-            const data = await res.json();
-            // store session in parent state and navigate to home
-            setUserSession(data);
             navigate("/");
         } catch (err: any) {
-            setError(err?.message || 'An error occurred');
+            const msg = err?.response?.data || err?.message || 'An error occurred';
+            setError(typeof msg === 'string' ? msg : JSON.stringify(msg));
         } finally {
             setSubmitting(false);
         }
     };
 
-    
+
 
     return (
         <Page title="Quark | Login" userSession={userSession} setUserSession={setUserSession}>
@@ -90,7 +91,7 @@ export default function LoginPage() {
                             </button>
                         </div>
                     </div>
-                    
+
                     <div className="flex items-center justify-between mb-6">
                         <label className="flex items-center gap-2 text-sm">
                             <input type="checkbox" name="remember" className="w-4 h-4" />
@@ -98,11 +99,11 @@ export default function LoginPage() {
                         </label>
                         <a href="/forgot" className="text-sm text-[#4d538b] hover:underline text-[#bdcdff]">Forgot Password?</a>
                     </div>
-                    
-                            {error && <div className="mb-4 text-sm text-red-400 text-center">{error}</div>}
-                            <button type="submit" disabled={submitting} className="w-full px-4 py-2 bg-[#566fb8] text-white rounded-md font-semibold hover:bg-[#bdcdff] transition">
-                                {submitting ? 'Signing in...' : 'Sign in'}
-                            </button>
+
+                    {error && <div className="mb-4 text-sm text-red-400 text-center">{error}</div>}
+                    <button type="submit" disabled={submitting} className="w-full px-4 py-2 bg-[#566fb8] text-white rounded-md font-semibold hover:bg-[#bdcdff] transition">
+                        {submitting ? 'Signing in...' : 'Sign in'}
+                    </button>
                     <p className="mt-4 text-center text-sm text-white">Don't have an account? <a href="/register" className="text-[#bccdff] font-semibold">Register</a></p>
                 </form>
             </div>

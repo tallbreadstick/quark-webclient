@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { loadSessionState } from "../types/UserSession";
 import Page from "../components/page/Page";
+import api from "../scripts/api";
 
 export default function RegisterPage() {
     const { userSession, setUserSession } = loadSessionState();
@@ -26,22 +27,12 @@ export default function RegisterPage() {
         };
 
         try {
-            const res = await fetch('http://localhost:8080/api/auth/register', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(body),
-            });
-
-            if (!res.ok) {
-                const text = await res.text();
-                throw new Error(text || 'Registration failed');
-            }
-
-            await res.json();
+            await api.post("/auth/register", body);
             // registration successful — redirect to login page
             navigate("/login");
         } catch (err: any) {
-            setError(err?.message || 'An error occurred');
+            const msg = err?.response?.data || err?.message || 'An error occurred';
+            setError(typeof msg === 'string' ? msg : JSON.stringify(msg));
         } finally {
             setSubmitting(false);
         }
