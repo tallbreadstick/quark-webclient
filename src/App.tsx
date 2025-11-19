@@ -4,6 +4,8 @@ import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
 import CoursesPage from "./pages/CoursesPage";
 import CourseCreationPage from "./pages/CourseCreationPage";
+import ChapterPage from "./pages/ChapterPage";
+import ChapterDetailPage from "./pages/ChapterDetailPage";
 
 export default function App() {
 
@@ -16,6 +18,8 @@ export default function App() {
                     <Route path="/register" element={<RegisterPage />} />
                     <Route path="/my-courses" element={<CoursesPage />} />
                     <Route path="/my-courses/create" element={<CourseCreationPage />} />
+                    <Route path="/course/:courseId/chapters" element={<ChapterPage />} />
+                    <Route path="/course/:courseId/chapter/:chapterId" element={<ChapterDetailPage />} />
                 </Routes>
             </BrowserRouter>
         </div>

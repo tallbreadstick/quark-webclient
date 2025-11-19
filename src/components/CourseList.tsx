@@ -98,7 +98,7 @@ export default function CourseList({
                             <div className="text-sm font-semibold text-white truncate">{c.name}</div>
                             <div className="text-xs text-gray-400 truncate">{c.description ?? ""}</div>
                         </div>
-                        <Link to={`/course/${c.id}`} className="ml-4 px-2 py-1 bg-[#3b82f6] rounded-md text-xs text-white">Open</Link>
+                        <Link to={`/course/${c.id}/chapters`} className="ml-4 px-2 py-1 bg-[#3b82f6] rounded-md text-xs text-white">Open</Link>
                     </li>
                 ))}
             </ul>
