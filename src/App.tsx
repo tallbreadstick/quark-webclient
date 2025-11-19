@@ -4,9 +4,9 @@ import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
 import CoursesPage from "./pages/CoursesPage";
 import CourseCreationPage from "./pages/CourseCreationPage";
+import MarketplacePage from "./pages/MarketplacePage";
 
 export default function App() {
-
     return (
         <div className="w-full h-full">
             <BrowserRouter>
@@ -16,6 +16,7 @@ export default function App() {
                     <Route path="/register" element={<RegisterPage />} />
                     <Route path="/my-courses" element={<CoursesPage />} />
                     <Route path="/my-courses/create" element={<CourseCreationPage />} />
+                    <Route path="/marketplace" element={<MarketplacePage />} />
                 </Routes>
             </BrowserRouter>
         </div>
