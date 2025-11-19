@@ -158,7 +158,7 @@ export default function CourseContent() {
     }
 
     return (
-        <Page title={`Quark | Course ${courseId}`} userSession={userSession} setUserSession={setUserSession}>
+        <Page title={`Quark | ${course?.name ?? `Course ${courseId}`}`} userSession={userSession} setUserSession={setUserSession}>
             <div className="relative z-10 min-h-[calc(100vh-7rem)] px-6 py-8 text-gray-200">
                 <div className="max-w-6xl mx-auto grid grid-cols-12 gap-8">
                     {/* Sidebar: course progress + TOC */}
