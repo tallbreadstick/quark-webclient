@@ -5,7 +5,7 @@ export interface UserSession {
     id: number;
     username: string;
     email: string;
-    userType: "Learner" | "Educator";
+    userType: "learner" | "educator";
     token: string;
     expiration: number; // timestamp in milliseconds
     profilePictureUrl?: string;
