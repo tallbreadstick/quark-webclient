@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
 import Page from "../components/page/Page";
+import CourseList from "../components/CourseList";
 import { loadSessionState } from "../types/UserSession";
 import { Link } from "react-router-dom";
 
@@ -57,27 +58,28 @@ export default function HomePage() {
                             track your progress, and dive back into discovery.
                         </p>
 
-                        {/* Quick Access / Dashboard Section */}
+                        {/* Dashboard layout: recent activity (left, wide), learning tracks (right), then courses */}
                         <section className="grid grid-cols-3 gap-6 mb-16">
-                            {/* Placeholder cards for shortcuts */}
-                            <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-6 h-40 flex flex-col justify-center items-center">
+                            {/* Recent Activity - spans two columns */}
+                            <div className="col-span-2 bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-6 h-40 flex flex-col justify-center">
                                 <span className="text-gray-400">[UNDER CONSTRUCTION]</span>
-                                <p className="mt-2 text-sm text-gray-500">Recent Activity</p>
+                                <p className="mt-2 text-sm text-gray-500">Pick Up Where You Left Off</p>
                             </div>
-                            <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-6 h-40 flex flex-col justify-center items-center">
-                                <span className="text-gray-400">[UNDER CONSTRUCTION]</span>
-                                <p className="mt-2 text-sm text-gray-500">Your Courses</p>
-                            </div>
+
+                            {/* Learning Tracks (right column) */}
                             <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-6 h-40 flex flex-col justify-center items-center">
                                 <span className="text-gray-400">[UNDER CONSTRUCTION]</span>
                                 <p className="mt-2 text-sm text-gray-500">Learning Tracks</p>
                             </div>
                         </section>
 
-                        {/* Placeholder for dynamic data once backend is live */}
-                        <section className="text-center text-gray-500 italic">
-                            More personalized content coming soon.
-                        </section>
+                        {/* Your Courses section below the dashboard */}
+                        <div className="mb-6">
+                            <h2 className="text-xl font-semibold text-white mb-4">Your Courses</h2>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <CourseList userId={userSession.id} maxItems={6} className="w-full" scrollable={true} maxHeightClass="max-h-96" />
+                            </div>
+                        </div>
                     </motion.div>
                 )}
             </div>
