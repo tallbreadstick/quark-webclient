@@ -66,7 +66,7 @@ export default function HomePage() {
 
     // Check user roles
     const isEducator = userSession?.userType === 'educator';
-    const isLearner = userSession?.userType === 'learner' || userSession?.userType === 'student';
+    const isLearner = userSession?.userType === 'learner';
 
     // Personalized welcome messages FROM FIRST CODE
     const getWelcomeMessage = () => {

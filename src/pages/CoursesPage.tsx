@@ -73,7 +73,7 @@ export default function CoursesPage() {
 
     // Check if user can create courses (ONLY educators)
     const canCreateCourse = userSession?.userType === 'educator';
-    const isLearner = userSession?.userType === 'learner' || userSession?.userType === 'student';
+    const isLearner = userSession?.userType === 'learner';
 
     // Filter courses based on search term
     const filteredCourses = (courses || []).filter(course => 
