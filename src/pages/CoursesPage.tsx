@@ -103,7 +103,7 @@ export default function CoursesPage() {
                                             <div className="mt-4 flex items-center justify-between">
                                                 <div className="text-xs text-gray-500">Owner: {c.owner?.username ?? c.ownerId ?? "—"}</div>
                                                 <div className="flex gap-2">
-                                                    <Link to={`/course/${c.id}`} className="px-3 py-1 bg-[#3b82f6] rounded-md text-xs text-white">Open</Link>
+                                                    <Link to={`/course/${c.id}/chapters`} className="px-3 py-1 bg-[#3b82f6] rounded-md text-xs text-white">Open</Link>
                                                     <Link to={`/course/${c.id}/edit`} className="px-3 py-1 border rounded-md text-xs text-white/80">Edit</Link>
                                                 </div>
                                             </div>

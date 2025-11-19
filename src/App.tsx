@@ -5,6 +5,7 @@ import RegisterPage from "./pages/RegisterPage";
 import CoursesPage from "./pages/CoursesPage";
 import CourseCreationPage from "./pages/CourseCreationPage";
 import MarketplacePage from "./pages/MarketplacePage";
+import ChapterPage from "./pages/CourseContent";
 
 export default function App() {
     return (
@@ -17,6 +18,7 @@ export default function App() {
                     <Route path="/my-courses" element={<CoursesPage />} />
                     <Route path="/my-courses/create" element={<CourseCreationPage />} />
                     <Route path="/marketplace" element={<MarketplacePage />} />
+                    <Route path="/course/:courseId/chapters" element={<ChapterPage />} />
                 </Routes>
             </BrowserRouter>
         </div>
