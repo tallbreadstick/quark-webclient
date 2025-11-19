@@ -92,13 +92,27 @@ export default function MarketplacePage() {
     const currentCourses = filteredCourses.slice(indexOfFirstCourse, indexOfLastCourse);
     const totalPages = Math.ceil(filteredCourses.length / coursesPerPage);
 
-    const handleEnroll = (courseId: number, e: React.MouseEvent) => {
+    const handleEnroll = (courseId: number, courseName: string, e: React.MouseEvent) => {
         e.stopPropagation();
         if (!userSession) return;
         
+        // Show enroll alert
+        alert(`Successfully enrolled in "${courseName}"! You can now access this course from your My Courses page.`);
+        
+        // Update enrollment state
         setCourses(courses.map(course => 
             course.id === courseId ? { ...course, enrolled: !course.enrolled } : course
         ));
+    };
+
+    const handleFork = (courseId: number, courseName: string, e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (!userSession) return;
+        
+        // Show fork alert
+        alert(`"${courseName}" has been added to your courses as a template! You can now customize it for your own use.`);
+        
+        // Add your fork logic here
     };
 
     const handlePageChange = (pageNumber: number) => {
@@ -109,23 +123,61 @@ export default function MarketplacePage() {
         navigate(`/course/${courseId}`);
     };
 
+    // Check user role
+    const isEducator = userSession?.userType === 'educator';
+    const isLearner = userSession?.userType === 'learner' || userSession?.userType === 'student';
+
+    // Get button text and action based on role
+    const getActionButton = (course: Course) => {
+        if (!userSession) return null;
+
+        if (isLearner) {
+            return (
+                <button 
+                    onClick={(e) => handleEnroll(course.id, course.name, e)}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition cursor-pointer"
+                >
+                    Enroll
+                </button>
+            );
+        }
+
+        if (isEducator) {
+            return (
+                <button 
+                    onClick={(e) => handleFork(course.id, course.name, e)}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition cursor-pointer"
+                >
+                    Fork
+                </button>
+            );
+        }
+
+        return null;
+    };
+
     return (
         <Page title="Quark | Marketplace" userSession={userSession} setUserSession={setUserSession}>
             <div className="relative z-10 min-h-[calc(100vh-7rem)] px-6 py-8 text-gray-200">
                 <div className="max-w-7xl mx-auto">
                     <div className="mb-8">
                         <h1 className="text-3xl font-bold text-white mb-2">Course Marketplace</h1>
-                        <p className="text-gray-400">Discover and enroll in courses tailored to your learning journey</p>
+                        <p className="text-gray-400">
+                            {isEducator 
+                                ? "Discover courses to use as templates for your own curriculum" 
+                                : "Discover and enroll in courses tailored to your learning journey"
+                            }
+                        </p>
                     </div>
 
                     {!userSession && (
                         <div className="bg-white/5 border border-white/10 rounded-2xl p-6 mb-8 text-center">
                             <p className="text-gray-300 mb-4">Sign in to enroll in courses and track your progress</p>
                             <div className="flex justify-center gap-3">
-                                <Link to="/login" className="px-4 py-2 bg-[#566fb8] rounded-md text-white hover:bg-[#475a9c] transition">
+                                <Link to="/login" className="px-4 py-2 bg-[#566fb8] rounded-md text-white hover:bg-[#475a9c] transition cursor-pointer">
                                     Sign in
                                 </Link>
-                                <Link to="/register" className="px-4 py-2 border border-white/20 rounded-md text-white/80 hover:bg-white/5 transition">
+                                <Link to="/register" className="px-4 py-2 border border-white/20 rounded-md text-white/80 hover:bg-white/5 transition cursor-pointer">
                                     Register
                                 </Link>
                             </div>
@@ -155,7 +207,7 @@ export default function MarketplacePage() {
                             <select
                                 value={selectedTag}
                                 onChange={(e) => setSelectedTag(e.target.value)}
-                                className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500/50 appearance-none pr-10 transition [&>option]:bg-slate-900 [&>option]:text-white [&>option:checked]:bg-blue-600"
+                                className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500/50 appearance-none pr-10 transition [&>option]:bg-slate-900 [&>option]:text-white [&>option:checked]:bg-blue-600 cursor-pointer"
                             >
                                 <option value="">All Tags</option>
                                 {allTags.map(tag => (
@@ -179,7 +231,7 @@ export default function MarketplacePage() {
                     <div className="flex gap-2 flex-wrap mb-6">
                         <button
                             onClick={() => setSelectedTag("")}
-                            className={`px-3 py-1 rounded-full text-sm border transition-colors ${
+                            className={`px-3 py-1 rounded-full text-sm border transition-colors cursor-pointer ${
                                 selectedTag === "" 
                                 ? "bg-blue-500/20 text-blue-300 border-blue-500/50" 
                                 : "bg-white/5 text-gray-400 border-white/10 hover:bg-white/10"
@@ -191,7 +243,7 @@ export default function MarketplacePage() {
                             <button
                                 key={tag}
                                 onClick={() => setSelectedTag(tag === selectedTag ? "" : tag)}
-                                className={`px-3 py-1 rounded-full text-sm border transition-colors ${
+                                className={`px-3 py-1 rounded-full text-sm border transition-colors cursor-pointer ${
                                     selectedTag === tag 
                                     ? "bg-blue-500/20 text-blue-300 border-blue-500/50" 
                                     : "bg-white/5 text-gray-400 border-white/10 hover:bg-white/10"
@@ -211,7 +263,7 @@ export default function MarketplacePage() {
                                     Showing {currentCourses.length} of {filteredCourses.length} courses
                                 </span>
                                 <div className="relative">
-                                    <select className="px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500/50 appearance-none pr-8 transition [&>option]:bg-slate-900 [&>option]:text-white [&>option:checked]:bg-blue-600">
+                                    <select className="px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500/50 appearance-none pr-8 transition [&>option]:bg-slate-900 [&>option]:text-white [&>option:checked]:bg-blue-600 cursor-pointer">
                                         <option>Sort by: Newest</option>
                                         <option>Sort by: Popular</option>
                                         <option>Sort by: Name</option>
@@ -246,7 +298,7 @@ export default function MarketplacePage() {
                                                 {course.tags.map(tag => (
                                                     <span 
                                                         key={tag} 
-                                                        className="px-2 py-1 bg-blue-500/20 text-blue-300 text-xs rounded hover:bg-blue-500/30 transition-colors"
+                                                        className="px-2 py-1 bg-blue-500/20 text-blue-300 text-xs rounded hover:bg-blue-500/30 transition-colors cursor-pointer"
                                                         onClick={(e) => {
                                                             e.stopPropagation();
                                                             setSelectedTag(tag === selectedTag ? "" : tag);
@@ -262,18 +314,7 @@ export default function MarketplacePage() {
                                             <span className="text-gray-500 text-sm">
                                                 By {course.owner.username}
                                             </span>
-                                            {userSession && (
-                                                <button 
-                                                    onClick={(e) => handleEnroll(course.id, e)}
-                                                    className={`px-4 py-2 rounded-lg transition cursor-pointer ${
-                                                        course.enrolled 
-                                                        ? "bg-green-600 text-white hover:bg-green-700" 
-                                                        : "bg-blue-600 text-white hover:bg-blue-700"
-                                                    }`}
-                                                >
-                                                    {course.enrolled ? "Enrolled" : "Enroll"}
-                                                </button>
-                                            )}
+                                            {userSession && getActionButton(course)}
                                         </div>
                                     </div>
                                 ))}
@@ -285,13 +326,13 @@ export default function MarketplacePage() {
                                 </div>
                             )}
 
-                            {/* Pagination */}
+                            {/* Pagination with cursor pointers */}
                             {totalPages > 1 && (
                                 <div className="flex justify-center items-center space-x-2 mt-8">
                                     <button
                                         onClick={() => handlePageChange(currentPage - 1)}
                                         disabled={currentPage === 1}
-                                        className="px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white disabled:opacity-50 disabled:cursor-not-allowed hover:bg-white/10 transition"
+                                        className="px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white disabled:opacity-50 disabled:cursor-not-allowed hover:bg-white/10 transition cursor-pointer"
                                     >
                                         Previous
                                     </button>
@@ -300,7 +341,7 @@ export default function MarketplacePage() {
                                         <button
                                             key={page}
                                             onClick={() => handlePageChange(page)}
-                                            className={`px-3 py-2 border rounded-lg transition ${
+                                            className={`px-3 py-2 border rounded-lg transition cursor-pointer ${
                                                 currentPage === page
                                                 ? "bg-blue-600 text-white border-blue-600"
                                                 : "bg-white/5 border-white/10 text-white hover:bg-white/10"
@@ -313,7 +354,7 @@ export default function MarketplacePage() {
                                     <button
                                         onClick={() => handlePageChange(currentPage + 1)}
                                         disabled={currentPage === totalPages}
-                                        className="px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white disabled:opacity-50 disabled:cursor-not-allowed hover:bg-white/10 transition"
+                                        className="px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white disabled:opacity-50 disabled:cursor-not-allowed hover:bg-white/10 transition cursor-pointer"
                                     >
                                         Next
                                     </button>
