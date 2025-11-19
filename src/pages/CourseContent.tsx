@@ -216,7 +216,7 @@ export default function CourseContent() {
                         <div className="mb-6">
                             <div className="flex items-start justify-between">
                                 <div>
-                                    <h1 className="text-2xl font-bold text-white">{currentChapter?.name ?? 'chapter name not found'}</h1>
+                                    <h1 className="text-2xl font-bold text-white">{currentChapter?.name ?? '—'}</h1>
                                     <p className="text-gray-400 mt-2">{currentChapter?.description ?? ''}</p>
                                 </div>
                                 <div className="flex gap-2">
