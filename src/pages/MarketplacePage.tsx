@@ -125,7 +125,7 @@ export default function MarketplacePage() {
 
     // Check user role
     const isEducator = userSession?.userType === 'educator';
-    const isLearner = userSession?.userType === 'learner' || userSession?.userType === 'student';
+    const isLearner = userSession?.userType === 'learner';
 
     // Get button text and action based on role
     const getActionButton = (course: Course) => {
