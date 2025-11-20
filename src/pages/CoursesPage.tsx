@@ -295,7 +295,7 @@ export default function CoursesPage() {
                                                             </span>
                                                             <div className="flex gap-2">
                                                                 <Link 
-                                                                    to={`/course/${course.id}`} 
+                                                                    to={`/course/${course.id}/chapters`} 
                                                                     className="px-3 py-1 bg-blue-600 rounded-md text-white hover:bg-blue-700 transition"
                                                                 >
                                                                     {getCourseButtonText(course)}

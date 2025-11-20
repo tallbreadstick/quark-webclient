@@ -223,7 +223,7 @@ export default function HomePage() {
                                                                 Edit
                                                             </Link>
                                                             <Link 
-                                                                to={`/course/${course.id}`} 
+                                                                to={`/course/${course.id}/chapters`} 
                                                                 className="px-4 py-2 bg-blue-600 rounded-lg text-white hover:bg-blue-700 transition"
                                                             >
                                                                 Open
@@ -231,7 +231,7 @@ export default function HomePage() {
                                                         </>
                                                     ) : (
                                                         <Link 
-                                                            to={`/course/${course.id}`} 
+                                                            to={`/course/${course.id}/chapters`} 
                                                             className="px-4 py-2 bg-blue-600 rounded-lg text-white hover:bg-blue-700 transition"
                                                         >
                                                             Start
