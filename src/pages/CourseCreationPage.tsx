@@ -66,35 +66,39 @@ export default function CourseCreationPage() {
 
     return (
         <Page title="Quark | Create Course" userSession={userSession} setUserSession={setUserSession}>
-            <div className="relative z-10 min-h-[calc(100vh-7rem)] px-6 py-8 text-gray-200">
-                <div className="max-w-3xl mx-auto bg-black/20 backdrop-blur-lg border border-white/10 rounded-2xl p-8">
-                    <h1 className="text-2xl font-semibold text-white mb-4">Create Course</h1>
+            <div className="relative z-10 min-h-[calc(100vh-7rem)] flex items-center justify-center px-6 py-8 text-gray-200">
+                <div className="max-w-3xl w-full mx-auto bg-black/20 backdrop-blur-lg border border-white/10 rounded-2xl p-8">
+                    <h1 className="text-2xl font-semibold text-white mb-4 text-center">Create Course</h1>
 
                     {!userSession ? (
                         <div className="text-center text-gray-300">
                             <p className="mb-4">You must be signed in to create a course.</p>
                             <div className="flex justify-center gap-3">
-                                <a href="/login" className="px-4 py-2 bg-[#566fb8] rounded-md text-white">Sign in</a>
+                                <a href="/login" className="px-4 py-2 bg-[#566fb8] rounded-md text-white cursor-pointer">Sign in</a>
                             </div>
                         </div>
                     ) : (
                         <form onSubmit={handleSubmit}>
-                            {error && <div className="mb-4 text-sm text-red-400">{error}</div>}
+                            {error && <div className="mb-4 text-sm text-red-400 text-center">{error}</div>}
 
                             <label className="block mb-2 text-sm font-medium text-[#bdcdff]">Name</label>
-                            <input name="name" required className="w-full px-4 py-2 mb-4 border rounded-md" />
+                            <input name="name" required className="w-full px-4 py-2 mb-4 border rounded-md bg-black/20 text-white" />
 
                             <label className="block mb-2 text-sm font-medium text-[#bdcdff]">Description</label>
-                            <input name="description" className="w-full px-4 py-2 mb-4 border rounded-md" />
+                            <input name="description" className="w-full px-4 py-2 mb-4 border rounded-md bg-black/20 text-white" />
 
                             <label className="block mb-2 text-sm font-medium text-[#bdcdff]">Introduction</label>
-                            <textarea name="introduction" rows={4} className="w-full px-4 py-2 mb-4 border rounded-md" />
+                            <textarea name="introduction" rows={4} className="w-full px-4 py-2 mb-4 border rounded-md bg-black/20 text-white" />
 
                             <label className="block mb-2 text-sm font-medium text-[#bdcdff]">Tag IDs (comma separated)</label>
-                            <input name="tags" placeholder="e.g. 1,2,3" className="w-full px-4 py-2 mb-6 border rounded-md" />
+                            <input name="tags" placeholder="e.g. 1,2,3" className="w-full px-4 py-2 mb-6 border rounded-md bg-black/20 text-white" />
 
-                            <div className="flex justify-end">
-                                <button type="submit" disabled={submitting} className="px-4 py-2 bg-indigo-600 rounded-md text-white">
+                            <div className="flex justify-center">
+                                <button 
+                                    type="submit" 
+                                    disabled={submitting} 
+                                    className="px-6 py-3 bg-indigo-600 rounded-md text-white font-medium cursor-pointer hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
                                     {submitting ? "Creating..." : "Create Course"}
                                 </button>
                             </div>
