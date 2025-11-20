@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import api from "../scripts/api";
-import { Link } from "react-router-dom";
+import CourseCard from "./CourseCard";
+import { getUserCourses } from "../utils/courseUtils";
 
 type Course = {
     id: number;
@@ -42,9 +43,8 @@ export default function CourseList({
                 if (cancelled) return;
 
                 if (userId != null) {
-                    const mine = Array.isArray(data)
-                        ? data.filter((c: Course) => c.ownerId === userId || (c.owner && c.owner.id === userId))
-                        : [];
+                    // Use the shared utility function
+                    const mine = getUserCourses(data, userId, 'educator');
                     setCourses(mine.slice(0, maxItems));
                 } else {
                     setCourses([]);
@@ -63,7 +63,6 @@ export default function CourseList({
     }, [userId, maxItems]);
 
     const baseCard = `bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl ${className}`;
-
     const centeredClasses = `${baseCard} h-40 flex flex-col justify-center items-center`;
     const listClasses = `${baseCard} p-4 ${scrollable ? `${maxHeightClass} overflow-auto` : "h-40 overflow-hidden"}`;
 
@@ -92,14 +91,12 @@ export default function CourseList({
     return (
         <div className={listClasses}>
             <ul className="space-y-2 text-left">
-                {courses.map((c) => (
-                    <li key={c.id} className="flex items-center justify-between">
-                        <div className="overflow-hidden">
-                            <div className="text-sm font-semibold text-white truncate">{c.name}</div>
-                            <div className="text-xs text-gray-400 truncate">{c.description ?? ""}</div>
-                        </div>
-                        <Link to={`/course/${c.id}/chapters`} className="ml-4 px-2 py-1 bg-[#3b82f6] rounded-md text-xs text-white">Open</Link>
-                    </li>
+                {courses.map((course) => (
+                    <CourseCard
+                        key={course.id}
+                        course={course}
+                        variant="compact"
+                    />
                 ))}
             </ul>
         </div>

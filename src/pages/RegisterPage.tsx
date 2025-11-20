@@ -10,7 +10,6 @@ export default function RegisterPage() {
     const [error, setError] = useState<string | null>(null);
     const [submitting, setSubmitting] = useState(false);
 
-
     // submit registration to backend
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
@@ -37,6 +36,7 @@ export default function RegisterPage() {
             setSubmitting(false);
         }
     };
+
     return (
         <Page title="Quark | Register" userSession={userSession} setUserSession={setUserSession}>
             <div className="relative z-10 flex flex-col items-center justify-center min-h-[calc(100vh-7rem)] px-6 py-8 text-gray-200">
@@ -45,61 +45,102 @@ export default function RegisterPage() {
 
                     {error && <div className="mb-4 text-sm text-red-400 text-center">{error}</div>}
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-4">
+                        {/* Email - Full width on first row */}
                         <div>
                             <label className="block mb-2 text-sm font-medium text-[#bdcdff]">Email</label>
-                            <input name="email" type="email" required className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-[#4d538b]" />
+                            <input 
+                                name="email" 
+                                type="email" 
+                                required 
+                                className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500/50 transition cursor-text" 
+                                placeholder="Enter your email"
+                            />
                         </div>
 
-                        <div>
-                            <label className="block mb-2 text-sm font-medium text-[#bdcdff]">Username</label>
-                            <input name="username" required className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-[#4d538b]" />
-                        </div>
+                        {/* Username and User Type - 2-column grid on second row */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <label className="block mb-2 text-sm font-medium text-[#bdcdff]">Username</label>
+                                <input 
+                                    name="username" 
+                                    required 
+                                    className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500/50 transition cursor-text" 
+                                    placeholder="Choose a username"
+                                />
+                            </div>
 
-
-                        <div>
-                            <label className="block mb-2 text-sm font-medium text-[#bdcdff]">User Type</label>
-                            <div className="relative">
-                                <select
-                                    name="userType"
-                                    required
-                                    className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-[#4d538b] appearance-none"
-                                >
-                                    <option value="" disabled className="text-left text-black">Select User Type</option>
-                                    <option value="learner" className="text-left text-black">Learner</option>
-                                    <option value="educator" className="text-left text-black">Educator</option>
-                                </select>
-                                <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center">
-                                    <svg className="w-4 h-4 text-gray-500" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                        <path d="M6 8l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                                    </svg>
+                            <div>
+                                <label className="block mb-2 text-sm font-medium text-[#bdcdff]">User Type</label>
+                                <div className="relative">
+                                    <select
+                                        name="userType"
+                                        required
+                                        className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500/50 appearance-none pr-10 transition [&>option]:bg-slate-900 [&>option]:text-white [&>option:checked]:bg-blue-600 cursor-pointer"
+                                    >
+                                        <option value="" disabled className="text-gray-400">Select User Type</option>
+                                        <option value="learner">Learner</option>
+                                        <option value="educator">Educator</option>
+                                    </select>
+                                    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3">
+                                        <svg className="w-4 h-4 text-gray-400" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                            <path d="M6 8l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                                        </svg>
+                                    </div>
                                 </div>
                             </div>
                         </div>
 
-                        <div className="sm:col-span-2">
+                        {/* Password fields - Full width on separate rows */}
+                        <div>
                             <label className="block mb-2 text-sm font-medium text-[#bdcdff]">Password</label>
-                            <input name="password" type="password" required className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-[#4d538b]" />
+                            <input 
+                                name="password" 
+                                type="password" 
+                                required 
+                                className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500/50 transition cursor-text" 
+                                placeholder="Create a password"
+                            />
                         </div>
 
-                        <div className="sm:col-span-2">
+                        <div>
                             <label className="block mb-2 text-sm font-medium text-[#bdcdff]">Confirm Password</label>
-                            <input name="confirmPassword" type="password" required className="w-full px-4 py-2 mb-4 border rounded-md focus:outline-none focus:ring-2 focus:ring-[#4d538b]" />
+                            <input 
+                                name="confirmPassword" 
+                                type="password" 
+                                required 
+                                className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500/50 transition cursor-text" 
+                                placeholder="Confirm your password"
+                            />
                         </div>
                     </div>
                     
-                    <div className="flex items-center justify-between mb-8">
-                        <label className="flex items-center gap-2 text-sm">
-                            <input type="checkbox" name="remember" className="w-4 h-4" />
+                    <div className="flex items-center justify-between mb-8 mt-6">
+                        <label className="flex items-center gap-2 text-sm cursor-pointer">
+                            <input 
+                                type="checkbox" 
+                                name="remember" 
+                                className="w-4 h-4 bg-white/5 border border-white/10 rounded focus:ring-blue-500 focus:ring-2 cursor-pointer" 
+                            />
                             <p className="text-[#bdcdff]">Remember me</p>
                         </label>
-                        <a href="/forgot" className="text-sm text-[#4d538b] hover:underline text-[#bdcdff]">Forgot Password?</a>
+                        <a href="/forgot" className="text-sm text-[#bdcdff] hover:underline hover:text-blue-300 transition cursor-pointer">Forgot Password?</a>
                     </div>
                     
-                    <button type="submit" disabled={submitting} className="w-full px-4 py-2 bg-[#566fb8] text-white rounded-md font-semibold hover:bg-[#bdcdff] transition">
-                        {submitting ? "Creating..." : "Create account"}
+                    <button 
+                        type="submit" 
+                        disabled={submitting} 
+                        className="w-full px-4 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                    >
+                        {submitting ? "Creating Account..." : "Create Account"}
                     </button>
-                    <p className="mt-4 text-center text-sm text-white">Already have an account? <a href="/login" className="text-[#bccdff] font-semibold">Sign in</a></p>
+                    
+                    <p className="mt-4 text-center text-sm text-gray-400">
+                        Already have an account?{" "}
+                        <a href="/login" className="text-[#bdcdff] font-semibold hover:text-blue-300 hover:underline transition cursor-pointer">
+                            Sign in
+                        </a>
+                    </p>
                 </form>
             </div>
         </Page>
