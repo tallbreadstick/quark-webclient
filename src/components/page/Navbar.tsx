@@ -1,6 +1,7 @@
 import type { Dispatch, FunctionComponent, SetStateAction } from "react";
 import type { UserSession } from "../../types/UserSession";
 import { useNavigate } from "react-router-dom";
+import Logo from "../../assets/logos/quarklogo-gradient.png";
 
 export interface NavbarProps {
     userSession: UserSession | null;
@@ -26,6 +27,7 @@ const Navbar: FunctionComponent<NavbarProps> = ({ userSession, setUserSession })
         <nav className="w-full flex items-center justify-between px-8 py-4 bg-black/30 backdrop-blur-md text-white shadow-lg">
             {/* --- Left side: quick links --- */}
             <div className="flex items-center gap-8 font-medium text-lg">
+                <img src={Logo} alt="Quark Logo" className="w-10 h-10"/>
                 <a href="/" className="hover:text-[#bccdff] transition-colors">Home</a>
                 <a href="/marketplace" className="hover:text-[#bccdff] transition-colors">Marketplace</a>
                 <a href="/my-courses" className="hover:text-[#bccdff] transition-colors">My Courses</a>
