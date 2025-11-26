@@ -2,14 +2,15 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import Page from "../components/page/Page";
 import { loadSessionState } from "../types/UserSession";
-import api from "../scripts/api";
+// api import removed - using typed endpoint below
+import { fetchCourses } from "../endpoints/CourseHandler";
 import { fetchUsers } from "../endpoints/UserHandler";
 import CourseCard from "../components/CourseCard";
 import SearchFilterBar from "../components/SearchFilterBar";
 import Pagination from "../components/Pagination";
 import LoadingSkeleton from "../components/LoadingSkeleton";
 import EmptyState from "../components/EmptyState";
-import { filterCourses, sortCourses, paginate, getTotalPages, getUserCourses } from "../utils/courseUtils";
+import { filterCourses, sortCourses, paginate, getTotalPages } from "../utils/courseUtils";
 import type { DatabaseCourse } from "../types/CourseTypes";
 
 export default function CoursesPage() {
@@ -27,32 +28,43 @@ export default function CoursesPage() {
     useEffect(() => {
         let cancelled = false;
 
-        async function fetchCourses() {
+        async function loadCourses() {
             setLoading(true);
             setError(null);
             try {
                 await new Promise(resolve => setTimeout(resolve, 1000));
-                
-                const res = await api.get("/course");
-                const data = res.data;
+
+                if (!userSession) {
+                    // anonymous user -> no personal courses
+                    setCourses([]);
+                    setLoading(false);
+                    return;
+                }
+
+                // First fetch profile so we know user id / type
+                const usersRes = await fetchUsers(userSession?.username || userSession?.email || "");
+                let normalized: "educator" | "learner" | undefined = undefined;
+                if (usersRes.status === "OK" && usersRes.ok && usersRes.ok.length > 0) {
+                    const profile = usersRes.ok[0];
+                    // profile.id is available but not required here — server will return the user's courses
+                    normalized = profile.userType === 'EDUCATOR' ? 'educator' : 'learner';
+                    setProfileUserType(normalized);
+                }
+
+                // Ask the server to return only the courses that belong to the current user
+                const params: Record<string, string | undefined> = { my_courses: 'true', page: String(currentPage) };
+                const res = await fetchCourses(params, userSession?.jwt ?? "");
+                const data = res.status === "OK" && res.ok ? res.ok : [];
 
                 if (cancelled) return;
 
-                if (userSession) {
-                    // fetch profile info from backend (session no longer stores id/userType)
-                    const lookupId = userSession.username || userSession.email;
-                    const usersRes = await fetchUsers(lookupId);
-                    if (usersRes.status === "OK" && usersRes.ok && usersRes.ok.length > 0) {
-                        const profile = usersRes.ok[0];
-                        const uid = profile.id;
-                        const normalized = profile.userType === 'EDUCATOR' ? 'educator' : 'learner';
-                        setProfileUserType(normalized);
-                        const userCourses = getUserCourses(data, uid, normalized);
-                        setCourses(userCourses);
+                    if (userSession) {
+                        // server already returned only the user's courses (my_courses=true)
+                        const normalizedInput = data as any as DatabaseCourse[];
+                        setCourses(normalizedInput);
                     } else {
                         setCourses([]);
                     }
-                }
             } catch (err: any) {
                 if (!cancelled) setError(err?.message || "Failed to load courses");
             } finally {
@@ -60,7 +72,7 @@ export default function CoursesPage() {
             }
         }
 
-        fetchCourses();
+        loadCourses();
         return () => {
             cancelled = true;
         };

@@ -62,7 +62,7 @@ const Profile = () => {
         if (res.status === "OK") {
           const lookupId = userSession.username || userSession.email;
           const usersRes = await fetchUsers(lookupId);
-          if (usersRes.status === "OK" && usersRes.ok.length > 0) {
+          if (usersRes.status === "OK" && usersRes.ok && usersRes.ok.length > 0) {
             const uid = usersRes.ok[0].id;
             const picRes = await fetchProfilePicture(uid);
             if (picRes.status === "OK" && picRes.ok) {
@@ -258,13 +258,17 @@ const Profile = () => {
 
   /* -------------------------- Load profile info -------------------------- */
   useEffect(() => {
-    if (!userSession) return navigate("/login");
+    if (!userSession) {
+      navigate("/login");
+      return;
+    }
 
+    // must not return a Promise from useEffect
     const loadProfile = async () => {
       try {
         const id = userSession.username || userSession.email;
         const res = await fetchUsers(id);
-        if (res.status === "OK" && res.ok.length > 0) {
+        if (res.status === "OK" && res.ok && res.ok.length > 0) {
           const p = res.ok[0];
           setProfileUserType(p.userType === "EDUCATOR" ? "educator" : "learner");
 
@@ -292,7 +296,7 @@ const Profile = () => {
 
     loadProfile();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [navigate]);
+  }, [userSession, navigate]);
 
   if (!userSession)
     return (

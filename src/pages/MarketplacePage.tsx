@@ -6,8 +6,9 @@ import CourseCard from "../components/CourseCard";
 import SearchFilterBar from "../components/SearchFilterBar";
 import Pagination from "../components/Pagination";
 import { mockCourses } from "../data/marketplaceData"; 
+import { fetchCourses } from "../endpoints/CourseHandler";
 import type { MarketplaceCourse } from "../types/CourseTypes";
-import { filterCourses, filterByTag, getUniqueTags, paginate, getTotalPages, sortCourses } from "../utils/courseUtils";
+import { filterCourses, getUniqueTags, paginate, getTotalPages, sortCourses } from "../utils/courseUtils";
 import { fetchUsers } from "../endpoints/UserHandler";
 
 export default function MarketplacePage() {
@@ -17,17 +18,64 @@ export default function MarketplacePage() {
     const [loading, setLoading] = useState(true);
     const [profileUserType, setProfileUserType] = useState<"educator" | "learner" | "student" | undefined>(undefined);
     const [searchTerm, setSearchTerm] = useState("");
-    const [selectedTag, setSelectedTag] = useState("");
+    // allow selecting multiple tags for the server-side 'tags' param
+    const [selectedTags, setSelectedTags] = useState<string[]>([]);
     const [sortBy, setSortBy] = useState("newest");
+    const [order, setOrder] = useState<"desc" | "asc">("desc");
+    const [myCourses, setMyCourses] = useState<boolean>(false);
+    const [sharedWithMe, setSharedWithMe] = useState<boolean>(false);
+    const [forkableOnly, setForkableOnly] = useState<boolean>(false);
     const [currentPage, setCurrentPage] = useState(1);
     const coursesPerPage = 9;
 
     useEffect(() => {
-        setTimeout(() => {
-            setCourses(mockCourses);
-            setLoading(false);
-        }, 1000);
-    }, []);
+        let cancelled = false;
+
+        const params: Record<string, string | undefined> = {
+            search: searchTerm || undefined,
+            tags: selectedTags.length ? selectedTags.join(",") : undefined,
+            sort_by: sortBy || undefined,
+            order: order || undefined,
+            my_courses: myCourses ? String(myCourses) : undefined,
+            shared_with_me: sharedWithMe ? String(sharedWithMe) : undefined,
+            forkable: forkableOnly ? String(forkableOnly) : undefined,
+            page: String(currentPage || 1)
+        };
+
+        const load = async () => {
+            setLoading(true);
+            try {
+                const res = await fetchCourses(params, userSession?.jwt ?? "");
+                if (!cancelled) {
+                    if (res.status === "OK" && res.ok) {
+                        // map server response to a shape usable by CourseCard
+                        const mapped = res.ok.map(c => ({
+                            id: c.id,
+                            name: c.name,
+                            description: c.description ?? "",
+                            tags: c.tags ?? [],
+                            enrolled: false,
+                            owner: { username: "—" }
+                        }));
+                        setCourses(mapped);
+                    } else {
+                        // fallback to local mock if server returns error
+                        setCourses(mockCourses);
+                    }
+                }
+            } catch (e) {
+                if (!cancelled) setCourses(mockCourses);
+            } finally {
+                if (!cancelled) setLoading(false);
+            }
+        };
+
+        load();
+
+        return () => {
+            cancelled = true;
+        };
+    }, [searchTerm, selectedTags, sortBy, order, currentPage, myCourses, sharedWithMe, forkableOnly, userSession]);
 
     useEffect(() => {
         if (!userSession) return;
@@ -44,13 +92,16 @@ export default function MarketplacePage() {
                 // ignore
             }
         })();
-    }, []);
+    }, [userSession]);
 
     const allTags = getUniqueTags(courses);
     
     // Apply filters and sorting
     const searchFiltered = filterCourses(courses, searchTerm);
-    const tagFiltered = filterByTag(searchFiltered, selectedTag);
+    // client-side tag filtering supports multi-tag OR match
+    const tagFiltered = selectedTags.length > 0
+        ? searchFiltered.filter(course => selectedTags.some(t => course.tags.includes(t)))
+        : searchFiltered;
     const sorted = sortCourses(tagFiltered, sortBy);
     const currentCourses = paginate(sorted, currentPage, coursesPerPage);
     const totalPages = getTotalPages(sorted.length, coursesPerPage);
@@ -110,9 +161,12 @@ export default function MarketplacePage() {
                     <SearchFilterBar
                         searchTerm={searchTerm}
                         onSearchChange={setSearchTerm}
-                        selectedTag={selectedTag}
+                        
+                        selectedTag={selectedTags[0] ?? ""}
                         allTags={allTags}
-                        onTagSelect={setSelectedTag}
+                        onTagSelect={(tag) => {
+                            setSelectedTags(prev => prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]);
+                        }}
                         searchPlaceholder="Search courses..."
                     />
 
@@ -125,26 +179,57 @@ export default function MarketplacePage() {
                                 <span className="text-gray-400">
                                     Showing {currentCourses.length} of {sorted.length} courses
                                 </span>
-                                <div className="relative">
-                                    <select 
-                                        value={sortBy}
-                                        onChange={(e) => setSortBy(e.target.value)}
-                                        className="px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500/50 appearance-none pr-8 transition [&>option]:bg-slate-900 [&>option]:text-white [&>option:checked]:bg-blue-600 cursor-pointer"
-                                    >
-                                        <option value="newest">Sort by: Newest</option>
-                                        <option value="popular">Sort by: Popular</option>
-                                        <option value="name">Sort by: Name</option>
-                                    </select>
-                                    {/* Custom dropdown arrow for sort */}
-                                    <div className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
-                                        <svg 
-                                            className="h-4 w-4 text-gray-400" 
-                                            fill="none" 
-                                            stroke="currentColor" 
-                                            viewBox="0 0 24 24"
+                                <div className="flex items-center gap-3">
+                                    <div className="flex items-center gap-2">
+                                        <select
+                                            value={order}
+                                            onChange={(e) => setOrder(e.target.value as any)}
+                                            className="px-2 py-2 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition cursor-pointer mr-2"
                                         >
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                                        </svg>
+                                            <option value="desc">Newest</option>
+                                            <option value="asc">Oldest</option>
+                                        </select>
+
+                                        {userSession && (
+                                            <div className="hidden sm:flex items-center gap-3 text-xs text-gray-300 mr-2">
+                                                <label className="inline-flex items-center gap-2 cursor-pointer">
+                                                    <input type="checkbox" checked={myCourses} onChange={(e) => setMyCourses(e.target.checked)} className="form-checkbox" />
+                                                    <span>My courses</span>
+                                                </label>
+                                                <label className="inline-flex items-center gap-2 cursor-pointer">
+                                                    <input type="checkbox" checked={sharedWithMe} onChange={(e) => setSharedWithMe(e.target.checked)} className="form-checkbox" />
+                                                    <span>Shared</span>
+                                                </label>
+                                            </div>
+                                        )}
+
+                                        <label className="inline-flex items-center gap-2 cursor-pointer text-xs text-gray-300 mr-3">
+                                            <input type="checkbox" checked={forkableOnly} onChange={(e) => setForkableOnly(e.target.checked)} className="form-checkbox" />
+                                            <span>Forkable</span>
+                                        </label>
+                                    </div>
+
+                                    <div className="relative">
+                                        <select
+                                            value={sortBy}
+                                            onChange={(e) => setSortBy(e.target.value)}
+                                            className="px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition cursor-pointer"
+                                        >
+                                            <option value="newest">Sort by: Newest</option>
+                                            <option value="popular">Sort by: Popular</option>
+                                            <option value="name">Sort by: Name</option>
+                                        </select>
+
+                                        <div className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
+                                            <svg
+                                                className="h-4 w-4 text-gray-400"
+                                                fill="none"
+                                                stroke="currentColor"
+                                                viewBox="0 0 24 24"
+                                            >
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                            </svg>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -157,8 +242,8 @@ export default function MarketplacePage() {
                                             userType={profileUserType}
                                             onEnroll={handleEnroll}
                                             onFork={handleFork}
-                                            onTagClick={setSelectedTag}
-                                            selectedTag={selectedTag}
+                                            onTagClick={(tag) => setSelectedTags(prev => prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag])}
+                                            selectedTag={selectedTags[0] ?? ""}
                                             variant="grid"
                                         />
                                     </div>
