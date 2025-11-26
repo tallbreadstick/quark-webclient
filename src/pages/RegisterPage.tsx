@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { loadSessionState } from "../types/UserSession";
 import Page from "../components/page/Page";
-import api from "../scripts/api";
+import { register as registerEndpoint } from "../endpoints/UserHandler";
 
 export default function RegisterPage() {
     const { userSession, setUserSession } = loadSessionState();
@@ -22,13 +22,18 @@ export default function RegisterPage() {
             username: String(formData.get('username') || ''),
             email: String(formData.get('email') || ''),
             password: String(formData.get('password') || ''),
-            userType: String(formData.get('userType') || ''),
+            userType: (String(formData.get('userType') || '') as unknown) as "EDUCATOR" | "STUDENT",
         };
 
         try {
-            await api.post("/auth/register", body);
-            // registration successful — redirect to login page
-            navigate("/login");
+            const res = await registerEndpoint(body);
+
+            if (res.status === "OK") {
+                // registration successful — redirect to login page
+                navigate("/login");
+            } else {
+                throw new Error(res.err ?? "Registration failed");
+            }
         } catch (err: any) {
             const msg = err?.response?.data || err?.message || 'An error occurred';
             setError(typeof msg === 'string' ? msg : JSON.stringify(msg));

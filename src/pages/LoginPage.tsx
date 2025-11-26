@@ -2,7 +2,8 @@
 import { useNavigate } from "react-router-dom";
 import { loadSessionState } from "../types/UserSession";
 import Page from "../components/page/Page";
-import api from "../scripts/api";
+import { login as loginEndpoint, fetchUsers } from "../endpoints/UserHandler";
+import { fetchProfilePicture, fetchBio } from "../endpoints/ProfileHandler";
 
 export default function LoginPage() {
     const { userSession, setUserSession } = loadSessionState();
@@ -25,20 +26,50 @@ export default function LoginPage() {
         };
 
         try {
-            const res = await api.post("/auth/login", body);
-            const data = res.data;
+            const res = await loginEndpoint(body);
 
-            // store session including token and expiration
-            setUserSession({
-                id: data.id,
-                username: data.username,
-                email: data.email,
-                userType: data.userType,
-                token: data.token,
-                expiration: data.expiration,
-            });
+            if (res.status === "OK" && res.ok) {
+                // store only the slim session returned from the auth endpoint
 
-            navigate("/");
+                // start with the basic session
+                const slim = {
+                    jwt: res.ok.jwt,
+                    username: res.ok.username,
+                    email: res.ok.email,
+                };
+
+                // try to enrich the session with profile picture and bio — backend keeps these under profile endpoints
+                try {
+                    const lookupId = slim.username || slim.email;
+                    const usersRes = await fetchUsers(lookupId);
+                    if (usersRes.status === "OK" && usersRes.ok && usersRes.ok.length > 0) {
+                        const profile = usersRes.ok[0];
+                        // fetch picture and bio if available
+                        const pictureRes = await fetchProfilePicture(profile.id);
+                        if (pictureRes.status === "OK" && pictureRes.ok) {
+                            const raw = pictureRes.ok;
+                            // if backend returns just base64, prefix it so browsers can render it as a data url
+                            const dataUrl = raw.startsWith("data:") ? raw : `data:image/png;base64,${raw}`;
+                            // store into session
+                            (slim as any).profilePictureUrl = dataUrl;
+                        }
+
+                        const bioRes = await fetchBio(profile.id);
+                        if (bioRes.status === "OK" && bioRes.ok) {
+                            (slim as any).bio = bioRes.ok;
+                        }
+                    }
+                } catch (e) {
+                    // silently ignore enrichment failures — login itself succeeded
+                }
+
+                setUserSession(slim);
+
+                navigate("/");
+            } else {
+                throw new Error(res.err ?? "Login failed");
+            }
+
         } catch (err: any) {
             const msg = err?.response?.data || err?.message || 'An error occurred';
             setError(typeof msg === 'string' ? msg : JSON.stringify(msg));

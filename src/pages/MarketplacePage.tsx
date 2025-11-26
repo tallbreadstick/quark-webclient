@@ -8,12 +8,14 @@ import Pagination from "../components/Pagination";
 import { mockCourses } from "../data/marketplaceData"; 
 import type { MarketplaceCourse } from "../types/CourseTypes";
 import { filterCourses, filterByTag, getUniqueTags, paginate, getTotalPages, sortCourses } from "../utils/courseUtils";
+import { fetchUsers } from "../endpoints/UserHandler";
 
 export default function MarketplacePage() {
     const { userSession, setUserSession } = loadSessionState();
     const navigate = useNavigate();
     const [courses, setCourses] = useState<MarketplaceCourse[]>([]);
     const [loading, setLoading] = useState(true);
+    const [profileUserType, setProfileUserType] = useState<"educator" | "learner" | "student" | undefined>(undefined);
     const [searchTerm, setSearchTerm] = useState("");
     const [selectedTag, setSelectedTag] = useState("");
     const [sortBy, setSortBy] = useState("newest");
@@ -25,6 +27,23 @@ export default function MarketplacePage() {
             setCourses(mockCourses);
             setLoading(false);
         }, 1000);
+    }, []);
+
+    useEffect(() => {
+        if (!userSession) return;
+
+        const lookupId = userSession.username || userSession.email;
+        (async () => {
+            try {
+                const res = await fetchUsers(lookupId);
+                if (res.status === "OK" && res.ok && res.ok.length > 0) {
+                    const profile = res.ok[0];
+                    setProfileUserType(profile.userType === 'EDUCATOR' ? 'educator' : 'learner');
+                }
+            } catch (e) {
+                // ignore
+            }
+        })();
     }, []);
 
     const allTags = getUniqueTags(courses);
@@ -47,7 +66,7 @@ export default function MarketplacePage() {
         ));
     };
 
-    const handleFork = (courseId: number, courseName: string, e: React.MouseEvent) => {
+    const handleFork = (_courseId: number, courseName: string, e: React.MouseEvent) => {
         e.stopPropagation();
         if (!userSession) return;
         
@@ -58,7 +77,7 @@ export default function MarketplacePage() {
         navigate(`/course/${courseId}`);
     };
 
-    const isEducator = userSession?.userType === 'educator';
+    const isEducator = profileUserType === 'educator';
 
     return (
         <Page title="Quark | Marketplace" userSession={userSession} setUserSession={setUserSession}>
@@ -135,7 +154,7 @@ export default function MarketplacePage() {
                                     <div key={course.id} onClick={() => handleCourseClick(course.id)}>
                                         <CourseCard
                                             course={course}
-                                            userType={userSession?.userType}
+                                            userType={profileUserType}
                                             onEnroll={handleEnroll}
                                             onFork={handleFork}
                                             onTagClick={setSelectedTag}

@@ -13,11 +13,11 @@ api.interceptors.request.use((config) => {
         const raw = localStorage.getItem("session");
         if (raw) {
             const session = JSON.parse(raw);
-            if (session?.token) {
+            if (session?.jwt) {
                 config.headers = config.headers || {};
                 // only set Authorization if it's not already set
                 if (!config.headers["Authorization"] && !config.headers["authorization"]) {
-                    config.headers["Authorization"] = `Bearer ${session.token}`;
+                    config.headers["Authorization"] = `Bearer ${session.jwt}`;
                 }
             }
         }

@@ -48,8 +48,8 @@ export default function CourseCreationPage() {
 
         try {
             const headers: Record<string, string> = {};
-            if (userSession && (userSession as any).token) {
-                headers["Authorization"] = `Bearer ${(userSession as any).token}`;
+            if (userSession && userSession.jwt) {
+                headers["Authorization"] = `Bearer ${userSession.jwt}`;
             }
 
             await api.post("/course", body, { headers });

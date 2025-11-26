@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import Page from "../components/page/Page";
 import { loadSessionState } from "../types/UserSession";
 import api from "../scripts/api";
+import { fetchUsers } from "../endpoints/UserHandler";
 import CourseCard from "../components/CourseCard";
 import SearchFilterBar from "../components/SearchFilterBar";
 import Pagination from "../components/Pagination";
@@ -21,6 +22,8 @@ export default function CoursesPage() {
     const [sortBy, setSortBy] = useState("newest");
     const coursesPerPage = 9;
 
+    const [profileUserType, setProfileUserType] = useState<"educator" | "learner" | "student" | undefined>(undefined);
+
     useEffect(() => {
         let cancelled = false;
 
@@ -35,11 +38,20 @@ export default function CoursesPage() {
 
                 if (cancelled) return;
 
-                if (userSession && userSession.id != null) {
-                    const userCourses = getUserCourses(data, userSession.id, userSession.userType);
-                    setCourses(userCourses);
-                } else {
-                    setCourses([]);
+                if (userSession) {
+                    // fetch profile info from backend (session no longer stores id/userType)
+                    const lookupId = userSession.username || userSession.email;
+                    const usersRes = await fetchUsers(lookupId);
+                    if (usersRes.status === "OK" && usersRes.ok && usersRes.ok.length > 0) {
+                        const profile = usersRes.ok[0];
+                        const uid = profile.id;
+                        const normalized = profile.userType === 'EDUCATOR' ? 'educator' : 'learner';
+                        setProfileUserType(normalized);
+                        const userCourses = getUserCourses(data, uid, normalized);
+                        setCourses(userCourses);
+                    } else {
+                        setCourses([]);
+                    }
                 }
             } catch (err: any) {
                 if (!cancelled) setError(err?.message || "Failed to load courses");
@@ -54,8 +66,8 @@ export default function CoursesPage() {
         };
     }, [userSession]);
 
-    const canCreateCourse = userSession?.userType === 'educator';
-    const isLearner = userSession?.userType === 'learner';
+    const canCreateCourse = profileUserType === 'educator';
+    
 
     // Apply filters and sorting
     const filtered = filterCourses(courses || [], searchTerm);
@@ -69,13 +81,7 @@ export default function CoursesPage() {
     };
 
     // Determine button text based on user type and course progress
-    const getCourseButtonText = (course: DatabaseCourse) => {
-        if (canCreateCourse) return "Open";
-        if (isLearner) {
-            return "Start";
-        }
-        return "Open";
-    };
+    // (Left as a small helper for future use) -- not needed right now so keep logic inline where required
 
     return (
         <Page title="Quark | My Courses" userSession={userSession} setUserSession={setUserSession}>
@@ -84,7 +90,7 @@ export default function CoursesPage() {
                     <div className="mb-8">
                         <h1 className="text-3xl font-bold text-white mb-2">My Courses</h1>
                         <p className="text-gray-400">
-                            {userSession?.userType === 'educator'
+                            {profileUserType === 'educator'
                                 ? "Manage and create your courses" 
                                 : "View your enrolled courses and learning progress"
                             }
@@ -162,7 +168,7 @@ export default function CoursesPage() {
                                             <CourseCard
                                                 key={course.id}
                                                 course={course}
-                                                userType={userSession.userType}
+                                                userType={profileUserType}
                                                 variant="grid"
                                             />
                                         ))}

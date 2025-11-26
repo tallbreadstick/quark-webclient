@@ -2,13 +2,11 @@ import { useState, useEffect } from "react";
 import type { Dispatch, SetStateAction } from "react";
 
 export interface UserSession {
-    id: number;
+    jwt: string;
     username: string;
     email: string;
-    userType: "learner" | "educator";
-    token: string;
-    expiration: number; // timestamp in milliseconds
-    profilePictureUrl?: string;
+    profilePictureUrl?: string | null; // data URL / full URL
+    bio?: string | null;
 }
 
 // Custom hook to persist session in localStorage
@@ -43,6 +41,7 @@ export function loadSessionState() {
             setUserSessionState((prev) => {
                 const next = (value as (prev: UserSession | null) => UserSession | null)(prev);
                 try {
+                    // persist only the new UserSession shape
                     if (next === null) localStorage.removeItem("session");
                     else localStorage.setItem("session", JSON.stringify(next));
                 } catch (e) {

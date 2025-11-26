@@ -42,12 +42,20 @@ const Navbar: FunctionComponent<NavbarProps> = ({ userSession, setUserSession })
                             onClick={handleProfileClick}
                             className="flex items-center gap-3 cursor-pointer hover:opacity-90 transition group"
                         >
-                            {/* Placeholder profile image */}
-                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center border border-cyan-400 group-hover:border-cyan-300 transition-colors">
-                                <span className="text-white font-semibold text-sm">
-                                    {userSession.username?.charAt(0).toUpperCase() || 'U'}
-                                </span>
-                            </div>
+                            {/* Profile image (prefer userSession.profilePictureUrl) */}
+                            {userSession.profilePictureUrl ? (
+                                <img
+                                    src={userSession.profilePictureUrl}
+                                    alt={userSession.username || 'Profile'}
+                                    className="w-10 h-10 rounded-full object-cover border border-cyan-400 group-hover:border-cyan-300 transition-colors"
+                                />
+                            ) : (
+                                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center border border-cyan-400 group-hover:border-cyan-300 transition-colors">
+                                    <span className="text-white font-semibold text-sm">
+                                        {userSession.username?.charAt(0).toUpperCase() || 'U'}
+                                    </span>
+                                </div>
+                            )}
                             <span className="font-semibold group-hover:text-[#bccdff] transition-colors">
                                 {userSession.username}
                             </span>
