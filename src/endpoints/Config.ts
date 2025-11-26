@@ -1,14 +1,23 @@
 export const baseUrl = "http://localhost:8080";
 
-export interface Response {
+export interface Response<T> {
     status: "OK" | "ERROR";
-    msg: any;
+    ok: T | null;
+    err: string | null;
 }
 
-export function Ok(msg: string): Response {
-    return { status: "OK", msg };
+export function Ok<T>(ok: T): Response<T> {
+    return {
+        status: "OK",
+        ok,
+        err: null
+    };
 }
 
-export function Err(msg: string): Response {
-    return { status: "ERROR", msg }
+export function Err<T>(err: string): Response<T> {
+    return {
+        status: "ERROR",
+        ok: null,
+        err
+    };
 }
