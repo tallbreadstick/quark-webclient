@@ -8,6 +8,7 @@ import LoadingSkeleton from "../components/LoadingSkeleton";
 import ReactMarkdown from "react-markdown";
 import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
+import Editor from "@monaco-editor/react";
 
 // lightweight lazy LaTeX renderer using Markdown+KaTeX to avoid extra deps
 const LatexRenderer = React.lazy(async () => ({
@@ -33,6 +34,7 @@ export default function CourseEditPage() {
   const [description, setDescription] = useState<string | null>(null);
   const [introRenderer, setIntroRenderer] = useState<"MARKDOWN" | "LATEX">("MARKDOWN");
   const [introContent, setIntroContent] = useState("");
+  const [activeTab, setActiveTab] = useState<"METADATA" | "CHAPTERS">("METADATA");
   const [forkable, setForkable] = useState(false);
   const [visibility, setVisibility] = useState<"PUBLIC" | "PRIVATE" | "UNLISTED">("PUBLIC");
   const [tagsText, setTagsText] = useState("");
@@ -156,73 +158,138 @@ export default function CourseEditPage() {
 
   return (
     <Page title={`Quark | Edit ${name || "Course"}`} userSession={userSession} setUserSession={setUserSession}>
-      <div className="relative z-10 min-h-[calc(100vh-7rem)] flex items-center justify-center px-6 py-8 text-gray-200">
-        <div className="max-w-3xl w-full mx-auto bg-black/20 backdrop-blur-lg border border-white/10 rounded-2xl p-8">
-          <h1 className="text-2xl font-semibold text-white mb-2 text-center">Edit Course</h1>
-          {ownerName && <div className="text-center text-sm text-gray-400 mb-4">Owner: {ownerName}</div>}
+      <div className="relative z-10 h-[calc(100vh-7rem)] px-3 py-4 text-gray-200">
+        <div className="w-full mx-auto grid grid-cols-12 gap-6 items-start h-full">
+          {/* i forgor what the tabs were so i just put ts */}
+          {/* LEFT: Metadata / Tabs (narrow) */}
+          <div className="col-span-12 lg:col-span-2 w-full bg-black/20 backdrop-blur-lg border border-white/10 rounded-2xl p-6 h-full flex flex-col justify-between">
+            <div className="flex-1 overflow-hidden">
+              <h1 className="text-2xl font-semibold text-white mb-4 text-left">Edit Course</h1>
 
-          {error && <div className="mb-4 text-sm text-red-400 text-center">{error}</div>}
+              {!userSession ? (
+                <div className="text-center text-gray-300">
+                  <p className="mb-4">You must be signed in to edit a course.</p>
+                  <div className="flex justify-center gap-3">
+                    <a href="/login" className="px-4 py-2 bg-[#566fb8] rounded-md text-white cursor-pointer">Sign in</a>
+                  </div>
+                </div>
+              ) : (
+                <form id="course-edit-form" onSubmit={handleSubmit} className="flex flex-col gap-4 h-full overflow-auto">
+                  {error && <div className="mb-2 text-sm text-red-400">{error}</div>}
 
-          <form onSubmit={handleSubmit}>
-            <label className="block mb-2 text-sm font-medium text-[#bdcdff]">Name</label>
-            <input value={name} onChange={(e) => setName(e.target.value)} required className="w-full px-4 py-2 mb-4 border rounded-md bg-black/20 text-white" />
+                  <div className="mb-3">
+                    <div className="flex gap-2">
+                      <button type="button" onClick={() => setActiveTab("METADATA")} className={`px-3 py-1 rounded-md ${activeTab === "METADATA" ? "bg-indigo-600 text-white" : "bg-white/5 text-white"}`}>
+                        Metadata
+                      </button>
+                      <button type="button" onClick={() => setActiveTab("CHAPTERS")} className={`px-3 py-1 rounded-md ${activeTab === "CHAPTERS" ? "bg-indigo-600 text-white" : "bg-white/5 text-white"}`}>
+                        Chapter Edit
+                      </button>
+                    </div>
+                  </div>
 
-            <label className="block mb-2 text-sm font-medium text-[#bdcdff]">Description</label>
-            <input value={description ?? ""} onChange={(e) => setDescription(e.target.value)} className="w-full px-4 py-2 mb-4 border rounded-md bg-black/20 text-white" />
+                  {activeTab === "METADATA" ? (
+                    <>
+                      <div>
+                        <label className="block mb-2 text-sm font-medium text-[#bdcdff]">Name</label>
+                        <input value={name} onChange={(e) => setName(e.target.value)} required className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500/50 transition" />
+                      </div>
 
-            <label className="block mb-2 text-sm font-medium text-[#bdcdff]">Introduction</label>
-            <div className="mb-4">
-              <div className="flex items-center gap-3 mb-2">
-                <div className="text-sm text-gray-300">Renderer</div>
-                <select value={introRenderer} onChange={(e) => setIntroRenderer(e.target.value as any)} className="px-2 py-1 bg-black/30 text-white rounded-md border border-white/10">
+                      <div>
+                        <label className="block mb-2 text-sm font-medium text-[#bdcdff]">Description</label>
+                        <textarea value={description ?? ""} onChange={(e) => setDescription(e.target.value)} rows={4} className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500/50 transition h-24 resize-y" />
+                      </div>
+
+                      <div>
+                        <label className="block mb-2 text-sm font-medium text-[#bdcdff]">Tag IDs (comma separated)</label>
+                        <input value={tagsText} onChange={(e) => setTagsText(e.target.value)} placeholder="e.g. 1,2,3" className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500/50 transition" />
+                      </div>
+
+                      <div className="flex items-center gap-4">
+                        <label className="inline-flex items-center gap-2 text-sm text-black-300">
+                          <input type="checkbox" checked={forkable} onChange={(e) => setForkable(e.target.checked)} />
+                          <span className="text-white">Forkable</span>
+                        </label>
+
+                        <label className="inline-flex items-center gap-2 text-sm text-black-300">
+                          <div className="text-sm mr-2 text-white">Visibility</div>
+                          <select value={visibility} onChange={(e) => setVisibility(e.target.value as any)} className="px-2 py-1 bg-black text-white rounded-md border border-white/10">
+                            <option value="PUBLIC">Public</option>
+                            <option value="PRIVATE">Private</option>
+                            <option value="UNLISTED">Unlisted</option>
+                          </select>
+                        </label>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="text-sm text-gray-300">Chapter editor is empty for now.</div>
+                  )}
+                </form>
+              )}
+            </div>
+
+            {userSession && (
+              <div className="pt-4">
+                <div className="flex justify-center">
+                  <button type="submit" form="course-edit-form" disabled={submitting} onClick={() => document.querySelector<HTMLFormElement>("#course-edit-form")?.dispatchEvent(new Event('submit', {cancelable: true, bubbles: true}))} className="px-6 py-3 bg-indigo-600 rounded-md text-white font-medium cursor-pointer hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                    {submitting ? "Saving..." : "Save Changes"}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* CENTER: Editor */}
+          <div className="col-span-12 lg:col-span-5 w-full bg-black/20 backdrop-blur-lg border border-white/10 rounded-2xl p-4 h-full flex flex-col">
+            <div className="flex items-center justify-between mb-3">
+              <div className="text-sm text-gray-300">Renderer</div>
+              <div>
+                <select value={introRenderer} onChange={(e) => setIntroRenderer(e.target.value as any)} className="px-2 py-1 bg-black text-white rounded-md border border-white/10">
                   <option value="MARKDOWN">Markdown</option>
                   <option value="LATEX">LaTeX</option>
                 </select>
               </div>
+            </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <textarea value={introContent} onChange={(e) => setIntroContent(e.target.value)} rows={10} className="w-full px-4 py-2 rounded-md bg-black/20 text-white border" placeholder={introRenderer === "MARKDOWN" ? "Write introduction in Markdown..." : "Write LaTeX content..."} />
+            <div className="flex-1 bg-transparent border border-white/5 rounded-md overflow-hidden">
+              <Editor
+                height="100%"
+                theme="vs-dark"
+                defaultLanguage={introRenderer === "LATEX" ? "latex" : "markdown"}
+                language={introRenderer === "LATEX" ? "latex" : "markdown"}
+                value={introContent}
+                onChange={(val) => setIntroContent(val ?? "")}
+                options={{
+                  minimap: { enabled: false },
+                  lineNumbers: 'on',
+                  scrollBeyondLastLine: false,
+                  wordWrap: 'on',
+                  fontSize: 14,
+                  automaticLayout: true,
+                }}
+              />
+            </div>
+          </div>
 
-                <div className="w-full px-4 py-2 rounded-md bg-black/10 border text-white overflow-auto" style={{ minHeight: 160 }}>
-                  <div className="text-xs text-gray-300 mb-2">Preview</div>
-                  <div className="prose prose-invert text-sm">
-                    <Suspense fallback={<div>Loading preview...</div>}>
-                      {introRenderer === "MARKDOWN" ? (
-                        <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>{introContent}</ReactMarkdown>
-                      ) : (
-                        <LatexRenderer value={introContent} />
-                      )}
-                    </Suspense>
-                  </div>
-                </div>
+          {/* RIGHT: Preview */}
+          <div className="col-span-12 lg:col-span-5 w-full bg-black/20 backdrop-blur-lg border border-white/10 rounded-2xl p-6 h-full flex flex-col overflow-y-auto">
+            <h1 className="text-2xl font-semibold text-white mb-4 text-center">Preview</h1>
+
+            <div className="w-full px-6 py-6 rounded-md bg-white border border-gray-200 text-gray-900 overflow-auto h-full" style={{ minHeight: 0 }}>
+              <div className="prose max-w-none">
+                <Suspense fallback={<div>Loading preview...</div>}>
+                  {introRenderer === "MARKDOWN" ? (
+                    <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>
+                      {introContent}
+                    </ReactMarkdown>
+                  ) : (
+                    <LatexRenderer value={introContent} />
+                  )}
+                </Suspense>
               </div>
             </div>
+          </div>
 
-            <label className="block mb-2 text-sm font-medium text-[#bdcdff]">Tag IDs (comma separated)</label>
-            <input value={tagsText} onChange={(e) => setTagsText(e.target.value)} placeholder="e.g. 1,2,3" className="w-full px-4 py-2 mb-6 border rounded-md bg-black/20 text-white" />
-
-            <div className="flex items-center gap-4 mb-4">
-              <label className="inline-flex items-center gap-2 text-sm text-gray-300">
-                <input type="checkbox" checked={forkable} onChange={(e) => setForkable(e.target.checked)} />
-                <span>Forkable</span>
-              </label>
-
-              <label className="inline-flex items-center gap-2 text-sm text-gray-300">
-                <div className="text-sm mr-2">Visibility</div>
-                <select value={visibility} onChange={(e) => setVisibility(e.target.value as any)} className="px-2 py-1 bg-black/30 text-white rounded-md border border-white/10">
-                  <option value="PUBLIC">Public</option>
-                  <option value="PRIVATE">Private</option>
-                  <option value="UNLISTED">Unlisted</option>
-                </select>
-              </label>
-            </div>
-
-            <div className="flex justify-center">
-              <button type="submit" disabled={submitting} className="px-6 py-3 bg-indigo-600 rounded-md text-white font-medium cursor-pointer hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-                {submitting ? "Saving..." : "Save Changes"}
-              </button>
-            </div>
-          </form>
         </div>
       </div>
     </Page>
