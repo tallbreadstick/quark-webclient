@@ -1,4 +1,4 @@
-import React, { useEffect, useState, Suspense } from "react";
+import React, { useEffect, useState, Suspense, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import Page from "../components/page/Page";
 import { loadSessionState } from "../types/UserSession";
@@ -34,6 +34,19 @@ export default function CourseEditPage() {
   const [description, setDescription] = useState<string | null>(null);
   const [introRenderer, setIntroRenderer] = useState<"MARKDOWN" | "LATEX">("MARKDOWN");
   const [introContent, setIntroContent] = useState("");
+  // Resizable left panel state
+  const [leftWidth, setLeftWidth] = useState<number>(320);
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const draggingRef = useRef(false);
+  const startXRef = useRef(0);
+  const startWidthRef = useRef(0);
+  const [isLarge, setIsLarge] = useState(() => typeof window !== 'undefined' ? window.innerWidth >= 1024 : true);
+
+  // Minimums to prevent editor/preview from collapsing
+  const MIN_LEFT = 200;
+  const MIN_CENTER = 360;
+  const MIN_PREVIEW = 360;
+  const MIN_REMAIN = MIN_CENTER + MIN_PREVIEW;
   const [activeTab, setActiveTab] = useState<"METADATA" | "CHAPTERS">("METADATA");
   const [forkable, setForkable] = useState(false);
   const [visibility, setVisibility] = useState<"PUBLIC" | "PRIVATE" | "UNLISTED">("PUBLIC");
@@ -104,6 +117,78 @@ export default function CourseEditPage() {
     };
   }, [courseId, userSession]);
 
+  // Responsive tracking for large screens
+  useEffect(() => {
+    const onResize = () => setIsLarge(window.innerWidth >= 1024);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
+
+  // Mousemove cleanup effect (ensures handlers removed on unmount)
+  useEffect(() => {
+    const onMouseMove = (e: MouseEvent) => {
+      if (!draggingRef.current || !containerRef.current) return;
+      const dx = e.clientX - startXRef.current;
+      const containerRect = containerRef.current.getBoundingClientRect();
+      const max = Math.max(MIN_LEFT, containerRect.width - MIN_REMAIN);
+      let newWidth = Math.max(MIN_LEFT, Math.min(startWidthRef.current + dx, max));
+      setLeftWidth(newWidth);
+    };
+
+    const onMouseUp = () => {
+      if (draggingRef.current) {
+        draggingRef.current = false;
+        document.body.style.cursor = '';
+        window.removeEventListener('mousemove', onMouseMove);
+        window.removeEventListener('mouseup', onMouseUp);
+      }
+    };
+
+    return () => {
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', onMouseUp);
+      document.body.style.cursor = '';
+    };
+  }, []);
+
+  const startDrag = (e: React.MouseEvent) => {
+    if (!containerRef.current) return;
+    draggingRef.current = true;
+    startXRef.current = e.clientX;
+    startWidthRef.current = leftWidth;
+    document.body.style.cursor = 'col-resize';
+    const onMouseMove = (ev: MouseEvent) => {
+      if (!draggingRef.current || !containerRef.current) return;
+      const dx = ev.clientX - startXRef.current;
+      const containerRect = containerRef.current.getBoundingClientRect();
+      const max = Math.max(MIN_LEFT, containerRect.width - MIN_REMAIN);
+      let newWidth = Math.max(MIN_LEFT, Math.min(startWidthRef.current + dx, max));
+      setLeftWidth(newWidth);
+    };
+    const onMouseUp = () => {
+      draggingRef.current = false;
+      document.body.style.cursor = '';
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', onMouseUp);
+    };
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup', onMouseUp);
+  };
+
+  // Clamp leftWidth on window/container resize so panels never collapse
+  useEffect(() => {
+    const clampToBounds = () => {
+      if (!containerRef.current) return;
+      const rect = containerRef.current.getBoundingClientRect();
+      const max = Math.max(MIN_LEFT, rect.width - MIN_REMAIN);
+      setLeftWidth((w) => Math.max(MIN_LEFT, Math.min(w, max)));
+    };
+
+    window.addEventListener('resize', clampToBounds);
+    clampToBounds();
+    return () => window.removeEventListener('resize', clampToBounds);
+  }, []);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
@@ -159,10 +244,24 @@ export default function CourseEditPage() {
   return (
     <Page title={`Quark | Edit ${name || "Course"}`} userSession={userSession} setUserSession={setUserSession}>
       <div className="relative z-10 h-[calc(100vh-7rem)] px-3 py-4 text-gray-200">
-        <div className="w-full mx-auto grid grid-cols-12 gap-6 items-start h-full">
+        <div
+          ref={containerRef}
+          className="w-full mx-auto gap-6 items-start h-full relative"
+          style={{ display: 'grid', gridTemplateColumns: isLarge ? `${leftWidth}px 1fr 1fr` : '1fr', gap: '1.5rem' }}
+        >
+
+          {isLarge && (
+            <div
+              onMouseDown={startDrag}
+              style={{ position: 'absolute', top: 0, left: leftWidth, height: '100%', width: 8, transform: 'translateX(-4px)', cursor: 'col-resize', zIndex: 40 }}
+              className="hidden lg:block"
+            >
+              <div className="h-full w-full bg-transparent hover:bg-white/10" />
+            </div>
+          )}
           {/* i forgor what the tabs were so i just put ts */}
           {/* LEFT: Metadata / Tabs (narrow) */}
-          <div className="col-span-12 lg:col-span-2 w-full bg-black/20 backdrop-blur-lg border border-white/10 rounded-2xl p-6 h-full flex flex-col justify-between">
+          <div className="w-full bg-black/20 backdrop-blur-lg border border-white/10 rounded-2xl p-6 h-full flex flex-col justify-between">
             <div className="flex-1 overflow-hidden">
               <h1 className="text-2xl font-semibold text-white mb-4 text-left">Edit Course</h1>
 
@@ -240,7 +339,7 @@ export default function CourseEditPage() {
           </div>
 
           {/* CENTER: Editor */}
-          <div className="col-span-12 lg:col-span-5 w-full bg-black/20 backdrop-blur-lg border border-white/10 rounded-2xl p-4 h-full flex flex-col">
+          <div className="w-full bg-black/20 backdrop-blur-lg border border-white/10 rounded-2xl p-4 h-full flex flex-col">
             <div className="flex items-center justify-between mb-3">
               <div className="text-sm text-gray-300">Renderer</div>
               <div>
@@ -272,7 +371,7 @@ export default function CourseEditPage() {
           </div>
 
           {/* RIGHT: Preview */}
-          <div className="col-span-12 lg:col-span-5 w-full bg-black/20 backdrop-blur-lg border border-white/10 rounded-2xl p-6 h-full flex flex-col overflow-y-auto">
+          <div className="w-full bg-black/20 backdrop-blur-lg border border-white/10 rounded-2xl p-6 h-full flex flex-col overflow-y-auto">
             <h1 className="text-2xl font-semibold text-white mb-4 text-center">Preview</h1>
 
             <div className="w-full px-6 py-6 rounded-md bg-white border border-gray-200 text-gray-900 overflow-auto h-full" style={{ minHeight: 0 }}>
