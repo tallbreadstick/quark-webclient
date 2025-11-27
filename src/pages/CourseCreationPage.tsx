@@ -222,7 +222,8 @@ export default function CourseCreationPage() {
                     </div>
 
                     {/* RIGHT: Preview */}
-                    <div className="col-span-12 lg:col-span-5 w-full bg-black/20 backdrop-blur-lg border border-white/10 rounded-2xl p-6 h-full flex flex-col">
+                    <div className="col-span-12 lg:col-span-5 w-full bg-black/20 backdrop-blur-lg border border-white/10 rounded-2xl p-6 h-full flex flex-col overflow-y-auto"
+                        >
                         <h1 className="text-2xl font-semibold text-white mb-4 text-center">Preview</h1>
 
                         <div className="w-full px-6 py-6 rounded-md bg-white border border-gray-200 text-gray-900 overflow-auto h-full" style={{ minHeight: 0 }}>
