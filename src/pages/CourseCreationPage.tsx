@@ -89,23 +89,23 @@ export default function CourseCreationPage() {
     return (
         <Page title="Quark | Create Course" userSession={userSession} setUserSession={setUserSession}>
             <div className="relative z-10 h-[calc(100vh-7rem)] px-3 py-4 text-gray-200">
-                <div className="w-full mx-auto grid grid-cols-12 gap-6 items-start h-full">
+                <div className="w-full mx-auto flex gap-6 items-start h-full">
 
                     {/* LEFT: form controls (narrow) */}
-                    <div className="col-span-12 lg:col-span-2 w-full bg-black/20 backdrop-blur-lg border border-white/10 rounded-2xl p-6 h-full flex flex-col justify-between">
+                    <div className="bg-black/20 backdrop-blur-lg border border-white/10 rounded-2xl p-6 h-full flex flex-col justify-between w-fit shrink-0">
                         <div className="flex-1 overflow-hidden">
                             <h1 className="text-2xl font-semibold text-white mb-4 text-left">Create Course</h1>
 
                             {!userSession ? (
-                            <div className="text-center text-gray-300">
-                                <p className="mb-4">You must be signed in to create a course.</p>
-                                <div className="flex justify-center gap-3">
-                                    <a href="/login" className="px-4 py-2 bg-[#566fb8] rounded-md text-white cursor-pointer">
-                                        Sign in
-                                    </a>
+                                <div className="text-center text-gray-300">
+                                    <p className="mb-4">You must be signed in to create a course.</p>
+                                    <div className="flex justify-center gap-3">
+                                        <a href="/login" className="px-4 py-2 bg-[#566fb8] rounded-md text-white cursor-pointer">
+                                            Sign in
+                                        </a>
+                                    </div>
                                 </div>
-                            </div>
-                                ) : (
+                            ) : (
                                 <form id="course-create-form" onSubmit={handleSubmit} className="flex flex-col gap-4 h-full overflow-auto">
                                     {error && <div className="mb-2 text-sm text-red-400">{error}</div>}
 
@@ -171,7 +171,7 @@ export default function CourseCreationPage() {
                                         type="submit"
                                         form="course-create-form"
                                         disabled={submitting}
-                                        onClick={() => document.querySelector<HTMLFormElement>("form")?.dispatchEvent(new Event('submit', {cancelable: true, bubbles: true}))}
+                                        onClick={() => document.querySelector<HTMLFormElement>("form")?.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }))}
                                         className="px-6 py-3 bg-indigo-600 rounded-md text-white font-medium cursor-pointer hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                     >
                                         {submitting ? "Creating..." : "Create Course"}
@@ -182,26 +182,20 @@ export default function CourseCreationPage() {
                     </div>
 
                     {/* CENTER: Editor */}
-                    <div className="col-span-12 lg:col-span-5 w-full bg-black/20 backdrop-blur-lg border border-white/10 rounded-2xl p-4 h-full flex flex-col">
+                    <div className="bg-black/20 backdrop-blur-lg border border-white/10 rounded-2xl p-4 h-full flex flex-col flex-1 min-w-0">
                         <div className="flex items-center justify-between mb-3">
                             <div className="text-sm text-gray-300">Renderer</div>
-                            <div>
-                                <select
-                                    value={introRenderer}
-                                    onChange={(e) => setIntroRenderer(e.target.value as any)}
-                                    className="px-2 py-1 bg-black text-white rounded-md border border-white/10"
-                                >
-                                    <option value="MARKDOWN">Markdown</option>
-                                    <option value="LATEX">LaTeX</option>
-                                </select>
-                            </div>
+                            <select
+                                value={introRenderer}
+                                onChange={(e) => setIntroRenderer(e.target.value as any)}
+                                className="px-2 py-1 bg-black text-white rounded-md border border-white/10"
+                            >
+                                <option value="MARKDOWN">Markdown</option>
+                                <option value="LATEX">LaTeX</option>
+                            </select>
                         </div>
-                        {/* brochaco
-                            brotosynthesis
-                            brotato chip
-                            brazzer */}
 
-                        <div className="flex-1 bg-transparent border border-white/5 rounded-md overflow-hidden">
+                        <div className="flex-1 bg-transparent border border-white/5 rounded-md overflow-hidden min-h-0">
                             <Editor
                                 height="100%"
                                 theme="vs-dark"
@@ -222,11 +216,10 @@ export default function CourseCreationPage() {
                     </div>
 
                     {/* RIGHT: Preview */}
-                    <div className="col-span-12 lg:col-span-5 w-full bg-black/20 backdrop-blur-lg border border-white/10 rounded-2xl p-6 h-full flex flex-col overflow-y-auto"
-                        >
+                    <div className="bg-black/20 backdrop-blur-lg border border-white/10 rounded-2xl p-6 h-full flex flex-col flex-1 min-w-0 overflow-y-auto">
                         <h1 className="text-2xl font-semibold text-white mb-4 text-center">Preview</h1>
 
-                        <div className="w-full px-6 py-6 rounded-md bg-white border border-gray-200 text-gray-900 overflow-auto h-full" style={{ minHeight: 0 }}>
+                        <div className="w-full flex-1 px-6 py-6 rounded-md bg-white border border-gray-200 text-gray-900 overflow-auto min-h-0">
                             <div className="prose max-w-none">
                                 <Suspense fallback={<div>Loading preview...</div>}>
                                     {introRenderer === "MARKDOWN" ? (
