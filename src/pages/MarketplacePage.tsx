@@ -5,7 +5,7 @@ import Page from "../components/page/Page";
 import CourseCard from "../components/CourseCard";
 import SearchFilterBar from "../components/SearchFilterBar";
 import Pagination from "../components/Pagination";
-import { mockCourses } from "../data/marketplaceData"; 
+// NOTE: removed mock data fallback; marketplace now uses live API
 import { fetchCourses } from "../endpoints/CourseHandler";
 import type { MarketplaceCourse } from "../types/CourseTypes";
 import { filterCourses, getUniqueTags, paginate, getTotalPages, sortCourses } from "../utils/courseUtils";
@@ -49,22 +49,30 @@ export default function MarketplacePage() {
                 if (!cancelled) {
                     if (res.status === "OK" && res.ok) {
                         // map server response to a shape usable by CourseCard
-                        const mapped = res.ok.map(c => ({
-                            id: c.id,
-                            name: c.name,
-                            description: c.description ?? "",
-                            tags: c.tags ?? [],
-                            enrolled: false,
-                            owner: { username: "—" }
-                        }));
+                        const mapped = res.ok.map(c => {
+                            const rawTags = (c as any).tags ?? [];
+                            const tags = Array.isArray(rawTags)
+                                ? rawTags.map((t: any) => typeof t === "string" ? t : (t?.name ?? String(t?.id ?? "")))
+                                : [];
+
+                            return {
+                                id: c.id,
+                                name: c.name,
+                                description: c.description ?? "",
+                                tags,
+                                enrolled: false,
+                                forkable: Boolean((c as any).forkable),
+                                owner: { username: (c as any).owner ?? "—" }
+                            };
+                        });
                         setCourses(mapped);
                     } else {
-                        // fallback to local mock if server returns error
-                        setCourses(mockCourses);
+                        // API returned an error — show empty list instead of mock data
+                        setCourses([]);
                     }
                 }
             } catch (e) {
-                if (!cancelled) setCourses(mockCourses);
+                if (!cancelled) setCourses([]);
             } finally {
                 if (!cancelled) setLoading(false);
             }
@@ -117,11 +125,12 @@ export default function MarketplacePage() {
         ));
     };
 
-    const handleFork = (_courseId: number, courseName: string, e: React.MouseEvent) => {
+    const handleFork = (_courseId: number, _courseName: string, e: React.MouseEvent) => {
         e.stopPropagation();
         if (!userSession) return;
-        
-        alert(`"${courseName}" has been added to your courses as a template! You can now customize it for your own use.`);
+
+        // Navigate to the fork page which will pre-fill the creation form
+        navigate(`/course/${_courseId}/fork`);
     };
 
     const handleCourseClick = (courseId: number) => {

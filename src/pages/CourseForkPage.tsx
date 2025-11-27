@@ -2,14 +2,13 @@ import React, { useEffect, useState, Suspense } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import Page from "../components/page/Page";
 import { loadSessionState } from "../types/UserSession";
-import { fetchCourseWithChapters, editCourse } from "../endpoints/CourseHandler";
+import { fetchCourseWithChapters, forkCourse } from "../endpoints/CourseHandler";
 import { fetchUsers } from "../endpoints/UserHandler";
 import LoadingSkeleton from "../components/LoadingSkeleton";
 import ReactMarkdown from "react-markdown";
 import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
 
-// lightweight lazy LaTeX renderer using Markdown+KaTeX to avoid extra deps
 const LatexRenderer = React.lazy(async () => ({
   default: ({ value }: { value: string }) => (
     <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>
@@ -18,35 +17,34 @@ const LatexRenderer = React.lazy(async () => ({
   ),
 }));
 
-export default function CourseEditPage() {
+export default function CourseForkPage() {
   const { courseId } = useParams();
   const navigate = useNavigate();
   const { userSession, setUserSession } = loadSessionState();
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
   const [ownerName, setOwnerName] = useState<string | null>(null);
 
-  // form state
   const [name, setName] = useState("");
   const [description, setDescription] = useState<string | null>(null);
   const [introRenderer, setIntroRenderer] = useState<"MARKDOWN" | "LATEX">("MARKDOWN");
   const [introContent, setIntroContent] = useState("");
-  const [forkable, setForkable] = useState(false);
+  const [forkable, setForkable] = useState(true);
   const [visibility, setVisibility] = useState<"PUBLIC" | "PRIVATE" | "UNLISTED">("PUBLIC");
   const [tagsText, setTagsText] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
+
     async function load() {
       setLoading(true);
       setError(null);
 
       try {
         if (!userSession) {
-          setError("You must be signed in to edit courses.");
+          setError("You must be signed in to fork courses.");
           setLoading(false);
           return;
         }
@@ -57,20 +55,21 @@ export default function CourseEditPage() {
           return;
         }
 
-        // confirm user profile (keeps parity with other pages)
+        // Ensure user profile exists and determine type (only educators allowed to fork)
         const lookup = userSession.username || userSession.email || "";
         const userRes = await fetchUsers(lookup);
-        if (!(userRes.status === "OK" && userRes.ok && userRes.ok.length > 0)) {
-          if (!cancelled) setError("User profile not found");
+        const userType = userRes.status === "OK" && userRes.ok && userRes.ok.length > 0 ? userRes.ok[0].userType : null;
+        if (userType !== "EDUCATOR") {
+          setError("Only educators can fork marketplace courses.");
+          setLoading(false);
+          return;
         }
 
         const res = await fetchCourseWithChapters(Number(courseId), userSession.jwt ?? "");
         if (res.status !== "OK" || !res.ok) {
-          if (!cancelled) setError(res.err ?? "Failed to fetch course");
-        } else {
+          setError(res.err ?? "Failed to fetch course");
+          } else {
           const course = res.ok;
-
-          // populate fields
           setName(course.name ?? "");
           setDescription(course.description ?? null);
           setForkable(Boolean(course.forkable));
@@ -78,13 +77,11 @@ export default function CourseEditPage() {
           setTagsText((course.tags ?? []).join(","));
           setOwnerName((course as any).owner ?? null);
 
-          // introduction is stored as JSON string — try to parse
           try {
             const parsed = JSON.parse(course.introduction ?? '{"renderer":"MARKDOWN","content":""}');
             setIntroRenderer(parsed.renderer === "LATEX" ? "LATEX" : "MARKDOWN");
             setIntroContent(parsed.content ?? "");
           } catch (e) {
-            // older courses may have plain text intro — assume MARKDOWN
             setIntroRenderer("MARKDOWN");
             setIntroContent(String(course.introduction ?? ""));
           }
@@ -97,6 +94,7 @@ export default function CourseEditPage() {
     }
 
     load();
+
     return () => {
       cancelled = true;
     };
@@ -120,7 +118,6 @@ export default function CourseEditPage() {
     }
 
     const introJson = JSON.stringify({ renderer: introRenderer, content: introContent });
-
     const tags = (tagsText || "").split(",").map(s => s.trim()).filter(Boolean).map(String);
 
     const body = {
@@ -134,20 +131,19 @@ export default function CourseEditPage() {
 
     try {
       const jwt = userSession?.jwt ?? "";
-      const res = await editCourse(Number(courseId), body as any, jwt);
-      if (res.status !== "OK") throw new Error(res.err ?? "Failed to update course");
+      const res = await forkCourse(Number(courseId), body as any, jwt);
+      if (res.status !== "OK") throw new Error(res.err ?? "Failed to fork course");
 
-      // Navigate to course content after edit
-      navigate(`/course/${courseId}/chapters`);
+      navigate(`/my-courses`);
     } catch (e: any) {
-      setError(e?.message || "Failed to save");
+      setError(e?.message || "Failed to fork course");
     } finally {
       setSubmitting(false);
     }
   };
 
   if (loading) return (
-    <Page title="Quark | Edit Course" userSession={userSession} setUserSession={setUserSession}>
+    <Page title="Quark | Fork Course" userSession={userSession} setUserSession={setUserSession}>
       <div className="min-h-[calc(100vh-7rem)] flex items-center justify-center">
         <LoadingSkeleton count={3} />
       </div>
@@ -155,11 +151,11 @@ export default function CourseEditPage() {
   );
 
   return (
-    <Page title={`Quark | Edit ${name || "Course"}`} userSession={userSession} setUserSession={setUserSession}>
+    <Page title={`Quark | Fork ${name || "Course"}`} userSession={userSession} setUserSession={setUserSession}>
       <div className="relative z-10 min-h-[calc(100vh-7rem)] flex items-center justify-center px-6 py-8 text-gray-200">
         <div className="max-w-3xl w-full mx-auto bg-black/20 backdrop-blur-lg border border-white/10 rounded-2xl p-8">
-          <h1 className="text-2xl font-semibold text-white mb-2 text-center">Edit Course</h1>
-          {ownerName && <div className="text-center text-sm text-gray-400 mb-4">Owner: {ownerName}</div>}
+          <h1 className="text-2xl font-semibold text-white mb-2 text-center">Fork Course</h1>
+          {ownerName && <div className="text-center text-sm text-gray-400 mb-4">Original owner: {ownerName}</div>}
 
           {error && <div className="mb-4 text-sm text-red-400 text-center">{error}</div>}
 
@@ -219,7 +215,7 @@ export default function CourseEditPage() {
 
             <div className="flex justify-center">
               <button type="submit" disabled={submitting} className="px-6 py-3 bg-indigo-600 rounded-md text-white font-medium cursor-pointer hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-                {submitting ? "Saving..." : "Save Changes"}
+                {submitting ? "Forking..." : "Fork Course"}
               </button>
             </div>
           </form>

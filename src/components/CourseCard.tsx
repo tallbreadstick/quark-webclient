@@ -45,7 +45,7 @@ export default function CourseCard({
             );
         }
 
-        if (isEducator && onFork) {
+        if (isEducator && onFork && course.forkable) {
             return (
                 <button 
                     onClick={(e) => onFork(course.id, course.name, e)}
