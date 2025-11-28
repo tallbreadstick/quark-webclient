@@ -86,4 +86,34 @@ body {
     background-color: rgba(255,255,255,0.08);
 }
 
+/* Simple Markdown (prose) styles to ensure headings, lists, code, tables render correctly */
+.prose {
+    color: #111827; /* dark text for white preview background */
+    line-height: 1.6;
+    font-size: 1rem;
+}
+.prose p { margin: 0 0 1rem 0; }
+.prose h1 { font-size: 2rem; font-weight: 700; margin: 0 0 0.75rem 0; }
+.prose h2 { font-size: 1.5rem; font-weight: 700; margin: 0 0 0.65rem 0; }
+.prose h3 { font-size: 1.25rem; font-weight: 600; margin: 0 0 0.5rem 0; }
+.prose h4 { font-size: 1.125rem; font-weight: 600; margin: 0 0 0.5rem 0; }
+.prose h5 { font-size: 1rem; font-weight: 600; margin: 0 0 0.4rem 0; }
+.prose h6 { font-size: 0.875rem; font-weight: 600; margin: 0 0 0.4rem 0; }
+.prose ul, .prose ol { margin: 0 0 1rem 1.25rem; }
+.prose li { margin: 0.35rem 0; }
+.prose code { background: rgba(27,31,35,0.05); padding: 0.15rem 0.3rem; border-radius: 4px; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, "Roboto Mono", "Courier New", monospace; font-size: 0.95em; }
+.prose pre { background: #0f1724; color: #e6eef8; padding: 0.75rem; border-radius: 6px; overflow: auto; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, "Roboto Mono", "Courier New", monospace; font-size: 0.9rem; }
+.prose blockquote { border-left: 4px solid rgba(55,65,81,0.15); padding: 0.25rem 0.75rem; color: #374151; background: rgba(249,250,251,0.02); margin: 0 0 1rem 0; }
+.prose table { width: 100%; border-collapse: collapse; margin: 0 0 1rem 0; }
+.prose th, .prose td { border: 1px solid rgba(0,0,0,0.08); padding: 0.5rem 0.75rem; text-align: left; }
+.prose th { background: rgba(0,0,0,0.03); font-weight: 600; }
+.prose hr { border: none; border-top: 1px solid rgba(0,0,0,0.08); margin: 1rem 0; }
+
+/* Inverse/ dark-mode variant for prose if used on dark backgrounds */
+.prose-invert { color: #e6eef8; }
+.prose-invert h1, .prose-invert h2, .prose-invert h3, .prose-invert h4, .prose-invert h5, .prose-invert h6 { color: #fff; }
+.prose-invert code { background: rgba(255,255,255,0.04); color: #f3f4f6; }
+.prose-invert pre { background: #0b1220; color: #e6eef8; }
+.prose-invert blockquote { border-left-color: rgba(255,255,255,0.08); color: #cbd5e1; }
+
 
