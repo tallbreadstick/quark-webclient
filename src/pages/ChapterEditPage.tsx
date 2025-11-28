@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { useParams, useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
@@ -31,6 +32,18 @@ import {
     type ChapterRequest,
     type ChapterItem
 } from "../endpoints/ChapterHandler";
+import {
+    addLesson as apiAddLesson,
+    editLesson as apiEditLesson,
+    deleteLesson as apiDeleteLesson,
+    type LessonRequest
+} from "../endpoints/LessonHandler";
+import {
+    addActivity as apiAddActivity,
+    editActivity as apiEditActivity,
+    deleteActivity as apiDeleteActivity,
+    type ActivityRequest
+} from "../endpoints/ActivityHandler";
 
 // --- Types ---
 type Item = {
@@ -70,6 +83,10 @@ export default function ChapterEditPage(): React.ReactElement {
 
     // Track detailed selection
     const [selection, setSelection] = useState<Selection>(null);
+    
+    // Item type selection modal
+    const [showItemTypeModal, setShowItemTypeModal] = useState(false);
+    const [pendingChapterId, setPendingChapterId] = useState<number | null>(null);
 
     // Fetch course and chapters on mount
     useEffect(() => {
@@ -230,41 +247,162 @@ export default function ChapterEditPage(): React.ReactElement {
         }
     }
 
-    async function addItemToChapter(chapterId: number) {
-        // TODO: Implement item creation API endpoint
-        // For now, this is a placeholder - items need their own API endpoints
-        alert("Item creation API endpoint not yet implemented. Please add item endpoints to ChapterHandler.");
+    function openItemTypeModal(chapterId: number) {
+        setPendingChapterId(chapterId);
+        setShowItemTypeModal(true);
+    }
+
+    async function createItem(itemType: "LESSON" | "ACTIVITY") {
+        if (!pendingChapterId) return;
         
-        // Temporary local-only implementation:
-        const newItem: Item = { 
-            id: Date.now(), 
-            itemType: "LESSON",
-            idx: 0,
-            name: "New Item", 
-            description: "Description", 
-            icon: "📄"
-        };
-        setChapters(prev => prev.map(c => c.id === chapterId ? { ...c, items: [...c.items, newItem] } : c));
-        setSelection({ type: 'item', chapterId, itemId: newItem.id });
+        setShowItemTypeModal(false);
+        const chapterId = pendingChapterId;
+        setPendingChapterId(null);
+
+        try {
+            const jwt = userSession?.jwt ?? "";
+            const chapter = chapters.find(c => c.id === chapterId);
+            const itemCount = chapter?.items.length ?? 0;
+            
+            if (itemType === "LESSON") {
+                const request: LessonRequest = {
+                    name: `New Lesson ${itemCount + 1}`,
+                    description: "Lesson description",
+                    icon: "📄",
+                    finishMessage: "Great job completing this lesson!"
+                };
+                
+                const result = await apiAddLesson(chapterId, request, jwt);
+                
+                if (result.ok) {
+                    // Reload chapter items to get the new item with proper ID
+                    const chapterResult = await fetchChapterWithItems(chapterId, jwt);
+                    if (chapterResult.ok) {
+                        setChapters(prev => prev.map(c => 
+                            c.id === chapterId ? { ...c, items: chapterResult.ok!.items } : c
+                        ));
+                        // Select the newly created item
+                        const newItem = chapterResult.ok.items[chapterResult.ok.items.length - 1];
+                        if (newItem) {
+                            setSelection({ type: 'item', chapterId, itemId: newItem.id });
+                        }
+                    }
+                } else {
+                    alert("Failed to add lesson: " + result.err);
+                }
+            } else {
+                const request: ActivityRequest = {
+                    name: `New Activity ${itemCount + 1}`,
+                    description: "Activity description",
+                    icon: "🧪",
+                    ruleset: {
+                        enabled: true
+                    },
+                    finishMessage: "Excellent work on this activity!"
+                };
+                
+                const result = await apiAddActivity(chapterId, request, jwt);
+                
+                if (result.ok) {
+                    // Reload chapter items to get the new item with proper ID
+                    const chapterResult = await fetchChapterWithItems(chapterId, jwt);
+                    if (chapterResult.ok) {
+                        setChapters(prev => prev.map(c => 
+                            c.id === chapterId ? { ...c, items: chapterResult.ok!.items } : c
+                        ));
+                        // Select the newly created item
+                        const newItem = chapterResult.ok.items[chapterResult.ok.items.length - 1];
+                        if (newItem) {
+                            setSelection({ type: 'item', chapterId, itemId: newItem.id });
+                        }
+                    }
+                } else {
+                    alert("Failed to add activity: " + result.err);
+                }
+            }
+        } catch (err) {
+            console.error("Error adding item:", err);
+            alert("Error adding item");
+        }
     }
 
     async function removeItemFromChapter(chapterId: number, itemId: number) {
-        // TODO: Implement item deletion API endpoint
-        if (!confirm("Delete this item? (Note: Item API endpoints not yet implemented, this is local only)")) return;
+        if (!confirm("Are you sure you want to delete this item?")) return;
         
-        setChapters(prev => prev.map(c => c.id === chapterId ? { ...c, items: c.items.filter(i => i.id !== itemId) } : c));
-        if (selection?.type === 'item' && selection.itemId === itemId) {
-            setSelection({ type: 'chapter', id: chapterId });
+        try {
+            const jwt = userSession?.jwt ?? "";
+            const chapter = chapters.find(c => c.id === chapterId);
+            const item = chapter?.items.find(i => i.id === itemId);
+            
+            if (!item) return;
+            
+            let result;
+            if (item.itemType === "LESSON") {
+                result = await apiDeleteLesson(itemId, jwt);
+            } else {
+                result = await apiDeleteActivity(itemId, jwt);
+            }
+            
+            if (result.ok) {
+                setChapters(prev => prev.map(c => 
+                    c.id === chapterId ? { ...c, items: c.items.filter(i => i.id !== itemId) } : c
+                ));
+                if (selection?.type === 'item' && selection.itemId === itemId) {
+                    setSelection({ type: 'chapter', id: chapterId });
+                }
+            } else {
+                alert("Failed to delete item: " + result.err);
+            }
+        } catch (err) {
+            console.error("Error deleting item:", err);
+            alert("Error deleting item");
         }
     }
 
     async function updateItem(chapterId: number, itemId: number, patch: Partial<Item>) {
-        // TODO: Implement item update API endpoint
-        // For now, update locally only
+        // Update UI immediately for responsive feel
         setChapters(prev => prev.map(c => c.id === chapterId ? {
             ...c,
             items: c.items.map(i => i.id === itemId ? { ...i, ...patch } : i)
         } : c));
+        
+        // Get the updated item data
+        const chapter = chapters.find(c => c.id === chapterId);
+        const item = chapter?.items.find(i => i.id === itemId);
+        if (!item) return;
+        
+        const updatedItem = { ...item, ...patch };
+        
+        try {
+            const jwt = userSession?.jwt ?? "";
+            let result;
+            
+            if (updatedItem.itemType === "LESSON") {
+                const request: LessonRequest = {
+                    name: updatedItem.name,
+                    description: updatedItem.description,
+                    icon: updatedItem.icon,
+                    finishMessage: updatedItem.finishMessage
+                };
+                result = await apiEditLesson(itemId, request, jwt);
+            } else {
+                const request: ActivityRequest = {
+                    name: updatedItem.name,
+                    description: updatedItem.description,
+                    icon: updatedItem.icon,
+                    ruleset: updatedItem.ruleset ? JSON.parse(updatedItem.ruleset) : { enabled: true },
+                    finishMessage: updatedItem.finishMessage ?? ""
+                };
+                result = await apiEditActivity(itemId, request, jwt);
+            }
+            
+            if (!result.ok) {
+                console.error("Failed to update item:", result.err);
+                // Optionally revert the change or show error
+            }
+        } catch (err) {
+            console.error("Error updating item:", err);
+        }
     }
 
     // --- Drag & Drop Helpers ---
@@ -488,7 +626,7 @@ export default function ChapterEditPage(): React.ReactElement {
 
                                         {/* Add Item Button */}
                                         <button
-                                            onClick={() => addItemToChapter(chapter.id)}
+                                            onClick={() => openItemTypeModal(chapter.id)}
                                             className="group/btn text-xs text-slate-500 hover:text-blue-400 py-2 pl-2 flex items-center gap-2 transition-colors mt-1 w-full text-left"
                                         >
                                             <div className="w-5 h-5 rounded-full bg-white/5 group-hover/btn:bg-blue-500/20 flex items-center justify-center transition-colors">
@@ -611,14 +749,30 @@ export default function ChapterEditPage(): React.ReactElement {
                                                 </div>
                                                 {(activeData.data as Item).itemType === 'ACTIVITY' && (
                                                     <div>
-                                                        <label className="text-sm font-medium text-slate-600 mb-2 block">Ruleset (Activity Only)</label>
+                                                        <label className="text-sm font-medium text-slate-600 mb-2 block">
+                                                            Ruleset (Activity Only) - JSON Format
+                                                        </label>
                                                         <textarea
                                                             className="w-full bg-white border border-slate-200 rounded-lg p-4 text-slate-800 leading-relaxed placeholder-slate-400 font-mono text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all resize-none"
-                                                            value={(activeData.data as Item).ruleset || ''}
+                                                            value={(() => {
+                                                                const item = activeData.data as Item;
+                                                                if (!item.ruleset) return '';
+                                                                try {
+                                                                    const parsed = typeof item.ruleset === 'string' 
+                                                                        ? JSON.parse(item.ruleset) 
+                                                                        : item.ruleset;
+                                                                    return JSON.stringify(parsed, null, 2);
+                                                                } catch {
+                                                                    return item.ruleset;
+                                                                }
+                                                            })()}
                                                             onChange={(e) => updateItem((activeData.chapter as Chapter).id, (activeData.data as Item).id, { ruleset: e.target.value })}
-                                                            placeholder="Activity ruleset configuration..."
+                                                            placeholder='{\n  "enabled": true,\n  "closeDateTime": "2025-12-31T23:59:59",\n  "timeLimit": 3600\n}'
                                                             rows={8}
                                                         />
+                                                        <p className="text-xs text-slate-500 mt-1">
+                                                            Format: &#123;"enabled": true, "closeDateTime": "ISO date", "timeLimit": seconds&#125;
+                                                        </p>
                                                     </div>
                                                 )}
                                             </div>
@@ -636,6 +790,59 @@ export default function ChapterEditPage(): React.ReactElement {
                     )}
                 </main>
             </div>
+
+            {/* Item Type Selection Modal */}
+            {showItemTypeModal && createPortal(
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+                    <div className="bg-slate-900 border border-white/10 rounded-2xl shadow-2xl p-8 max-w-md w-full mx-4 animate-in zoom-in-95 duration-200">
+                        <h3 className="text-2xl font-bold text-white mb-2">Choose Item Type</h3>
+                        <p className="text-slate-400 mb-6">Select the type of content you want to add to this chapter.</p>
+                        
+                        <div className="space-y-3">
+                            <button
+                                onClick={() => createItem("LESSON")}
+                                className="w-full p-4 bg-gradient-to-r from-blue-600/20 to-blue-500/20 hover:from-blue-600/30 hover:to-blue-500/30 border border-blue-500/30 hover:border-blue-500/50 rounded-xl transition-all group"
+                            >
+                                <div className="flex items-center gap-4">
+                                    <div className="w-12 h-12 rounded-lg bg-blue-500/20 flex items-center justify-center">
+                                        <FontAwesomeIcon icon={faFileLines} className="w-6 h-6 text-blue-400" />
+                                    </div>
+                                    <div className="flex-1 text-left">
+                                        <div className="font-semibold text-white mb-1">Lesson</div>
+                                        <div className="text-sm text-slate-400">Traditional learning content with pages</div>
+                                    </div>
+                                </div>
+                            </button>
+                            
+                            <button
+                                onClick={() => createItem("ACTIVITY")}
+                                className="w-full p-4 bg-gradient-to-r from-purple-600/20 to-purple-500/20 hover:from-purple-600/30 hover:to-purple-500/30 border border-purple-500/30 hover:border-purple-500/50 rounded-xl transition-all group"
+                            >
+                                <div className="flex items-center gap-4">
+                                    <div className="w-12 h-12 rounded-lg bg-purple-500/20 flex items-center justify-center">
+                                        <FontAwesomeIcon icon={faFlask} className="w-6 h-6 text-purple-400" />
+                                    </div>
+                                    <div className="flex-1 text-left">
+                                        <div className="font-semibold text-white mb-1">Activity</div>
+                                        <div className="text-sm text-slate-400">Interactive exercises with sections</div>
+                                    </div>
+                                </div>
+                            </button>
+                        </div>
+                        
+                        <button
+                            onClick={() => {
+                                setShowItemTypeModal(false);
+                                setPendingChapterId(null);
+                            }}
+                            className="w-full mt-4 py-3 px-4 bg-slate-800 hover:bg-slate-700 border border-white/10 text-slate-300 hover:text-white rounded-lg transition-all"
+                        >
+                            Cancel
+                        </button>
+                    </div>
+                </div>,
+                document.body
+            )}
 
         </Page>
     );
