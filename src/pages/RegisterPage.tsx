@@ -18,12 +18,27 @@ export default function RegisterPage() {
 
         const form = e.currentTarget;
         const formData = new FormData(form);
-        const body = {
-            username: String(formData.get('username') || ''),
-            email: String(formData.get('email') || ''),
-            password: String(formData.get('password') || ''),
-            userType: (String(formData.get('userType') || '') as unknown) as "EDUCATOR" | "STUDENT",
-        };
+        const username = String(formData.get('username') || '');
+        const email = String(formData.get('email') || '');
+        const password = String(formData.get('password') || '');
+        const confirmPassword = String(formData.get('confirmPassword') || '');
+        const userType = (String(formData.get('userType') || '') as unknown) as "EDUCATOR" | "STUDENT";
+
+        // Client-side validation
+        if (password !== confirmPassword) {
+            setError('Passwords do not match');
+            setSubmitting(false);
+            return;
+        }
+
+        const minPasswordLength = 8;
+        if (password.length < minPasswordLength) {
+            setError(`Password must be at least ${minPasswordLength} characters`);
+            setSubmitting(false);
+            return;
+        }
+
+        const body = { username, email, password, userType };
 
         try {
             const res = await registerEndpoint(body);
@@ -32,11 +47,28 @@ export default function RegisterPage() {
                 // registration successful — redirect to login page
                 navigate("/login");
             } else {
-                throw new Error(res.err ?? "Registration failed");
+                // Backend may return verbose errors; normalize them
+                const backendErr = res.err ?? 'Registration failed';
+                // If backend provides a long stack trace, show a friendly message
+                if (typeof backendErr === 'string' && backendErr.length > 200) {
+                    setError('Registration failed. Please check your input and try again.');
+                } else {
+                    setError(String(backendErr));
+                }
             }
         } catch (err: any) {
-            const msg = err?.response?.data || err?.message || 'An error occurred';
-            setError(typeof msg === 'string' ? msg : JSON.stringify(msg));
+            // Sanitize error messages so we don't display stack traces
+            const raw = err?.response?.data || err?.message || 'An error occurred';
+            if (typeof raw === 'string') {
+                if (raw.length > 200) setError('Registration failed. Please check your input and try again.');
+                else setError(raw);
+            } else if (raw && typeof raw === 'object') {
+                // try to extract a sensible message
+                const maybeMsg = (raw.message || raw.error || JSON.stringify(raw));
+                setError(String(maybeMsg));
+            } else {
+                setError('Registration failed. Please try again.');
+            }
         } finally {
             setSubmitting(false);
         }
