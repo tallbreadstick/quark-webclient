@@ -1,6 +1,11 @@
 import type { Dispatch, FunctionComponent, SetStateAction } from "react";
 import type { UserSession } from "../../types/UserSession";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { createPortal } from "react-dom";
+import usePortal from "../../utils/usePortal";
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faUser, faArrowRightFromBracket } from '@fortawesome/free-solid-svg-icons';
 import Logo from "../../assets/logos/quarklogo-gradient.png";
 
 export interface NavbarProps {
@@ -10,18 +15,44 @@ export interface NavbarProps {
 
 const Navbar: FunctionComponent<NavbarProps> = ({ userSession, setUserSession }) => {
     const navigate = useNavigate();
+    const portalEl = usePortal('nav-profile-dropdown');
+    const [dropdownOpen, setDropdownOpen] = useState(false);
+    const dropdownRef = useRef<HTMLDivElement | null>(null);
 
-    const handleLogout = () => {
-        // Clear session (hook will also remove from localStorage)
-        setUserSession(null);
-        // Navigate to home (client-side)
-        navigate("/");
-    };
+    // toggle from clicks inside page (ProfilePage avatar/username)
+    useEffect(() => {
+        const onToggle = (e: Event) => {
+            setDropdownOpen((s) => !s);
+        };
+        const onOpen = (e: Event) => {
+            setDropdownOpen(true);
+        };
+        window.addEventListener('profile-menu-toggle', onToggle as EventListener);
+        window.addEventListener('profile-menu-open', onOpen as EventListener);
+        return () => {
+            window.removeEventListener('profile-menu-toggle', onToggle as EventListener);
+            window.removeEventListener('profile-menu-open', onOpen as EventListener);
+        };
+    }, []);
 
-    const handleProfileClick = () => {
-        // Navigate to profile page
-        navigate("/profile");
-    };
+    // close on outside click / Escape
+    useEffect(() => {
+        if (!dropdownOpen) return;
+        const onDoc = (e: MouseEvent) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+                setDropdownOpen(false);
+            }
+        };
+        const onKey = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') setDropdownOpen(false);
+        };
+        document.addEventListener('mousedown', onDoc);
+        document.addEventListener('keydown', onKey);
+        return () => {
+            document.removeEventListener('mousedown', onDoc);
+            document.removeEventListener('keydown', onKey);
+        };
+    }, [dropdownOpen]);
 
     return (
         <nav className="w-full flex items-center justify-between px-8 py-4 bg-black/30 backdrop-blur-md text-white shadow-lg">
@@ -39,7 +70,7 @@ const Navbar: FunctionComponent<NavbarProps> = ({ userSession, setUserSession })
                     <div className="flex items-center gap-4">
                         {/* User profile with hover effect */}
                         <div 
-                            onClick={handleProfileClick}
+                            onClick={() => setDropdownOpen((s) => !s)}
                             className="flex items-center gap-3 cursor-pointer hover:opacity-90 transition group"
                         >
                             {/* Profile image (prefer userSession.profilePictureUrl) */}
@@ -60,15 +91,7 @@ const Navbar: FunctionComponent<NavbarProps> = ({ userSession, setUserSession })
                                 {userSession.username}
                             </span>
                         </div>
-                        
-                        {/* Logout button - improved color */}
-                        <button
-                            onClick={handleLogout}
-                            className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition font-semibold cursor-pointer"
-                            aria-label="Log out"
-                        >
-                            Logout
-                        </button>
+                    
                     </div>
                 ) : (
                     <div className="flex items-center gap-4">
@@ -87,6 +110,35 @@ const Navbar: FunctionComponent<NavbarProps> = ({ userSession, setUserSession })
                     </div>
                 )}
             </div>
+            {dropdownOpen && portalEl && createPortal(
+                <div ref={dropdownRef} className="fixed z-50" style={{ top: 56, right: 16 }} role="menu" aria-label="Profile menu">
+                    <div className="bg-[#0f1724] border border-white/10 rounded-lg p-2 w-48 shadow-xl">
+                        <button
+                            onClick={() => {
+                                setDropdownOpen(false);
+                                navigate('/profile');
+                            }}
+                            className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-200 hover:bg-white/5 rounded"
+                        >
+                            <FontAwesomeIcon icon={faUser} />
+                            <span>View Profile</span>
+                        </button>
+
+                        <button
+                            onClick={() => {
+                                setDropdownOpen(false);
+                                setUserSession(null);
+                                navigate('/');
+                            }}
+                            className="w-full mt-1 flex items-center gap-2 px-3 py-2 text-sm text-gray-200 hover:bg-white/5 rounded"
+                        >
+                            <FontAwesomeIcon icon={faArrowRightFromBracket} />
+                            <span>Logout</span>
+                        </button>
+                    </div>
+                </div>,
+                portalEl
+            )}
         </nav>
     );
 };

@@ -12,6 +12,7 @@ import {
   updateBio,
   fetchBio,
 } from "../endpoints/ProfileHandler";
+// icons/dropdown handled by Navbar
 // No hardcoded tab/course data — tabs start empty when no courses exist
 
 interface UserSession {
@@ -141,8 +142,16 @@ const Profile = () => {
         <div
           role="button"
           tabIndex={0}
-          onClick={() => setMenuOpen((s) => !s)}
-          className="w-28 h-28 rounded-full overflow-hidden border-2 border-cyan-400 shadow-md flex items-center justify-center bg-gradient-to-br from-slate-900 to-slate-700 cursor-pointer"
+          onClick={() => {
+            // notify navbar to toggle the profile dropdown (implemented in Navbar)
+            try {
+              window.dispatchEvent(new CustomEvent('profile-menu-toggle'));
+            } catch (e) {
+              // fallback to local upload menu when CustomEvent not available
+              setMenuOpen((s) => !s);
+            }
+          }}
+          className="w-28 h-28 rounded-full overflow-hidden border-2 border-cyan-400 shadow-md flex items-center justify-center bg-gradient-to-br from-slate-900 to-slate-700 cursor-pointer relative"
         >
           {(preview ?? userSession.profilePictureUrl) ? (
             <img
@@ -153,6 +162,20 @@ const Profile = () => {
           ) : (
             <span className="text-white font-semibold">{(userSession.username || userSession.email || "U").charAt(0).toUpperCase()}</span>
           )}
+          {/* small edit overlay to open the upload menu (keeps upload accessible when avatar now toggles dropdown) */}
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setMenuOpen(true);
+            }}
+            className="absolute -bottom-1 -right-1 bg-blue-600 text-white rounded-full p-1 shadow-lg border border-white/10"
+            aria-label="Edit profile photo"
+            title="Edit photo"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+              <path d="M17.414 2.586a2 2 0 010 2.828l-9.9 9.9a1 1 0 01-.464.263l-4 1a1 1 0 01-1.213-1.213l1-4a1 1 0 01.263-.464l9.9-9.9a2 2 0 012.828 0z" />
+            </svg>
+          </button>
         </div>
 
         {/* --- MODAL WITH PORTAL --- */}
@@ -174,8 +197,8 @@ const Profile = () => {
               </div>
 
               <div className="w-full flex flex-col sm:flex-row gap-3 mt-2">
-                <button onClick={() => fileInputRef.current?.click()} disabled={uploading} className="flex-1 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition shadow-lg shadow-green-900/20">{uploading ? "Uploading..." : "Upload New"}</button>
-                <button onClick={doClear} disabled={uploading} className="flex-1 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition shadow-lg shadow-red-900/20">Remove</button>
+                <button onClick={() => fileInputRef.current?.click()} disabled={uploading} className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition shadow-lg shadow-green-900/20">{uploading ? "Uploading..." : "Upload New"}</button>
+                <button onClick={doClear} disabled={uploading} className="flex-1 px-4 py-2 bg-red-700 text-white rounded-md hover:bg-red-800 transition shadow-lg shadow-red-900/20">Remove</button>
               </div>
 
               <div className="w-full text-right">
@@ -384,18 +407,37 @@ const Profile = () => {
 
   const username = userSession.username || "User";
   const isEducator = profileUserType === "educator";
+  
   // No courses yet — start with empty tabs and empty content
   const tabs: any[] = [];
+
+  
 
   return (
     <Page title={`Quark | ${username}'s Profile`} userSession={userSession} setUserSession={setUserSession}>
       <main className="min-h-[calc(100vh-7rem)] px-6 py-8 text-gray-200">
         <div className="max-w-5xl mx-auto space-y-8">
           {/* Profile Header */}
-          <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-6 flex flex-col sm:flex-row items-center gap-6">
+            <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-6 flex flex-col sm:flex-row items-center gap-6">
             <UploadControls userSession={userSession} setUserSession={setUserSession} />
             <div className="flex-1 text-center sm:text-left">
-              <h1 className="text-3xl font-bold text-white">{username}</h1>
+              <div className="flex flex-col sm:flex-row items-center justify-center sm:justify-between gap-2">
+                <h1
+                  onClick={() => {
+                    try {
+                      window.dispatchEvent(new CustomEvent('profile-menu-toggle'));
+                    } catch (e) {
+                      // nothing
+                    }
+                  }}
+                  role="button"
+                  tabIndex={0}
+                  className="text-3xl font-bold text-white cursor-pointer"
+                >
+                  {username}
+                </h1>
+              </div>
+
               <div className="flex items-center justify-center sm:justify-start gap-3 mt-1">
                 <span className="text-gray-400 text-sm">{isEducator ? "Educator" : "Learner"}</span>
                 {profileUserType && (
@@ -413,6 +455,8 @@ const Profile = () => {
               </div>
             </div>
           </div>
+
+
 
           {/* Tabs */}
           <ProfileTab tabs={tabs} activeTab={activeTab} onTabChange={setActiveTab} />
