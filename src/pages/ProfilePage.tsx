@@ -1,9 +1,10 @@
-import { useEffect, useState, type FC } from "react";
+import { useEffect, useState, useRef, type FC } from "react";
 import { useNavigate } from "react-router-dom";
 import Page from "../components/page/Page";
 import { loadSessionState } from "../types/UserSession";
 import ProfileTab from "../components/ProfileTab";
 import { fetchUsers } from "../endpoints/UserHandler";
+import { createPortal } from "react-dom";
 import {
   uploadProfilePicture,
   fetchProfilePicture,
@@ -29,7 +30,7 @@ const Profile = () => {
     "educator" | "learner" | undefined
   >(undefined);
 
-  /* -------------------------- UploadControls -------------------------- */
+/* -------------------------- UploadControls -------------------------- */
   const UploadControls: FC<{
     userSession: UserSession;
     setUserSession: React.Dispatch<React.SetStateAction<UserSession | null>>;
@@ -37,6 +38,9 @@ const Profile = () => {
     const [selected, setSelected] = useState<File | null>(null);
     const [uploading, setUploading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [menuOpen, setMenuOpen] = useState(false);
+    const fileInputRef = useRef<HTMLInputElement | null>(null);
+    const modalRef = useRef<HTMLDivElement | null>(null);
 
     const preview = selected ? URL.createObjectURL(selected) : undefined;
 
@@ -46,111 +50,156 @@ const Profile = () => {
       };
     }, [preview]);
 
-    const doUpload = async () => {
-      setError(null);
-      if (!selected) return setError("Please select a file");
-      if (!userSession?.jwt) return setError("Not authenticated");
-
-      // Simple client-side size limit (5MB)
-      const maxBytes = 5 * 1024 * 1024;
-      if (selected.size > maxBytes) return setError("File is too large (max 5MB)");
-
-      setUploading(true);
-      try {
-        const res = await uploadProfilePicture(selected, userSession.jwt);
-        if (res.status !== "OK") {
-          return setError(res.err ?? String(res.ok ?? "Upload failed"));
+    // close modal when clicking outside or pressing Escape
+    useEffect(() => {
+      const onDoc = (e: MouseEvent) => {
+        if (!menuOpen) return;
+        if (modalRef.current && !modalRef.current.contains(e.target as Node)) {
+          setMenuOpen(false);
         }
+      };
 
-        // After successful upload, fetch the user's id and then the stored picture
-        const lookupId = userSession.username || userSession.email;
-        const usersRes = await fetchUsers(lookupId);
-        if (usersRes.status === "OK" && usersRes.ok && usersRes.ok.length > 0) {
-          const uid = usersRes.ok[0].id;
-          const picRes = await fetchProfilePicture(uid);
-          if (picRes.status === "OK" && picRes.ok) {
-            const dataUrl = picRes.ok.startsWith("data:")
-              ? picRes.ok
-              : `data:image/png;base64,${picRes.ok}`;
-            setUserSession((prev) => (prev ? { ...prev, profilePictureUrl: dataUrl } : prev));
+      const onKey = (e: KeyboardEvent) => {
+        if (e.key === "Escape") setMenuOpen(false);
+      };
+
+      document.addEventListener("mousedown", onDoc);
+      document.addEventListener("keydown", onKey);
+      return () => {
+        document.removeEventListener("mousedown", onDoc);
+        document.removeEventListener("keydown", onKey);
+      };
+    }, [menuOpen]);
+
+    const doUpload = async (fileParam?: File | null) => {
+        // ... (Keep existing doUpload logic exactly as is) ...
+        // (Hidden for brevity, paste your existing doUpload function here)
+        setError(null);
+        const fileToUpload = fileParam ?? selected;
+        if (!fileToUpload) return setError("Please select a file");
+        if (!userSession?.jwt) return setError("Not authenticated");
+
+        const maxBytes = 5 * 1024 * 1024;
+        if (fileToUpload.size > maxBytes) return setError("File is too large (max 5MB)");
+
+        setUploading(true);
+        try {
+            const res = await uploadProfilePicture(fileToUpload, userSession.jwt);
+            if (res.status !== "OK") {
+            return setError(res.err ?? String(res.ok ?? "Upload failed"));
+            }
+
+            const lookupId = userSession.username || userSession.email;
+            const usersRes = await fetchUsers(lookupId);
+            if (usersRes.status === "OK" && usersRes.ok && usersRes.ok.length > 0) {
+            const uid = usersRes.ok[0].id;
+            const picRes = await fetchProfilePicture(uid);
+            if (picRes.status === "OK" && picRes.ok) {
+                const dataUrl = picRes.ok.startsWith("data:")
+                ? picRes.ok
+                : `data:image/png;base64,${picRes.ok}`;
+                setUserSession((prev) => (prev ? { ...prev, profilePictureUrl: dataUrl } : prev));
+                setSelected(null);
+                setMenuOpen(false);
+                return;
+            }
+            }
             setSelected(null);
-            return;
-          }
+            setMenuOpen(false);
+            setError("Uploaded but failed to retrieve updated profile picture");
+        } catch (e: any) {
+            setError(e?.message || String(e));
+        } finally {
+            setUploading(false);
         }
-
-        // If we get here, fetching updated picture failed — still clear selection
-        setSelected(null);
-        setError("Uploaded but failed to retrieve updated profile picture");
-      } catch (e: any) {
-        setError(e?.message || String(e));
-      } finally {
-        setUploading(false);
-      }
     };
 
     const doClear = async () => {
-      if (!userSession?.jwt) return setError("Not authenticated");
-      setUploading(true);
-      setError(null);
-      try {
-        const res = await clearProfilePicture(userSession.jwt);
-        if (res.status === "OK") {
-          // Clear local preview and session value
-          if (selected) {
-            setSelected(null);
-          }
-          setUserSession((prev) => (prev ? { ...prev, profilePictureUrl: null } : prev));
-        } else setError(res.err ?? "Failed to clear profile picture");
-      } catch (e: any) {
-        setError(e?.message || String(e));
-      } finally {
-        setUploading(false);
-      }
+       // ... (Keep existing doClear logic exactly as is) ...
+       // (Hidden for brevity, paste your existing doClear function here)
+       if (!userSession?.jwt) return setError("Not authenticated");
+       setUploading(true);
+       setError(null);
+       try {
+         const res = await clearProfilePicture(userSession.jwt);
+         if (res.status === "OK") {
+           if (selected) {
+             setSelected(null);
+           }
+           setUserSession((prev) => (prev ? { ...prev, profilePictureUrl: null } : prev));
+           setMenuOpen(false);
+         } else setError(res.err ?? "Failed to clear profile picture");
+       } catch (e: any) {
+         setError(e?.message || String(e));
+       } finally {
+         setUploading(false);
+       }
     };
 
     return (
-      <div className="flex flex-col items-center gap-3">
-        <div className="w-28 h-28 rounded-full overflow-hidden border-2 border-cyan-400 shadow-md flex items-center justify-center bg-gradient-to-br from-slate-900 to-slate-700">
+      <div className="flex flex-col items-center gap-3 relative">
+        <div
+          role="button"
+          tabIndex={0}
+          onClick={() => setMenuOpen((s) => !s)}
+          className="w-28 h-28 rounded-full overflow-hidden border-2 border-cyan-400 shadow-md flex items-center justify-center bg-gradient-to-br from-slate-900 to-slate-700 cursor-pointer"
+        >
           {(preview ?? userSession.profilePictureUrl) ? (
-            // only render <img> when there's a valid src
-            // cast to string because union may include null
             <img
               src={(preview ?? userSession.profilePictureUrl) as string}
               alt={userSession.username ?? "Profile image"}
               className="w-full h-full object-cover"
             />
           ) : (
-            // placeholder initials
             <span className="text-white font-semibold">{(userSession.username || userSession.email || "U").charAt(0).toUpperCase()}</span>
           )}
         </div>
 
-        <label className="inline-flex items-center gap-2 px-4 py-2 bg-white/10 border border-white/20 rounded-md cursor-pointer hover:bg-white/20 transition text-sm">
-          <input
-            type="file"
-            accept="image/*"
-            onChange={(e) => setSelected(e.target.files?.[0] ?? null)}
-            className="hidden"
-          />
-          <span>{selected ? selected.name : "Choose image"}</span>
-        </label>
+        {/* --- MODAL WITH PORTAL --- */}
+        {menuOpen && createPortal(
+          <div className="fixed inset-0 bg-black/10 backdrop-blur-sm z-[9999] flex items-center justify-center" role="dialog" aria-modal="true" aria-label="Manage profile image">
+            <div ref={modalRef} className="bg-[#1a1f2e] border border-white/10 rounded-xl p-6 max-w-sm w-[90%] flex flex-col items-center gap-4 shadow-2xl relative">
+              
+              {/* Optional: Add a subtle glow behind the modal content */}
+              <div className="absolute inset-0 bg-blue-500/5 blur-xl rounded-xl -z-10" />
 
-        <div className="flex gap-2">
-          <button
-            onClick={doUpload}
-            disabled={uploading || !selected}
-            className="px-4 py-1 bg-green-600 rounded-md text-white hover:bg-green-700 transition"
-          >
-            {uploading ? "Uploading..." : "Upload"}
-          </button>
-          <button
-            onClick={doClear}
-            disabled={uploading}
-            className="px-4 py-1 bg-red-600 rounded-md text-white hover:bg-red-700 transition"
-          >
-            Clear
-          </button>
-        </div>
+              <h3 className="text-white text-lg font-medium">Update Photo</h3>
+              
+              <div className="w-36 h-36 rounded-full overflow-hidden border-2 border-cyan-400 shadow-md bg-gradient-to-br from-slate-900 to-slate-700">
+                {(preview ?? userSession.profilePictureUrl) ? (
+                  <img src={(preview ?? userSession.profilePictureUrl) as string} alt="Profile preview" className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-white font-semibold">{(userSession.username || userSession.email || "U").charAt(0).toUpperCase()}</div>
+                )}
+              </div>
+
+              <div className="w-full flex flex-col sm:flex-row gap-3 mt-2">
+                <button onClick={() => fileInputRef.current?.click()} disabled={uploading} className="flex-1 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition shadow-lg shadow-green-900/20">{uploading ? "Uploading..." : "Upload New"}</button>
+                <button onClick={doClear} disabled={uploading} className="flex-1 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition shadow-lg shadow-red-900/20">Remove</button>
+              </div>
+
+              <div className="w-full text-right">
+                <button onClick={() => setMenuOpen(false)} className="text-sm text-gray-400 hover:text-white transition">Cancel</button>
+              </div>
+            </div>
+          </div>,
+          document.body // Target container
+        )}
+
+        {/* hidden file input used by upload menu */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={(e) => {
+            const f = e.target.files?.[0] ?? null;
+            if (!f) return;
+            setSelected(f);
+            void doUpload(f);
+          }}
+        />
+
         {error && <p className="text-xs text-red-400">{error}</p>}
       </div>
     );
@@ -337,8 +386,6 @@ const Profile = () => {
   const isEducator = profileUserType === "educator";
   // No courses yet — start with empty tabs and empty content
   const tabs: any[] = [];
-  const achievements: any[] = [];
-  const activities: any[] = [];
 
   return (
     <Page title={`Quark | ${username}'s Profile`} userSession={userSession} setUserSession={setUserSession}>
