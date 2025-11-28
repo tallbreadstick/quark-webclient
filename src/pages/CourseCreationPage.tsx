@@ -314,7 +314,7 @@ export default function CourseCreationPage() {
                         <h1 className="text-2xl font-semibold text-white mb-4 text-center">Preview</h1>
 
                         <div className="w-full flex-1 px-6 py-6 rounded-md bg-white border border-gray-200 text-gray-900 overflow-auto min-h-0">
-                            <div className="markdown-preview">
+                            <div className="prose max-w-none">
                                 <Suspense fallback={<div>Loading preview...</div>}>
                                     {introRenderer === "MARKDOWN" ? (
                                         <ReactMarkdown
