@@ -27,14 +27,16 @@ export default function CourseEditPage() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
-    const [ownerName, setOwnerName] = useState<string | null>(null);
-
-    // form state
     const [name, setName] = useState("");
     const [description, setDescription] = useState<string | null>(null);
     const [introContent, setIntroContent] = useState("");
 
-    // left panel / drag state
+    const [forkable, setForkable] = useState(false);
+    const [visibility, setVisibility] = useState<"PUBLIC" | "PRIVATE" | "UNLISTED">("PUBLIC");
+    const [tagsText, setTagsText] = useState("");
+    const [submitting, setSubmitting] = useState(false);
+
+    // drag & layout state
     const [leftWidth, setLeftWidth] = useState<number>(320);
     const containerRef = useRef<HTMLDivElement | null>(null);
     const draggingRef = useRef(false);
@@ -49,35 +51,27 @@ export default function CourseEditPage() {
     const MIN_PREVIEW = 360;
     const MIN_REMAIN = MIN_CENTER + MIN_PREVIEW;
 
-    const [activeTab, setActiveTab] = useState<"METADATA" | "CHAPTERS">("METADATA");
-    const [forkable, setForkable] = useState(false);
-    const [visibility, setVisibility] = useState<"PUBLIC" | "PRIVATE" | "UNLISTED">("PUBLIC");
-    const [tagsText, setTagsText] = useState("");
-    const [submitting, setSubmitting] = useState(false);
-
-    // load course data
+    // Load course data
     useEffect(() => {
         let cancelled = false;
         async function load() {
             setLoading(true);
             setError(null);
+            if (!userSession) {
+                setError("You must be signed in to edit courses.");
+                setLoading(false);
+                return;
+            }
+            if (!courseId) {
+                setError("Invalid course id");
+                setLoading(false);
+                return;
+            }
 
             try {
-                if (!userSession) {
-                    setError("You must be signed in to edit courses.");
-                    setLoading(false);
-                    return;
-                }
-
-                if (!courseId) {
-                    setError("Invalid course id");
-                    setLoading(false);
-                    return;
-                }
-
                 const lookup = userSession.username || userSession.email || "";
                 const userRes = await fetchUsers(lookup);
-                if (!(userRes.status === "OK" && userRes.ok && userRes.ok.length > 0)) {
+                if (!(userRes.status === "OK" && userRes.ok?.length)) {
                     if (!cancelled) setError("User profile not found");
                 }
 
@@ -86,14 +80,11 @@ export default function CourseEditPage() {
                     if (!cancelled) setError(res.err ?? "Failed to fetch course");
                 } else {
                     const course = res.ok;
-
                     setName(course.name ?? "");
                     setDescription(course.description ?? null);
                     setForkable(Boolean(course.forkable));
                     setVisibility((course as any).visibility ?? "PUBLIC");
                     setTagsText((course.tags ?? []).join(","));
-                    setOwnerName((course as any).owner ?? null);
-
                     try {
                         const parsed = JSON.parse(course.introduction ?? '{"content":""}');
                         setIntroContent(parsed.content ?? "");
@@ -111,14 +102,14 @@ export default function CourseEditPage() {
         return () => { cancelled = true; };
     }, [courseId, userSession]);
 
-    // responsive tracking
+    // Responsive
     useEffect(() => {
         const onResize = () => setIsLarge(window.innerWidth >= 1024);
         window.addEventListener("resize", onResize);
         return () => window.removeEventListener("resize", onResize);
     }, []);
 
-    // drag handling
+    // Drag handler
     const startDrag = (e: React.MouseEvent) => {
         if (!containerRef.current) return;
         draggingRef.current = true;
@@ -132,8 +123,7 @@ export default function CourseEditPage() {
             const containerRect = containerRef.current.getBoundingClientRect();
             const maxLeft = containerRect.width / 4;
             const max = Math.min(maxLeft, containerRect.width - MIN_REMAIN);
-            const newWidth = Math.max(MIN_LEFT, Math.min(startWidthRef.current + dx, max));
-            setLeftWidth(newWidth);
+            setLeftWidth(Math.max(MIN_LEFT, Math.min(startWidthRef.current + dx, max)));
         };
 
         const onMouseUp = () => {
@@ -159,6 +149,7 @@ export default function CourseEditPage() {
         return () => window.removeEventListener("resize", clamp);
     }, []);
 
+    // Submit handler
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setSubmitting(true);
@@ -171,8 +162,7 @@ export default function CourseEditPage() {
         }
 
         const introJson = JSON.stringify({ content: introContent });
-        const tags = (tagsText || "").split(",").map((s) => s.trim()).filter(Boolean).map(String);
-
+        const tags = (tagsText || "").split(",").map(s => s.trim()).filter(Boolean).map(String);
         const body = { name: name.trim(), description: description?.trim() ?? null, introduction: introJson, forkable, visibility, tags };
 
         try {
@@ -201,7 +191,7 @@ export default function CourseEditPage() {
                 <div ref={containerRef} className="w-full mx-auto gap-6 items-start h-full relative"
                     style={{ display: 'grid', gridTemplateColumns: isLarge ? `${leftWidth}px 1fr 1fr` : '1fr', gap: '1.5rem' }}>
 
-                    {/* drag handle */}
+                    {/* Drag handle */}
                     {isLarge && (
                         <div onMouseDown={startDrag} style={{
                             position: 'absolute', top: 0, left: `calc(${leftWidth}px + 0.75rem - 4px)`,
@@ -211,9 +201,9 @@ export default function CourseEditPage() {
                         </div>
                     )}
 
-                    {/* LEFT: Metadata / Tabs */}
+                    {/* LEFT: Form + buttons */}
                     <div className="w-full bg-black/20 backdrop-blur-lg border border-white/10 rounded-2xl p-6 h-full flex flex-col justify-between">
-                        <div className="flex-1 overflow-hidden">
+                        <div className="flex-1 overflow-auto">
                             <h1 className="text-2xl font-semibold text-white mb-4 text-left">Edit Course</h1>
                             {!userSession ? (
                                 <div className="text-center text-gray-300">
@@ -221,34 +211,61 @@ export default function CourseEditPage() {
                                     <a href="/login" className="px-4 py-2 bg-[#566fb8] rounded-md text-white cursor-pointer">Sign in</a>
                                 </div>
                             ) : (
-                                <form id="course-edit-form" onSubmit={handleSubmit} className="flex flex-col gap-4 h-full overflow-auto">
+                                <form id="course-edit-form" className="flex flex-col gap-4">
                                     {error && <div className="mb-2 text-sm text-red-400">{error}</div>}
-                                    <div className="mb-3 flex gap-2">
-                                        <button type="button" onClick={() => setActiveTab("METADATA")} className={`px-3 py-1 w-1/2 rounded-md ${activeTab === "METADATA" ? "bg-indigo-600 text-white" : "bg-white/5 text-white"}`}>Metadata</button>
-                                        <button type="button" onClick={() => setActiveTab("CHAPTERS")} className={`px-3 py-1 w-1/2 rounded-md ${activeTab === "CHAPTERS" ? "bg-indigo-600 text-white" : "bg-white/5 text-white"}`}>Chapter Edit</button>
-                                    </div>
-                                    {activeTab === "METADATA" && <>
-                                        <div><label className="block mb-2 text-sm font-medium text-[#bdcdff]">Name</label><input value={name} onChange={(e) => setName(e.target.value)} required className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500/50 transition" /></div>
-                                        <div><label className="block mb-2 text-sm font-medium text-[#bdcdff]">Description</label><textarea value={description ?? ""} onChange={(e) => setDescription(e.target.value)} rows={4} className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500/50 transition h-24 resize-y" /></div>
-                                        <div><label className="block mb-2 text-sm font-medium text-[#bdcdff]">Tag IDs (comma separated)</label><input value={tagsText} onChange={(e) => setTagsText(e.target.value)} placeholder="e.g. 1,2,3" className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500/50 transition" /></div>
-                                        <div className="flex items-center gap-4">
-                                            <label className="inline-flex items-center gap-2 text-sm text-black-300"><input type="checkbox" checked={forkable} onChange={(e) => setForkable(e.target.checked)} /><span className="text-white">Forkable</span></label>
-                                            <label className="inline-flex items-center gap-2 text-sm text-black-300"><div className="text-sm mr-2 text-white">Visibility</div>
-                                                <select value={visibility} onChange={(e) => setVisibility(e.target.value as any)} className="px-2 py-1 bg-black text-white rounded-md border border-white/10">
+                                    <div>
+                                        <label className="block mb-2 text-sm font-medium text-[#bdcdff]">Name</label>
+                                        <input value={name} onChange={(e) => setName(e.target.value)} required
+                                            className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500/50 transition" />
+                                        <label className="block mb-2 mt-3 text-sm font-medium text-[#bdcdff]">Description</label>
+                                        <textarea value={description ?? ""} onChange={(e) => setDescription(e.target.value)} rows={4}
+                                            className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500/50 transition h-24 resize-y" />
+                                        <label className="block mb-2 mt-3 text-sm font-medium text-[#bdcdff]">Tag IDs (comma separated)</label>
+                                        <input value={tagsText} onChange={(e) => setTagsText(e.target.value)} placeholder="e.g. 1,2,3"
+                                            className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500/50 transition" />
+                                        <div className="mt-2 flex items-center gap-4">
+                                            <label className="inline-flex items-center gap-2 text-sm">
+                                                <input type="checkbox" checked={forkable} onChange={(e) => setForkable(e.target.checked)} />
+                                                <span className="text-white">Forkable</span>
+                                            </label>
+                                            <div className="ml-auto text-sm text-white flex items-center gap-2">
+                                                Visibility:
+                                                <select value={visibility} onChange={(e) => setVisibility(e.target.value as any)}
+                                                    className="px-2 py-1 bg-black text-white rounded-md border border-white/10">
                                                     <option value="PUBLIC">Public</option>
                                                     <option value="PRIVATE">Private</option>
                                                     <option value="UNLISTED">Unlisted</option>
                                                 </select>
-                                            </label>
+                                            </div>
                                         </div>
-                                    </>}
-                                    {activeTab === "CHAPTERS" && <div className="text-sm text-gray-300">Chapter editor is empty for now.</div>}
+                                    </div>
                                 </form>
                             )}
                         </div>
-                        {userSession && <div className="pt-4 flex justify-center">
-                            <button type="submit" form="course-edit-form" disabled={submitting} onClick={() => document.querySelector<HTMLFormElement>("#course-edit-form")?.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }))} className="px-6 py-3 bg-indigo-600 rounded-md text-white font-medium hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed">{submitting ? "Saving..." : "Save Changes"}</button>
-                        </div>}
+                        {userSession && (
+                            <div className="pt-4 flex gap-3">
+                                <button
+                                    type="button"
+                                    onClick={() => navigate(`/course/${courseId}/chapters/edit`)}
+                                    className="flex-1 px-4 py-2 bg-gray-700 rounded-md text-white text-sm font-medium hover:bg-gray-600"
+                                >
+                                    Edit Chapters
+                                </button>
+                                <button
+                                    type="submit"
+                                    form="course-edit-form"
+                                    disabled={submitting}
+                                    onClick={() =>
+                                        document.querySelector<HTMLFormElement>("#course-edit-form")?.dispatchEvent(
+                                            new Event("submit", { cancelable: true, bubbles: true })
+                                        )
+                                    }
+                                    className="flex-1 px-4 py-2 bg-indigo-600 rounded-md text-white text-sm font-medium hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    {submitting ? "Saving..." : "Save Changes"}
+                                </button>
+                            </div>
+                        )}
                     </div>
 
                     {/* CENTER: Editor */}
@@ -275,7 +292,7 @@ export default function CourseEditPage() {
                     {/* RIGHT: Preview */}
                     <div className="w-full bg-black/20 backdrop-blur-lg border border-white/10 rounded-2xl p-6 h-full flex flex-col overflow-y-auto">
                         <h1 className="text-2xl font-semibold text-white mb-4 text-center">Preview</h1>
-                        <div className="w-full flex-1 px-6 py-6 rounded-md bg-white border border-gray-200 text-gray-900 overflow-auto min-h-0">
+                        <div className="w-full flex-1 px-6 py-6 rounded-md bg-white border border-gray-200 text-gray-900 overflow-auto min-h-0 prose">
                             <Suspense fallback={<div>Loading preview...</div>}>
                                 <PreviewRenderer value={introContent} />
                             </Suspense>

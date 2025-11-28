@@ -10,6 +10,7 @@ import CourseEditPage from "./pages/CourseEditPage";
 import CourseForkPage from "./pages/CourseForkPage";
 import Profile from "./pages/ProfilePage"; // Add this import
 import "katex/dist/katex.min.css";
+import ChapterEditPage from "./pages/ChapterEditPage";
 
 export default function App() {
     return (
@@ -23,6 +24,7 @@ export default function App() {
                     <Route path="/my-courses/create" element={<CourseCreationPage />} />
                     <Route path="/marketplace" element={<MarketplacePage />} />
                     <Route path="/course/:courseId/chapters" element={<CourseContentPage />} />
+                    <Route path="/course/:courseId/chapters/edit" element={<ChapterEditPage />} />
                     <Route path="/course/:courseId/edit" element={<CourseEditPage />} />
                     <Route path="/course/:courseId/fork" element={<CourseForkPage />} />
                     <Route path="/profile" element={<Profile />} />
