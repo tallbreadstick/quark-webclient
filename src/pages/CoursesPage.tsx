@@ -9,6 +9,8 @@ import SearchFilterBar from "../components/SearchFilterBar";
 import Pagination from "../components/Pagination";
 import LoadingSkeleton from "../components/LoadingSkeleton";
 import EmptyState from "../components/EmptyState";
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faLock } from '@fortawesome/free-solid-svg-icons';
 import { filterCourses, sortCourses, paginate, getTotalPages } from "../utils/courseUtils";
 import type { DatabaseCourse } from "../types/CourseTypes";
 
@@ -113,7 +115,7 @@ export default function CoursesPage() {
                     {!userSession ? (
                         <EmptyState
                             message="You need to be signed in to view your courses."
-                            icon="🔒"
+                            icon={<FontAwesomeIcon icon={faLock} />}
                         >
                             <div className="flex justify-center gap-3 mt-4">
                                 <Link to="/login" className="px-4 py-2 bg-[#566fb8] rounded-md text-white hover:bg-[#475a9c] transition">

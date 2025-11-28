@@ -4,7 +4,7 @@ type EmptyStateProps = {
     message: string;
     actionText?: string;
     actionLink?: string;
-    icon?: string;
+    icon?: React.ReactNode;
     children?: React.ReactNode;
 };
 

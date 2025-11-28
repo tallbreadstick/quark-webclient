@@ -157,7 +157,7 @@ export default function MarketplacePage() {
                         <div className="bg-white/5 border border-white/10 rounded-2xl p-6 mb-8 text-center">
                             <p className="text-gray-300 mb-4">Sign in to enroll in courses and track your progress</p>
                             <div className="flex justify-center gap-3">
-                                <Link to="/login" className="px-4 py-2 bg-[#566fb8] rounded-md text-white hover:bg-[#475a9c] transition cursor-pointer">
+                                <Link to="/login" className="px-4 py-2 bg-blue-600 rounded-md text-white hover:bg-blue-700 transition cursor-pointer">
                                     Sign in
                                 </Link>
                                 <Link to="/register" className="px-4 py-2 border border-white/20 rounded-md text-white/80 hover:bg-white/5 transition cursor-pointer">
