@@ -2,6 +2,8 @@ import React, { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { useParams, useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import Editor from "@monaco-editor/react";
+import PreviewRenderer from "../components/PreviewRenderer";
 import {
     faTrash,
     faPlus,
@@ -18,7 +20,9 @@ import {
     faInfoCircle,
     faChevronRight,
     faLayerGroup,
-    faSpinner
+    faSpinner,
+    faEye,
+    faEdit
 } from '@fortawesome/free-solid-svg-icons';
 import { loadSessionState } from "../types/UserSession";
 import Page from "../components/page/Page";
@@ -87,6 +91,9 @@ export default function ChapterEditPage(): React.ReactElement {
     // Item type selection modal
     const [showItemTypeModal, setShowItemTypeModal] = useState(false);
     const [pendingChapterId, setPendingChapterId] = useState<number | null>(null);
+    
+    // Finish message editor preview mode
+    const [isPreviewMode, setIsPreviewMode] = useState(false);
 
     // Fetch course and chapters on mount
     useEffect(() => {
@@ -738,14 +745,41 @@ export default function ChapterEditPage(): React.ReactElement {
                                         <div className="p-8 min-h-[400px]">
                                             <div className="space-y-4">
                                                 <div>
-                                                    <label className="text-sm font-medium text-slate-600 mb-2 block">Finish Message</label>
-                                                    <textarea
-                                                        className="w-full bg-white border border-slate-200 rounded-lg p-4 text-slate-800 leading-relaxed placeholder-slate-400 font-medium outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all resize-none"
-                                                        value={(activeData.data as Item).finishMessage || ''}
-                                                        onChange={(e) => updateItem((activeData.chapter as Chapter).id, (activeData.data as Item).id, { finishMessage: e.target.value })}
-                                                        placeholder="Message shown when item is completed..."
-                                                        rows={3}
-                                                    />
+                                                    <div className="flex items-center justify-between mb-2">
+                                                        <label className="text-sm font-medium text-slate-600">Finish Message (Markdown/KaTeX)</label>
+                                                        <button
+                                                            onClick={() => setIsPreviewMode(!isPreviewMode)}
+                                                            className="flex items-center gap-2 px-3 py-1.5 bg-indigo-100 hover:bg-indigo-200 text-indigo-700 rounded-lg text-sm font-medium transition-colors"
+                                                        >
+                                                            <FontAwesomeIcon icon={isPreviewMode ? faEdit : faEye} className="w-4 h-4" />
+                                                            {isPreviewMode ? 'Edit' : 'Preview'}
+                                                        </button>
+                                                    </div>
+                                                    {isPreviewMode ? (
+                                                        <div className="w-full bg-white border border-slate-200 rounded-lg p-6 text-slate-800 min-h-[200px]">
+                                                            <div className="prose max-w-none">
+                                                                <PreviewRenderer value={(activeData.data as Item).finishMessage || ''} />
+                                                            </div>
+                                                        </div>
+                                                    ) : (
+                                                        <div className="border border-slate-200 rounded-lg overflow-hidden" style={{ height: '200px' }}>
+                                                            <Editor
+                                                                height="100%"
+                                                                theme="light"
+                                                                language="markdown"
+                                                                value={(activeData.data as Item).finishMessage || ''}
+                                                                onChange={(val) => updateItem((activeData.chapter as Chapter).id, (activeData.data as Item).id, { finishMessage: val ?? '' })}
+                                                                options={{
+                                                                    minimap: { enabled: false },
+                                                                    lineNumbers: 'on',
+                                                                    scrollBeyondLastLine: false,
+                                                                    wordWrap: 'on',
+                                                                    fontSize: 14,
+                                                                    automaticLayout: true
+                                                                }}
+                                                            />
+                                                        </div>
+                                                    )}
                                                 </div>
                                                 {(activeData.data as Item).itemType === 'ACTIVITY' && (
                                                     <div>

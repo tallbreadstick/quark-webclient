@@ -216,7 +216,7 @@ export default function CourseCreationPage() {
                                             <span className="text-white">Forkable</span>
                                         </label>
 
-                                        <label className="inline-flex items-center gap-2 text-sm text-black-300">
+                                        <label className="ml-auto inline-flex items-center gap-2 text-sm text-black-300">
                                             <div className="text-sm mr-2 text-white">Visibility:</div>
                                             <select
                                                 value={visibility}
@@ -247,7 +247,7 @@ export default function CourseCreationPage() {
                                                     new Event("submit", { cancelable: true, bubbles: true })
                                                 )
                                         }
-                                        className="px-6 py-3 bg-indigo-600 rounded-md text-white font-medium cursor-pointer hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                        className="flex-1 px-4 py-2 bg-indigo-600 rounded-md text-white text-sm font-medium hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
                                     >
                                         {submitting ? "Creating..." : "Create Course"}
                                     </button>
