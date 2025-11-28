@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import Page from "../components/page/Page";
 import { loadSessionState } from "../types/UserSession";
-// api import removed - using typed endpoint below
 import { fetchCourses } from "../endpoints/CourseHandler";
 import { fetchUsers } from "../endpoints/UserHandler";
 import CourseCard from "../components/CourseCard";
@@ -22,7 +21,6 @@ export default function CoursesPage() {
     const [currentPage, setCurrentPage] = useState(1);
     const [sortBy, setSortBy] = useState("newest");
     const coursesPerPage = 9;
-
     const [profileUserType, setProfileUserType] = useState<"educator" | "learner" | "student" | undefined>(undefined);
 
     useEffect(() => {
@@ -32,39 +30,40 @@ export default function CoursesPage() {
             setLoading(true);
             setError(null);
             try {
-                await new Promise(resolve => setTimeout(resolve, 1000));
-
                 if (!userSession) {
-                    // anonymous user -> no personal courses
                     setCourses([]);
                     setLoading(false);
                     return;
                 }
 
-                // First fetch profile so we know user id / type
-                const usersRes = await fetchUsers(userSession?.username || userSession?.email || "");
+                // Fetch profile info first
+                const usersRes = await fetchUsers(userSession.username || userSession.email || "");
                 let normalized: "educator" | "learner" | undefined = undefined;
                 if (usersRes.status === "OK" && usersRes.ok && usersRes.ok.length > 0) {
                     const profile = usersRes.ok[0];
-                    // profile.id is available but not required here — server will return the user's courses
                     normalized = profile.userType === 'EDUCATOR' ? 'educator' : 'learner';
                     setProfileUserType(normalized);
                 }
 
-                // Ask the server to return only the courses that belong to the current user
+                // Fetch courses
                 const params: Record<string, string | undefined> = { my_courses: 'true', page: String(currentPage) };
-                const res = await fetchCourses(params, userSession?.jwt ?? "");
+                const res = await fetchCourses(params, userSession.jwt ?? "");
                 const data = res.status === "OK" && res.ok ? res.ok : [];
 
                 if (cancelled) return;
 
-                    if (userSession) {
-                        // server already returned only the user's courses (my_courses=true)
-                        const normalizedInput = data as any as DatabaseCourse[];
-                        setCourses(normalizedInput);
-                    } else {
-                        setCourses([]);
-                    }
+                // Map courses to include owner info
+                const coursesWithOwners: DatabaseCourse[] = await Promise.all(
+                    data.map(async (c: any) => {
+                        const ownerUsername = c.owner || "—";
+                        return {
+                            ...c,
+                            owner: { username: ownerUsername }
+                        };
+                    })
+                );
+
+                setCourses(coursesWithOwners);
             } catch (err: any) {
                 if (!cancelled) setError(err?.message || "Failed to load courses");
             } finally {
@@ -73,15 +72,11 @@ export default function CoursesPage() {
         }
 
         loadCourses();
-        return () => {
-            cancelled = true;
-        };
-    }, [userSession]);
+        return () => { cancelled = true; };
+    }, [userSession, currentPage]);
 
     const canCreateCourse = profileUserType === 'educator';
-    
 
-    // Apply filters and sorting
     const filtered = filterCourses(courses || [], searchTerm);
     const sorted = sortCourses(filtered, sortBy);
     const currentCourses = paginate(sorted, currentPage, coursesPerPage);
@@ -92,9 +87,6 @@ export default function CoursesPage() {
         setCurrentPage(1);
     };
 
-    // Determine button text based on user type and course progress
-    // (Left as a small helper for future use) -- not needed right now so keep logic inline where required
-
     return (
         <Page title="Quark | My Courses" userSession={userSession} setUserSession={setUserSession}>
             <div className="relative z-10 min-h-[calc(100vh-7rem)] px-6 py-8 text-gray-200">
@@ -103,7 +95,7 @@ export default function CoursesPage() {
                         <h1 className="text-3xl font-bold text-white mb-2">My Courses</h1>
                         <p className="text-gray-400">
                             {profileUserType === 'educator'
-                                ? "Manage and create your courses" 
+                                ? "Manage and create your courses"
                                 : "View your enrolled courses and learning progress"
                             }
                         </p>
@@ -117,7 +109,7 @@ export default function CoursesPage() {
                         createButtonText="Create Course"
                         searchPlaceholder="Search your courses..."
                     />
-                                
+
                     {!userSession ? (
                         <EmptyState
                             message="You need to be signed in to view your courses."
@@ -146,13 +138,12 @@ export default function CoursesPage() {
                                 />
                             ) : (
                                 <>
-                                    {/* Sort dropdown inline with course count - matching original layout */}
                                     <div className="flex justify-between items-center mb-6">
                                         <span className="text-gray-400">
                                             Showing {currentCourses.length} of {sorted.length} courses
                                         </span>
                                         <div className="relative">
-                                            <select 
+                                            <select
                                                 value={sortBy}
                                                 onChange={(e) => setSortBy(e.target.value)}
                                                 className="px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500/50 appearance-none pr-8 transition [&>option]:bg-slate-900 [&>option]:text-white [&>option:checked]:bg-blue-600 cursor-pointer"
@@ -161,12 +152,11 @@ export default function CoursesPage() {
                                                 <option value="popular">Sort by: Popular</option>
                                                 <option value="name">Sort by: Name</option>
                                             </select>
-                                            {/* Custom dropdown arrow for sort */}
                                             <div className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
-                                                <svg 
-                                                    className="h-4 w-4 text-gray-400" 
-                                                    fill="none" 
-                                                    stroke="currentColor" 
+                                                <svg
+                                                    className="h-4 w-4 text-gray-400"
+                                                    fill="none"
+                                                    stroke="currentColor"
                                                     viewBox="0 0 24 24"
                                                 >
                                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />

@@ -127,7 +127,7 @@ export default function CourseCard({
     }
 
     return (
-        <div className="bg-white/5 backdrop-blur-lg border border-white/10 rounded-2xl p-6 hover:border-blue-500/50 transition-all duration-300 hover:transform hover:scale-105 cursor-pointer">
+        <div className="h-full flex flex-col bg-white/5 backdrop-blur-lg border border-white/10 rounded-2xl p-6 hover:border-blue-500/50 transition-all duration-300 hover:transform hover:scale-105 cursor-pointer">
             <div className="mb-4">
                 <h3 className="text-xl font-semibold text-white mb-2 hover:text-blue-300 transition-colors">
                     {course.name}

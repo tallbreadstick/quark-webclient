@@ -103,7 +103,7 @@ export default function MarketplacePage() {
     }, [userSession]);
 
     const allTags = getUniqueTags(courses);
-    
+
     // Apply filters and sorting
     const searchFiltered = filterCourses(courses, searchTerm);
     // client-side tag filtering supports multi-tag OR match
@@ -117,10 +117,10 @@ export default function MarketplacePage() {
     const handleEnroll = (courseId: number, courseName: string, e: React.MouseEvent) => {
         e.stopPropagation();
         if (!userSession) return;
-        
+
         alert(`Successfully enrolled in "${courseName}"! You can now access this course from your My Courses page.`);
-        
-        setCourses(courses.map(course => 
+
+        setCourses(courses.map(course =>
             course.id === courseId ? { ...course, enrolled: !course.enrolled } : course
         ));
     };
@@ -146,8 +146,8 @@ export default function MarketplacePage() {
                     <div className="mb-8">
                         <h1 className="text-3xl font-bold text-white mb-2">Course Marketplace</h1>
                         <p className="text-gray-400">
-                            {isEducator 
-                                ? "Discover courses to use as templates for your own curriculum" 
+                            {isEducator
+                                ? "Discover courses to use as templates for your own curriculum"
                                 : "Discover and enroll in courses tailored to your learning journey"
                             }
                         </p>
@@ -170,7 +170,7 @@ export default function MarketplacePage() {
                     <SearchFilterBar
                         searchTerm={searchTerm}
                         onSearchChange={setSearchTerm}
-                        
+
                         selectedTag={selectedTags[0] ?? ""}
                         allTags={allTags}
                         onTagSelect={(tag) => {
@@ -245,7 +245,7 @@ export default function MarketplacePage() {
 
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
                                 {currentCourses.map((course) => (
-                                    <div key={course.id} onClick={() => handleCourseClick(course.id)}>
+                                    <div key={course.id} onClick={() => handleCourseClick(course.id)} className="h-full">
                                         <CourseCard
                                             course={course}
                                             userType={profileUserType}
@@ -258,6 +258,7 @@ export default function MarketplacePage() {
                                     </div>
                                 ))}
                             </div>
+
 
                             {sorted.length === 0 && (
                                 <div className="text-center text-gray-400 py-12">
