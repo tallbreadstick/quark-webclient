@@ -741,75 +741,101 @@ export default function ChapterEditPage(): React.ReactElement {
                                     </div>
 
                                     {/* Content Card */}
-                                    <div className="bg-slate-50 rounded-2xl shadow-2xl overflow-hidden group transition-all duration-300 ring-4 ring-white/5">
-                                        <div className="p-8 min-h-[400px]">
-                                            <div className="space-y-4">
-                                                <div>
-                                                    <div className="flex items-center justify-between mb-2">
-                                                        <label className="text-sm font-medium text-slate-600">Finish Message (Markdown/KaTeX)</label>
-                                                        <button
-                                                            onClick={() => setIsPreviewMode(!isPreviewMode)}
-                                                            className="flex items-center gap-2 px-3 py-1.5 bg-indigo-100 hover:bg-indigo-200 text-indigo-700 rounded-lg text-sm font-medium transition-colors"
-                                                        >
-                                                            <FontAwesomeIcon icon={isPreviewMode ? faEdit : faEye} className="w-4 h-4" />
-                                                            {isPreviewMode ? 'Edit' : 'Preview'}
-                                                        </button>
-                                                    </div>
-                                                    {isPreviewMode ? (
-                                                        <div className="w-full bg-white border border-slate-200 rounded-lg p-6 text-slate-800 min-h-[200px]">
-                                                            <div className="prose max-w-none">
-                                                                <PreviewRenderer value={(activeData.data as Item).finishMessage || ''} />
-                                                            </div>
+                                    <div className="space-y-6">
+                                        {/* Activity Ruleset (Before Finish Message) */}
+                                        {(activeData.data as Item).itemType === 'ACTIVITY' && (() => {
+                                            const item = activeData.data as Item;
+                                            let ruleset: any = { enabled: true };
+                                            try {
+                                                ruleset = item.ruleset ? (typeof item.ruleset === 'string' ? JSON.parse(item.ruleset) : item.ruleset) : { enabled: true };
+                                            } catch {
+                                                ruleset = { enabled: true };
+                                            }
+
+                                            const updateRulesetField = (field: string, value: any) => {
+                                                const newRuleset = { ...ruleset, [field]: value };
+                                                updateItem((activeData.chapter as Chapter).id, item.id, { ruleset: JSON.stringify(newRuleset) });
+                                            };
+
+                                            return (
+                                                <div className="bg-slate-900/40 border border-white/10 rounded-xl p-6 space-y-4">
+                                                    <h3 className="text-lg font-semibold text-white mb-4">Activity Ruleset</h3>
+                                                    
+                                                    <div className="grid grid-cols-2 gap-4">
+                                                        <div>
+                                                            <label className="text-sm font-medium text-slate-400 mb-2 block">Enabled</label>
+                                                            <select
+                                                                value={String(ruleset.enabled ?? true)}
+                                                                onChange={(e) => updateRulesetField('enabled', e.target.value === 'true')}
+                                                                className="w-full bg-slate-800/50 border border-white/10 rounded-lg px-3 py-2 text-white focus:border-blue-500/40 focus:outline-none transition-all"
+                                                            >
+                                                                <option value="true">True</option>
+                                                                <option value="false">False</option>
+                                                            </select>
                                                         </div>
-                                                    ) : (
-                                                        <div className="border border-slate-200 rounded-lg overflow-hidden" style={{ height: '200px' }}>
-                                                            <Editor
-                                                                height="100%"
-                                                                theme="light"
-                                                                language="markdown"
-                                                                value={(activeData.data as Item).finishMessage || ''}
-                                                                onChange={(val) => updateItem((activeData.chapter as Chapter).id, (activeData.data as Item).id, { finishMessage: val ?? '' })}
-                                                                options={{
-                                                                    minimap: { enabled: false },
-                                                                    lineNumbers: 'on',
-                                                                    scrollBeyondLastLine: false,
-                                                                    wordWrap: 'on',
-                                                                    fontSize: 14,
-                                                                    automaticLayout: true
-                                                                }}
+                                                        
+                                                        <div>
+                                                            <label className="text-sm font-medium text-slate-400 mb-2 block">Time Limit (seconds)</label>
+                                                            <input
+                                                                type="number"
+                                                                value={ruleset.timeLimit ?? ''}
+                                                                onChange={(e) => updateRulesetField('timeLimit', e.target.value ? Number(e.target.value) : undefined)}
+                                                                placeholder="e.g. 3600"
+                                                                className="w-full bg-slate-800/50 border border-white/10 rounded-lg px-3 py-2 text-white placeholder-slate-600 focus:border-blue-500/40 focus:outline-none transition-all"
                                                             />
                                                         </div>
-                                                    )}
-                                                </div>
-                                                {(activeData.data as Item).itemType === 'ACTIVITY' && (
-                                                    <div>
-                                                        <label className="text-sm font-medium text-slate-600 mb-2 block">
-                                                            Ruleset (Activity Only) - JSON Format
-                                                        </label>
-                                                        <textarea
-                                                            className="w-full bg-white border border-slate-200 rounded-lg p-4 text-slate-800 leading-relaxed placeholder-slate-400 font-mono text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all resize-none"
-                                                            value={(() => {
-                                                                const item = activeData.data as Item;
-                                                                if (!item.ruleset) return '';
-                                                                try {
-                                                                    const parsed = typeof item.ruleset === 'string' 
-                                                                        ? JSON.parse(item.ruleset) 
-                                                                        : item.ruleset;
-                                                                    return JSON.stringify(parsed, null, 2);
-                                                                } catch {
-                                                                    return item.ruleset;
-                                                                }
-                                                            })()}
-                                                            onChange={(e) => updateItem((activeData.chapter as Chapter).id, (activeData.data as Item).id, { ruleset: e.target.value })}
-                                                            placeholder='{\n  "enabled": true,\n  "closeDateTime": "2025-12-31T23:59:59",\n  "timeLimit": 3600\n}'
-                                                            rows={8}
-                                                        />
-                                                        <p className="text-xs text-slate-500 mt-1">
-                                                            Format: &#123;"enabled": true, "closeDateTime": "ISO date", "timeLimit": seconds&#125;
-                                                        </p>
                                                     </div>
-                                                )}
+                                                    
+                                                    <div>
+                                                        <label className="text-sm font-medium text-slate-400 mb-2 block">Close Date & Time</label>
+                                                        <input
+                                                            type="datetime-local"
+                                                            value={ruleset.closeDateTime ? new Date(ruleset.closeDateTime).toISOString().slice(0, 16) : ''}
+                                                            onChange={(e) => updateRulesetField('closeDateTime', e.target.value ? new Date(e.target.value).toISOString() : undefined)}
+                                                            className="w-full bg-slate-800/50 border border-white/10 rounded-lg px-3 py-2 text-white focus:border-blue-500/40 focus:outline-none transition-all"
+                                                        />
+                                                    </div>
+                                                </div>
+                                            );
+                                        })()}
+
+                                        {/* Finish Message */}
+                                        <div>
+                                            <div className="flex items-center justify-between mb-3">
+                                                <label className="text-sm font-medium text-slate-400">Finish Message (Markdown/KaTeX)</label>
+                                                <button
+                                                    onClick={() => setIsPreviewMode(!isPreviewMode)}
+                                                    className="flex items-center gap-2 px-3 py-1.5 bg-indigo-600/20 hover:bg-indigo-600/30 border border-indigo-500/30 text-indigo-300 rounded-lg text-sm font-medium transition-colors"
+                                                >
+                                                    <FontAwesomeIcon icon={isPreviewMode ? faEdit : faEye} className="w-4 h-4" />
+                                                    {isPreviewMode ? 'Edit' : 'Preview'}
+                                                </button>
                                             </div>
+                                            {isPreviewMode ? (
+                                                <div className="w-full bg-slate-900/40 border border-white/10 rounded-lg p-6 text-slate-300 min-h-[200px]">
+                                                    <div className="prose prose-invert max-w-none">
+                                                        <PreviewRenderer value={(activeData.data as Item).finishMessage || ''} />
+                                                    </div>
+                                                </div>
+                                            ) : (
+                                                <div className="border border-white/10 rounded-lg overflow-hidden" style={{ height: '200px' }}>
+                                                    <Editor
+                                                        height="100%"
+                                                        theme="vs-dark"
+                                                        language="markdown"
+                                                        value={(activeData.data as Item).finishMessage || ''}
+                                                        onChange={(val) => updateItem((activeData.chapter as Chapter).id, (activeData.data as Item).id, { finishMessage: val ?? '' })}
+                                                        options={{
+                                                            minimap: { enabled: false },
+                                                            lineNumbers: 'on',
+                                                            scrollBeyondLastLine: false,
+                                                            wordWrap: 'on',
+                                                            fontSize: 14,
+                                                            automaticLayout: true
+                                                        }}
+                                                    />
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
 
