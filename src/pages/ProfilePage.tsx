@@ -12,6 +12,8 @@ import {
   updateBio,
   fetchBio,
 } from "../endpoints/ProfileHandler";
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faTrophy, faCertificate, faChartPie, faChartLine } from '@fortawesome/free-solid-svg-icons';
 // icons/dropdown handled by Navbar
 // No hardcoded tab/course data — tabs start empty when no courses exist
 
@@ -439,7 +441,7 @@ const Profile = () => {
               </div>
 
               <div className="flex items-center justify-center sm:justify-start gap-3 mt-1">
-                <span className="text-gray-400 text-sm">{isEducator ? "Educator" : "Learner"}</span>
+                
                 {profileUserType && (
                   <span
                     className={`px-2 py-1 text-xs rounded-full font-medium ${
@@ -467,7 +469,7 @@ const Profile = () => {
             {activeTab === "achievements" && (
               <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-6">
                 <div className="flex items-center gap-2 mb-6">
-                  <span className="text-2xl">🏆</span>
+                  <span className="text-2xl"><FontAwesomeIcon icon={faTrophy} /></span>
                   <h2 className="text-xl font-semibold text-white">{isEducator ? "Teaching Achievements" : "Your Badges"}</h2>
                 </div>
                 <div className="grid grid-cols-1 gap-4">
@@ -482,7 +484,7 @@ const Profile = () => {
             {/* Certificates */}
             {activeTab === "certificates" && !isEducator && (
               <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-6 text-center">
-                <span className="text-6xl block mb-4">📜</span>
+                <span className="text-6xl block mb-4"><FontAwesomeIcon icon={faCertificate} /></span>
                 <p className="text-gray-400 text-lg mb-4">Complete courses to earn certificates and showcase your achievements.</p>
                 <button onClick={() => navigate("/marketplace")} className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-semibold">Browse Courses</button>
               </div>
@@ -492,7 +494,7 @@ const Profile = () => {
             {activeTab === "activity" && (
               <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-6">
                 <div className="flex items-center gap-2 mb-6">
-                  <span className="text-2xl">📊</span>
+                  <span className="text-2xl"><FontAwesomeIcon icon={faChartPie} /></span>
                   <h2 className="text-xl font-semibold text-white">{isEducator ? "Teaching Activity" : "Recent Activity"}</h2>
                 </div>
                 <div className="p-6 rounded-lg bg-white/5 text-center text-gray-400">
@@ -506,7 +508,7 @@ const Profile = () => {
             {activeTab === "analytics" && isEducator && (
               <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-6">
                 <div className="flex items-center gap-2 mb-6">
-                  <span className="text-2xl">📈</span>
+                  <span className="text-2xl"><FontAwesomeIcon icon={faChartLine} /></span>
                   <h2 className="text-xl font-semibold text-white">Teaching Analytics</h2>
                 </div>
                 <div className="p-6 rounded-lg bg-white/5 text-center text-gray-400">
