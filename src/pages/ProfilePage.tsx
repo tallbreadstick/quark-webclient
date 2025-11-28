@@ -145,13 +145,8 @@ const Profile = () => {
           role="button"
           tabIndex={0}
           onClick={() => {
-            // notify navbar to toggle the profile dropdown (implemented in Navbar)
-            try {
-              window.dispatchEvent(new CustomEvent('profile-menu-toggle'));
-            } catch (e) {
-              // fallback to local upload menu when CustomEvent not available
-              setMenuOpen((s) => !s);
-            }
+            // Open the local upload modal when avatar is clicked
+            setMenuOpen(true);
           }}
           className="w-28 h-28 rounded-full overflow-hidden border-2 border-cyan-400 shadow-md flex items-center justify-center bg-gradient-to-br from-slate-900 to-slate-700 cursor-pointer relative"
         >
