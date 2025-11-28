@@ -406,7 +406,7 @@ const Profile = () => {
             <UploadControls userSession={userSession} setUserSession={setUserSession} />
             <div className="flex-1 text-center sm:text-left">
               <div className="flex flex-col sm:flex-row items-center justify-center sm:justify-between gap-2">
-                <h1 className="text-3xl font-bold text-white cursor-pointer">
+                <h1 className="text-3xl font-bold text-white">
                   {username}
                 </h1>
               </div>
