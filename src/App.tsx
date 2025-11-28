@@ -9,7 +9,7 @@ import CourseContentPage from "./pages/CourseContentPage";
 import CourseEditPage from "./pages/CourseEditPage";
 import CourseForkPage from "./pages/CourseForkPage";
 import Profile from "./pages/ProfilePage"; // Add this import
-import "katex/dist/katex.min.css";
+// import "katex/dist/katex.min.css";
 
 export default function App() {
     return (

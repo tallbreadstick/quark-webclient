@@ -141,7 +141,9 @@ export default function CourseCreationPage() {
             if (!draggingRef.current || !containerRef.current) return;
             const dx = ev.clientX - startXRef.current;
             const containerRect = containerRef.current.getBoundingClientRect();
-            const max = Math.max(MIN_LEFT, containerRect.width - MIN_REMAIN);
+            const containerWidth = containerRect.width;
+            const maxLeft = containerWidth / 4; // 1/3 of total width
+            const max = Math.min(maxLeft, containerWidth - MIN_REMAIN);
             let newWidth = Math.max(MIN_LEFT, Math.min(startWidthRef.current + dx, max));
             setLeftWidth(newWidth);
         };
@@ -167,10 +169,19 @@ export default function CourseCreationPage() {
                     {isLarge && (
                         <div
                             onMouseDown={startDrag}
-                            style={{ position: 'absolute', top: 0, left: leftWidth, height: '100%', width: 8, transform: 'translateX(-4px)', cursor: 'col-resize', zIndex: 40 }}
+                            style={{
+                                position: "absolute",
+                                top: 0,
+                                left: `calc(${leftWidth}px + 0.75rem - 4px)`,
+                                //   ^ sidebar width  ^ grid gap(1.5rem/2)   ^ half handle
+                                height: "100%",
+                                width: "8px",
+                                cursor: "col-resize",
+                                zIndex: 40
+                            }}
                             className="hidden lg:block"
                         >
-                            <div className="h-full w-full bg-transparent hover:bg-white/10" />
+                            <div className="h-full w-full bg-transparent hover:bg-white/10 transition-colors" />
                         </div>
                     )}
 
@@ -303,10 +314,13 @@ export default function CourseCreationPage() {
                         <h1 className="text-2xl font-semibold text-white mb-4 text-center">Preview</h1>
 
                         <div className="w-full flex-1 px-6 py-6 rounded-md bg-white border border-gray-200 text-gray-900 overflow-auto min-h-0">
-                            <div className="prose max-w-none">
+                            <div className="markdown-preview">
                                 <Suspense fallback={<div>Loading preview...</div>}>
                                     {introRenderer === "MARKDOWN" ? (
-                                        <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>
+                                        <ReactMarkdown
+                                            remarkPlugins={[remarkMath]}
+                                            rehypePlugins={[rehypeKatex]}
+                                        >
                                             {introContent}
                                         </ReactMarkdown>
                                     ) : (
@@ -314,6 +328,7 @@ export default function CourseCreationPage() {
                                     )}
                                 </Suspense>
                             </div>
+
                         </div>
                     </div>
 
