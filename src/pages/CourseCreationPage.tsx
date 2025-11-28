@@ -241,7 +241,7 @@ export default function CourseCreationPage() {
                                         </label>
 
                                         <label className="inline-flex items-center gap-2 text-sm text-black-300">
-                                            <div className="text-sm mr-2 text-white">Visibility</div>
+                                            <div className="text-sm mr-2 text-white">Visibility:</div>
                                             <select
                                                 value={visibility}
                                                 onChange={(e) => setVisibility(e.target.value as any)}

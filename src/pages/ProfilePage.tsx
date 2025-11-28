@@ -412,10 +412,6 @@ const Profile = () => {
                 <BioEditor userSession={userSession} setUserSession={setUserSession} />
               </div>
             </div>
-            <div className="flex flex-col items-end gap-3">
-              <div className="text-sm text-gray-300">Member since • <span className="font-semibold">2023</span></div>
-              <button className="px-5 py-2 bg-purple-600 rounded-lg text-white hover:bg-blue-700 transition font-semibold">Edit Profile</button>
-            </div>
           </div>
 
           {/* Tabs */}
