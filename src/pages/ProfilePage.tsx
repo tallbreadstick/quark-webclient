@@ -11,13 +11,7 @@ import {
   updateBio,
   fetchBio,
 } from "../endpoints/ProfileHandler";
-import {
-  educatorTabs,
-  learnerTabs,
-  mockAchievements,
-  mockAnalytics,
-  mockActivities,
-} from "../data/profileData";
+// No hardcoded tab/course data — tabs start empty when no courses exist
 
 interface UserSession {
   username: string;
@@ -53,29 +47,40 @@ const Profile = () => {
     }, [preview]);
 
     const doUpload = async () => {
+      setError(null);
       if (!selected) return setError("Please select a file");
       if (!userSession?.jwt) return setError("Not authenticated");
+
+      // Simple client-side size limit (5MB)
+      const maxBytes = 5 * 1024 * 1024;
+      if (selected.size > maxBytes) return setError("File is too large (max 5MB)");
+
       setUploading(true);
-      setError(null);
       try {
         const res = await uploadProfilePicture(selected, userSession.jwt);
-        if (res.status === "OK") {
-          const lookupId = userSession.username || userSession.email;
-          const usersRes = await fetchUsers(lookupId);
-          if (usersRes.status === "OK" && usersRes.ok && usersRes.ok.length > 0) {
-            const uid = usersRes.ok[0].id;
-            const picRes = await fetchProfilePicture(uid);
-            if (picRes.status === "OK" && picRes.ok) {
-              const dataUrl = picRes.ok.startsWith("data:")
-                ? picRes.ok
-                : `data:image/png;base64,${picRes.ok}`;
-              setUserSession((prev) =>
-                prev ? { ...prev, profilePictureUrl: dataUrl } : prev
-              );
-              setSelected(null);
-            }
+        if (res.status !== "OK") {
+          return setError(res.err ?? String(res.ok ?? "Upload failed"));
+        }
+
+        // After successful upload, fetch the user's id and then the stored picture
+        const lookupId = userSession.username || userSession.email;
+        const usersRes = await fetchUsers(lookupId);
+        if (usersRes.status === "OK" && usersRes.ok && usersRes.ok.length > 0) {
+          const uid = usersRes.ok[0].id;
+          const picRes = await fetchProfilePicture(uid);
+          if (picRes.status === "OK" && picRes.ok) {
+            const dataUrl = picRes.ok.startsWith("data:")
+              ? picRes.ok
+              : `data:image/png;base64,${picRes.ok}`;
+            setUserSession((prev) => (prev ? { ...prev, profilePictureUrl: dataUrl } : prev));
+            setSelected(null);
+            return;
           }
-        } else setError(res.err ?? "Upload failed");
+        }
+
+        // If we get here, fetching updated picture failed — still clear selection
+        setSelected(null);
+        setError("Uploaded but failed to retrieve updated profile picture");
       } catch (e: any) {
         setError(e?.message || String(e));
       } finally {
@@ -89,11 +94,13 @@ const Profile = () => {
       setError(null);
       try {
         const res = await clearProfilePicture(userSession.jwt);
-        if (res.status === "OK")
-          setUserSession((prev) =>
-            prev ? { ...prev, profilePictureUrl: null } : prev
-          );
-        else setError(res.err ?? "Failed to clear profile picture");
+        if (res.status === "OK") {
+          // Clear local preview and session value
+          if (selected) {
+            setSelected(null);
+          }
+          setUserSession((prev) => (prev ? { ...prev, profilePictureUrl: null } : prev));
+        } else setError(res.err ?? "Failed to clear profile picture");
       } catch (e: any) {
         setError(e?.message || String(e));
       } finally {
@@ -103,12 +110,19 @@ const Profile = () => {
 
     return (
       <div className="flex flex-col items-center gap-3">
-        <div className="w-28 h-28 rounded-full overflow-hidden border-2 border-cyan-400 shadow-md">
-          <img
-            src={preview ?? userSession.profilePictureUrl ?? undefined}
-            alt={userSession.username ?? "Profile image"}
-            className="w-full h-full object-cover bg-gradient-to-br from-slate-900 to-slate-700"
-          />
+        <div className="w-28 h-28 rounded-full overflow-hidden border-2 border-cyan-400 shadow-md flex items-center justify-center bg-gradient-to-br from-slate-900 to-slate-700">
+          {(preview ?? userSession.profilePictureUrl) ? (
+            // only render <img> when there's a valid src
+            // cast to string because union may include null
+            <img
+              src={(preview ?? userSession.profilePictureUrl) as string}
+              alt={userSession.username ?? "Profile image"}
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            // placeholder initials
+            <span className="text-white font-semibold">{(userSession.username || userSession.email || "U").charAt(0).toUpperCase()}</span>
+          )}
         </div>
 
         <label className="inline-flex items-center gap-2 px-4 py-2 bg-white/10 border border-white/20 rounded-md cursor-pointer hover:bg-white/20 transition text-sm">
@@ -258,35 +272,44 @@ const Profile = () => {
 
   /* -------------------------- Load profile info -------------------------- */
   useEffect(() => {
+    // only run when identifier changes (username or email)
+    const identifier = userSession?.username ?? userSession?.email ?? null;
+
     if (!userSession) {
       navigate("/login");
       return;
     }
 
-    // must not return a Promise from useEffect
+    if (!identifier) return;
+
+    let cancelled = false;
+
     const loadProfile = async () => {
       try {
-        const id = userSession.username || userSession.email;
-        const res = await fetchUsers(id);
+        const res = await fetchUsers(identifier);
+        if (cancelled) return;
         if (res.status === "OK" && res.ok && res.ok.length > 0) {
           const p = res.ok[0];
           setProfileUserType(p.userType === "EDUCATOR" ? "educator" : "learner");
 
+          // Fetch picture and bio, but only update session if values changed
+          const updates: Partial<UserSession> = {};
+
           const picRes = await fetchProfilePicture(p.id);
-          if (picRes.status === "OK" && picRes.ok) {
+          if (!cancelled && picRes.status === "OK" && picRes.ok) {
             const dataUrl = picRes.ok.startsWith("data:")
               ? picRes.ok
               : `data:image/png;base64,${picRes.ok}`;
-            setUserSession((prev) =>
-              prev ? { ...prev, profilePictureUrl: dataUrl } : prev
-            );
+            if (dataUrl !== userSession.profilePictureUrl) updates.profilePictureUrl = dataUrl;
           }
 
           const bioRes = await fetchBio(p.id);
-          if (bioRes.status === "OK" && bioRes.ok != null) {
-            setUserSession((prev) =>
-              prev ? { ...prev, bio: bioRes.ok } : prev
-            );
+          if (!cancelled && bioRes.status === "OK" && bioRes.ok != null) {
+            if (bioRes.ok !== userSession.bio) updates.bio = bioRes.ok;
+          }
+
+          if (Object.keys(updates).length > 0) {
+            setUserSession((prev) => (prev ? { ...prev, ...updates } : prev));
           }
         }
       } catch (e) {
@@ -295,8 +318,11 @@ const Profile = () => {
     };
 
     loadProfile();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userSession, navigate]);
+    return () => {
+      cancelled = true;
+    };
+    // only depend on identifier (username/email) and navigate
+  }, [userSession?.username, userSession?.email, navigate]);
 
   if (!userSession)
     return (
@@ -309,9 +335,10 @@ const Profile = () => {
 
   const username = userSession.username || "User";
   const isEducator = profileUserType === "educator";
-  const tabs = isEducator ? educatorTabs : learnerTabs;
-  const achievements = isEducator ? mockAchievements.educator : mockAchievements.learner;
-  const activities = isEducator ? mockActivities.educator : mockActivities.learner;
+  // No courses yet — start with empty tabs and empty content
+  const tabs: any[] = [];
+  const achievements: any[] = [];
+  const activities: any[] = [];
 
   return (
     <Page title={`Quark | ${username}'s Profile`} userSession={userSession} setUserSession={setUserSession}>
@@ -356,16 +383,11 @@ const Profile = () => {
                   <span className="text-2xl">🏆</span>
                   <h2 className="text-xl font-semibold text-white">{isEducator ? "Teaching Achievements" : "Your Badges"}</h2>
                 </div>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  {achievements.map(a => (
-                    <div key={a.id} className="flex flex-col items-center gap-2 p-4 rounded-lg bg-white/5 hover:bg-white/10 transition">
-                      <div className="h-16 w-16 rounded-full bg-blue-500/20 flex items-center justify-center">
-                        <span className="text-2xl">{a.icon}</span>
-                      </div>
-                      <span className="text-sm font-medium text-white text-center">{a.title}</span>
-                      <span className="text-xs text-gray-400 text-center">{a.description}</span>
-                    </div>
-                  ))}
+                <div className="grid grid-cols-1 gap-4">
+                  <div className="p-6 rounded-lg bg-white/5 text-center text-gray-400">
+                    <p className="text-sm">No achievements yet.</p>
+                    <p className="text-xs mt-2">Complete or create courses to earn achievements.</p>
+                  </div>
                 </div>
               </div>
             )}
@@ -386,16 +408,9 @@ const Profile = () => {
                   <span className="text-2xl">📊</span>
                   <h2 className="text-xl font-semibold text-white">{isEducator ? "Teaching Activity" : "Recent Activity"}</h2>
                 </div>
-                <div className="space-y-3">
-                  {activities.map(a => (
-                    <div key={a.id} className="flex items-start gap-4 p-3 rounded-lg bg-white/5 hover:bg-white/10 transition">
-                      <div className="h-2 w-2 rounded-full bg-blue-400 mt-3 flex-shrink-0" />
-                      <div>
-                        <p className="text-white font-medium">{a.title}</p>
-                        <p className="text-gray-400 text-sm mt-1">{a.time}</p>
-                      </div>
-                    </div>
-                  ))}
+                <div className="p-6 rounded-lg bg-white/5 text-center text-gray-400">
+                  <p className="text-sm">No recent activity.</p>
+                  <p className="text-xs mt-2">Your activity will appear here once you start using Quark.</p>
                 </div>
               </div>
             )}
@@ -407,14 +422,9 @@ const Profile = () => {
                   <span className="text-2xl">📈</span>
                   <h2 className="text-xl font-semibold text-white">Teaching Analytics</h2>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {mockAnalytics.map((analytic, i) => (
-                    <div key={i} className="bg-white/5 rounded-xl p-5 hover:bg-white/10 transition">
-                      <h3 className="text-lg font-semibold text-white mb-2">{analytic.title}</h3>
-                      <p className={`text-3xl font-bold ${analytic.color}`}>{analytic.value}</p>
-                      <p className="text-gray-400 text-sm mt-1">{analytic.description}</p>
-                    </div>
-                  ))}
+                <div className="p-6 rounded-lg bg-white/5 text-center text-gray-400">
+                  <p className="text-sm">No analytics available yet.</p>
+                  <p className="text-xs mt-2">Teaching analytics will show here once you create courses and receive engagement.</p>
                 </div>
               </div>
             )}
