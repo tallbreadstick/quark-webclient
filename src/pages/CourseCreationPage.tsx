@@ -1,21 +1,10 @@
-import React, { useState, Suspense, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Page from "../components/page/Page";
 import { loadSessionState } from "../types/UserSession";
-import ReactMarkdown from "react-markdown";
-import remarkMath from "remark-math";
-import rehypeKatex from "rehype-katex";
 import { createCourse } from "../endpoints/CourseHandler";
 import Editor from "@monaco-editor/react";
-
-// Lazy-loaded fallback LaTeX renderer (still rendered using Markdown+KaTeX)
-const LatexRenderer = React.lazy(async () => ({
-    default: ({ value }: { value: string }) => (
-        <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>
-            {value}
-        </ReactMarkdown>
-    )
-}));
+import PreviewRenderer from "../components/PreviewRenderer";
 
 export default function CourseCreationPage() {
     const { userSession, setUserSession } = loadSessionState();
@@ -23,24 +12,26 @@ export default function CourseCreationPage() {
 
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
-
-    const [introRenderer, setIntroRenderer] = useState<"MARKDOWN" | "LATEX">("MARKDOWN");
     const [introContent, setIntroContent] = useState("");
+
     const [leftWidth, setLeftWidth] = useState<number>(320);
     const containerRef = useRef<HTMLDivElement | null>(null);
     const draggingRef = useRef(false);
     const startXRef = useRef(0);
     const startWidthRef = useRef(0);
-    const [isLarge, setIsLarge] = useState(() => typeof window !== 'undefined' ? window.innerWidth >= 1024 : true);
+    const [isLarge, setIsLarge] = useState(() =>
+        typeof window !== "undefined" ? window.innerWidth >= 1024 : true
+    );
 
-    // Resize bounds: minimum left width, plus minimum center and preview widths
     const MIN_LEFT = 200;
     const MIN_CENTER = 360;
     const MIN_PREVIEW = 360;
     const MIN_REMAIN = MIN_CENTER + MIN_PREVIEW;
 
     const [forkable, setForkable] = useState(false);
-    const [visibility, setVisibility] = useState<"PUBLIC" | "PRIVATE" | "UNLISTED">("PUBLIC");
+    const [visibility, setVisibility] = useState<"PUBLIC" | "PRIVATE" | "UNLISTED">(
+        "PUBLIC"
+    );
 
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
@@ -48,7 +39,6 @@ export default function CourseCreationPage() {
         setError(null);
 
         const fd = new FormData(e.currentTarget);
-
         const name = String(fd.get("name") || "").trim();
         const description = String(fd.get("description") || "").trim() || null;
         const tagsRaw = String(fd.get("tags") || "").trim();
@@ -60,7 +50,6 @@ export default function CourseCreationPage() {
         }
 
         const introductionJson = JSON.stringify({
-            renderer: introRenderer,
             content: introContent
         });
 
@@ -100,35 +89,8 @@ export default function CourseCreationPage() {
 
     useEffect(() => {
         const onResize = () => setIsLarge(window.innerWidth >= 1024);
-        window.addEventListener('resize', onResize);
-        return () => window.removeEventListener('resize', onResize);
-    }, []);
-
-    useEffect(() => {
-        const onMouseMove = (e: MouseEvent) => {
-            if (!draggingRef.current || !containerRef.current) return;
-            const dx = e.clientX - startXRef.current;
-            const containerRect = containerRef.current.getBoundingClientRect();
-            const max = Math.max(MIN_LEFT, containerRect.width - MIN_REMAIN);
-            let newWidth = Math.max(MIN_LEFT, Math.min(startWidthRef.current + dx, max));
-            setLeftWidth(newWidth);
-        };
-
-        const onMouseUp = () => {
-            if (draggingRef.current) {
-                draggingRef.current = false;
-                document.body.style.cursor = '';
-                window.removeEventListener('mousemove', onMouseMove);
-                window.removeEventListener('mouseup', onMouseUp);
-            }
-        };
-
-        // cleanup on unmount
-        return () => {
-            window.removeEventListener('mousemove', onMouseMove);
-            window.removeEventListener('mouseup', onMouseUp);
-            document.body.style.cursor = '';
-        };
+        window.addEventListener("resize", onResize);
+        return () => window.removeEventListener("resize", onResize);
     }, []);
 
     const startDrag = (e: React.MouseEvent) => {
@@ -136,25 +98,27 @@ export default function CourseCreationPage() {
         draggingRef.current = true;
         startXRef.current = e.clientX;
         startWidthRef.current = leftWidth;
-        document.body.style.cursor = 'col-resize';
+        document.body.style.cursor = "col-resize";
+
         const onMouseMove = (ev: MouseEvent) => {
             if (!draggingRef.current || !containerRef.current) return;
             const dx = ev.clientX - startXRef.current;
             const containerRect = containerRef.current.getBoundingClientRect();
-            const containerWidth = containerRect.width;
-            const maxLeft = containerWidth / 4; // 1/3 of total width
-            const max = Math.min(maxLeft, containerWidth - MIN_REMAIN);
+            const maxLeft = containerRect.width / 4;
+            const max = Math.min(maxLeft, containerRect.width - MIN_REMAIN);
             let newWidth = Math.max(MIN_LEFT, Math.min(startWidthRef.current + dx, max));
             setLeftWidth(newWidth);
         };
+
         const onMouseUp = () => {
             draggingRef.current = false;
-            document.body.style.cursor = '';
-            window.removeEventListener('mousemove', onMouseMove);
-            window.removeEventListener('mouseup', onMouseUp);
+            document.body.style.cursor = "";
+            window.removeEventListener("mousemove", onMouseMove);
+            window.removeEventListener("mouseup", onMouseUp);
         };
-        window.addEventListener('mousemove', onMouseMove);
-        window.addEventListener('mouseup', onMouseUp);
+
+        window.addEventListener("mousemove", onMouseMove);
+        window.addEventListener("mouseup", onMouseUp);
     };
 
     return (
@@ -163,9 +127,13 @@ export default function CourseCreationPage() {
                 <div
                     ref={containerRef}
                     className="w-full mx-auto gap-6 items-start h-full relative"
-                    style={{ display: 'grid', gridTemplateColumns: isLarge ? `${leftWidth}px 1fr 1fr` : '1fr', gap: '1.5rem' }}
+                    style={{
+                        display: "grid",
+                        gridTemplateColumns: isLarge ? `${leftWidth}px 1fr 1fr` : "1fr",
+                        gap: "1.5rem"
+                    }}
                 >
-
+                    {/* Drag handle */}
                     {isLarge && (
                         <div
                             onMouseDown={startDrag}
@@ -173,7 +141,6 @@ export default function CourseCreationPage() {
                                 position: "absolute",
                                 top: 0,
                                 left: `calc(${leftWidth}px + 0.75rem - 4px)`,
-                                //   ^ sidebar width  ^ grid gap(1.5rem/2)   ^ half handle
                                 height: "100%",
                                 width: "8px",
                                 cursor: "col-resize",
@@ -185,7 +152,7 @@ export default function CourseCreationPage() {
                         </div>
                     )}
 
-                    {/* LEFT: form controls (narrow) */}
+                    {/* LEFT: form controls */}
                     <div className="w-full bg-black/20 backdrop-blur-lg border border-white/10 rounded-2xl p-6 h-full flex flex-col justify-between">
                         <div className="flex-1 overflow-hidden">
                             <h1 className="text-2xl font-semibold text-white mb-4 text-left">Create Course</h1>
@@ -194,13 +161,20 @@ export default function CourseCreationPage() {
                                 <div className="text-center text-gray-300">
                                     <p className="mb-4">You must be signed in to create a course.</p>
                                     <div className="flex justify-center gap-3">
-                                        <a href="/login" className="px-4 py-2 bg-[#566fb8] rounded-md text-white cursor-pointer">
+                                        <a
+                                            href="/login"
+                                            className="px-4 py-2 bg-[#566fb8] rounded-md text-white cursor-pointer"
+                                        >
                                             Sign in
                                         </a>
                                     </div>
                                 </div>
                             ) : (
-                                <form id="course-create-form" onSubmit={handleSubmit} className="flex flex-col gap-4 h-full overflow-auto">
+                                <form
+                                    id="course-create-form"
+                                    onSubmit={handleSubmit}
+                                    className="flex flex-col gap-4 h-full overflow-auto"
+                                >
                                     {error && <div className="mb-2 text-sm text-red-400">{error}</div>}
 
                                     <div>
@@ -222,7 +196,9 @@ export default function CourseCreationPage() {
                                     </div>
 
                                     <div>
-                                        <label className="block mb-2 text-sm font-medium text-[#bdcdff]">Tag IDs (comma separated)</label>
+                                        <label className="block mb-2 text-sm font-medium text-[#bdcdff]">
+                                            Tag IDs (comma separated)
+                                        </label>
                                         <input
                                             name="tags"
                                             placeholder="e.g. 1,2,3"
@@ -257,7 +233,6 @@ export default function CourseCreationPage() {
                             )}
                         </div>
 
-                        {/* Create button pinned to bottom of left column */}
                         {userSession && (
                             <div className="pt-4">
                                 <div className="flex justify-center">
@@ -265,7 +240,13 @@ export default function CourseCreationPage() {
                                         type="submit"
                                         form="course-create-form"
                                         disabled={submitting}
-                                        onClick={() => document.querySelector<HTMLFormElement>("form")?.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }))}
+                                        onClick={() =>
+                                            document
+                                                .querySelector<HTMLFormElement>("form")
+                                                ?.dispatchEvent(
+                                                    new Event("submit", { cancelable: true, bubbles: true })
+                                                )
+                                        }
                                         className="px-6 py-3 bg-indigo-600 rounded-md text-white font-medium cursor-pointer hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                     >
                                         {submitting ? "Creating..." : "Create Course"}
@@ -277,33 +258,20 @@ export default function CourseCreationPage() {
 
                     {/* CENTER: Editor */}
                     <div className="w-full bg-black/20 backdrop-blur-lg border border-white/10 rounded-2xl p-4 h-full flex flex-col">
-                        <div className="flex items-center justify-between mb-3">
-                            <div className="text-sm text-gray-300">Renderer</div>
-                            <select
-                                value={introRenderer}
-                                onChange={(e) => setIntroRenderer(e.target.value as any)}
-                                className="px-2 py-1 bg-black text-white rounded-md border border-white/10"
-                            >
-                                <option value="MARKDOWN">Markdown</option>
-                                <option value="LATEX">LaTeX</option>
-                            </select>
-                        </div>
-
                         <div className="flex-1 bg-transparent border border-white/5 rounded-md overflow-hidden min-h-0">
                             <Editor
                                 height="100%"
                                 theme="vs-dark"
-                                defaultLanguage={introRenderer === "LATEX" ? "latex" : "markdown"}
-                                language={introRenderer === "LATEX" ? "latex" : "markdown"}
+                                language="markdown"
                                 value={introContent}
                                 onChange={(val) => setIntroContent(val ?? "")}
                                 options={{
                                     minimap: { enabled: false },
-                                    lineNumbers: 'on',
+                                    lineNumbers: "on",
                                     scrollBeyondLastLine: false,
-                                    wordWrap: 'on',
+                                    wordWrap: "on",
                                     fontSize: 14,
-                                    automaticLayout: true,
+                                    automaticLayout: true
                                 }}
                             />
                         </div>
@@ -312,26 +280,12 @@ export default function CourseCreationPage() {
                     {/* RIGHT: Preview */}
                     <div className="w-full bg-black/20 backdrop-blur-lg border border-white/10 rounded-2xl p-6 h-full flex flex-col overflow-y-auto">
                         <h1 className="text-2xl font-semibold text-white mb-4 text-center">Preview</h1>
-
                         <div className="w-full flex-1 px-6 py-6 rounded-md bg-white border border-gray-200 text-gray-900 overflow-auto min-h-0">
                             <div className="prose max-w-none">
-                                <Suspense fallback={<div>Loading preview...</div>}>
-                                    {introRenderer === "MARKDOWN" ? (
-                                        <ReactMarkdown
-                                            remarkPlugins={[remarkMath]}
-                                            rehypePlugins={[rehypeKatex]}
-                                        >
-                                            {introContent}
-                                        </ReactMarkdown>
-                                    ) : (
-                                        <LatexRenderer value={introContent} />
-                                    )}
-                                </Suspense>
+                                <PreviewRenderer value={introContent} />
                             </div>
-
                         </div>
                     </div>
-
                 </div>
             </div>
         </Page>
