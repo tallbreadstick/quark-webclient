@@ -224,8 +224,8 @@ export default function CourseEditPage() {
                                 <form id="course-edit-form" onSubmit={handleSubmit} className="flex flex-col gap-4 h-full overflow-auto">
                                     {error && <div className="mb-2 text-sm text-red-400">{error}</div>}
                                     <div className="mb-3 flex gap-2">
-                                        <button type="button" onClick={() => setActiveTab("METADATA")} className={`px-3 py-1 rounded-md ${activeTab === "METADATA" ? "bg-indigo-600 text-white" : "bg-white/5 text-white"}`}>Metadata</button>
-                                        <button type="button" onClick={() => setActiveTab("CHAPTERS")} className={`px-3 py-1 rounded-md ${activeTab === "CHAPTERS" ? "bg-indigo-600 text-white" : "bg-white/5 text-white"}`}>Chapter Edit</button>
+                                        <button type="button" onClick={() => setActiveTab("METADATA")} className={`px-3 py-1 w-1/2 rounded-md ${activeTab === "METADATA" ? "bg-indigo-600 text-white" : "bg-white/5 text-white"}`}>Metadata</button>
+                                        <button type="button" onClick={() => setActiveTab("CHAPTERS")} className={`px-3 py-1 w-1/2 rounded-md ${activeTab === "CHAPTERS" ? "bg-indigo-600 text-white" : "bg-white/5 text-white"}`}>Chapter Edit</button>
                                     </div>
                                     {activeTab === "METADATA" && <>
                                         <div><label className="block mb-2 text-sm font-medium text-[#bdcdff]">Name</label><input value={name} onChange={(e) => setName(e.target.value)} required className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500/50 transition" /></div>
