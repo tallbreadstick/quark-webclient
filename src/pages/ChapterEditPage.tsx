@@ -59,6 +59,7 @@ type Item = {
     icon: string;
     finishMessage?: string;
     ruleset?: string;
+    uiSerialId?: string; // UI-managed serial id (e.g. L1, A1) used to track selection
 };
 
 type Chapter = {
@@ -70,7 +71,17 @@ type Chapter = {
     items: Item[]
 };
 
-type Selection = { type: 'chapter'; id: number } | { type: 'item'; chapterId: number; itemId: number } | null;
+type Selection = { type: 'chapter'; id: number } | { type: 'item'; chapterId: number; serialId: string } | null;
+
+// Assign UI serial ids to items (separate counters for lessons and activities)
+function assignUiSerials(items: Item[]): Item[] {
+    let lessonCounter = 1;
+    let activityCounter = 1;
+    return items.map(it => {
+        const uiSerialId = it.itemType === 'LESSON' ? `L${lessonCounter++}` : `A${activityCounter++}`;
+        return { ...it, uiSerialId };
+    });
+}
 
 // Using shared `Page` component from `src/components/page/Page.tsx`
 
@@ -143,15 +154,16 @@ export default function ChapterEditPage(): React.ReactElement {
         const loadChapterItems = async () => {
             if (selection?.type === 'chapter') {
                 const chapter = chapters.find(c => c.id === selection.id);
-                if (chapter && chapter.items.length === 0) {
+                    if (chapter && chapter.items.length === 0) {
                     try {
                         const jwt = userSession?.jwt ?? "";
                         const result = await fetchChapterWithItems(selection.id, jwt);
                         
                         if (result.ok) {
-                            setChapters(prev => prev.map(c => 
-                                c.id === selection.id ? { ...c, items: result.ok!.items } : c
-                            ));
+                                const withSerials = assignUiSerials(result.ok!.items as Item[]);
+                                setChapters(prev => prev.map(c => 
+                                    c.id === selection.id ? { ...c, items: withSerials } : c
+                                ));
                         }
                     } catch (err) {
                         console.error("Failed to load chapter items:", err);
@@ -285,13 +297,14 @@ export default function ChapterEditPage(): React.ReactElement {
                     // Reload chapter items to get the new item with proper ID
                     const chapterResult = await fetchChapterWithItems(chapterId, jwt);
                     if (chapterResult.ok) {
+                        const withSerials = assignUiSerials(chapterResult.ok!.items as Item[]);
                         setChapters(prev => prev.map(c => 
-                            c.id === chapterId ? { ...c, items: chapterResult.ok!.items } : c
+                            c.id === chapterId ? { ...c, items: withSerials } : c
                         ));
-                        // Select the newly created item
-                        const newItem = chapterResult.ok.items[chapterResult.ok.items.length - 1];
+                        // Select the newly created item (by UI serial id)
+                        const newItem = withSerials[withSerials.length - 1];
                         if (newItem) {
-                            setSelection({ type: 'item', chapterId, itemId: newItem.id });
+                            setSelection({ type: 'item', chapterId, serialId: newItem.uiSerialId! });
                         }
                     }
                 } else {
@@ -314,13 +327,14 @@ export default function ChapterEditPage(): React.ReactElement {
                     // Reload chapter items to get the new item with proper ID
                     const chapterResult = await fetchChapterWithItems(chapterId, jwt);
                     if (chapterResult.ok) {
+                        const withSerials = assignUiSerials(chapterResult.ok!.items as Item[]);
                         setChapters(prev => prev.map(c => 
-                            c.id === chapterId ? { ...c, items: chapterResult.ok!.items } : c
+                            c.id === chapterId ? { ...c, items: withSerials } : c
                         ));
-                        // Select the newly created item
-                        const newItem = chapterResult.ok.items[chapterResult.ok.items.length - 1];
+                        // Select the newly created item (by UI serial id)
+                        const newItem = withSerials[withSerials.length - 1];
                         if (newItem) {
-                            setSelection({ type: 'item', chapterId, itemId: newItem.id });
+                            setSelection({ type: 'item', chapterId, serialId: newItem.uiSerialId! });
                         }
                     }
                 } else {
@@ -350,14 +364,14 @@ export default function ChapterEditPage(): React.ReactElement {
                 result = await apiDeleteActivity(itemId, jwt);
             }
             
-            if (result.ok) {
-                setChapters(prev => prev.map(c => 
-                    c.id === chapterId ? { ...c, items: c.items.filter(i => i.id !== itemId) } : c
-                ));
-                if (selection?.type === 'item' && selection.itemId === itemId) {
-                    setSelection({ type: 'chapter', id: chapterId });
-                }
-            } else {
+                if (result.ok) {
+                    setChapters(prev => prev.map(c => 
+                        c.id === chapterId ? { ...c, items: c.items.filter(i => i.id !== itemId) } : c
+                    ));
+                    if (selection?.type === 'item' && selection.chapterId === chapterId && selection.serialId === item.uiSerialId) {
+                        setSelection({ type: 'chapter', id: chapterId });
+                    }
+                } else {
                 alert("Failed to delete item: " + result.err);
             }
         } catch (err) {
@@ -484,7 +498,7 @@ export default function ChapterEditPage(): React.ReactElement {
 
         if (selection.type === 'chapter') return { type: 'chapter', data: chap };
 
-        const item = chap.items.find(i => i.id === selection.itemId);
+        const item = chap.items.find(i => i.uiSerialId === selection.serialId);
         if (!item) return null;
 
         return { type: 'item', data: item, chapter: chap };
@@ -591,11 +605,11 @@ export default function ChapterEditPage(): React.ReactElement {
                                     {/* Items List */}
                                     <div className="mt-1 ml-4 pl-3 border-l border-white/5 space-y-0.5">
                                         {chapter.items.map((item, iIdx) => {
-                                            const isItemSelected = selection?.type === 'item' && selection.itemId === item.id;
+                                            const isItemSelected = selection?.type === 'item' && selection.chapterId === chapter.id && selection.serialId === item.uiSerialId;
 
                                             return (
                                                 <div
-                                                    key={item.id}
+                                                    key={`${chapter.id}-${item.id ?? 'na'}-${iIdx}`}
                                                     draggable
                                                     onDragStart={(e) => onDragStart(e, 'item', { chapterId: chapter.id, index: iIdx })}
                                                     onDragOver={(e) => e.preventDefault()}
@@ -612,7 +626,7 @@ export default function ChapterEditPage(): React.ReactElement {
                                                     </button>
 
                                                     <div
-                                                        onClick={() => setSelection({ type: 'item', chapterId: chapter.id, itemId: item.id })}
+                                                        onClick={() => setSelection({ type: 'item', chapterId: chapter.id, serialId: item.uiSerialId! })}
                                                         className={`
                                                             flex items-center gap-3 p-2.5 rounded-lg cursor-pointer text-sm transition-all duration-200 border border-transparent
                                                             ${isItemSelected
@@ -762,16 +776,15 @@ export default function ChapterEditPage(): React.ReactElement {
                                                     <h3 className="text-lg font-semibold text-white mb-4">Activity Ruleset</h3>
                                                     
                                                     <div className="grid grid-cols-2 gap-4">
-                                                        <div>
-                                                            <label className="text-sm font-medium text-slate-400 mb-2 block">Enabled</label>
-                                                            <select
-                                                                value={String(ruleset.enabled ?? true)}
-                                                                onChange={(e) => updateRulesetField('enabled', e.target.value === 'true')}
-                                                                className="w-full bg-slate-800/50 border border-white/10 rounded-lg px-3 py-2 text-white focus:border-blue-500/40 focus:outline-none transition-all"
-                                                            >
-                                                                <option value="true">True</option>
-                                                                <option value="false">False</option>
-                                                            </select>
+                                                        <div className="flex items-center gap-3">
+                                                            <input
+                                                                id={`enabled-${item.id}`}
+                                                                type="checkbox"
+                                                                checked={!!ruleset.enabled}
+                                                                onChange={(e) => updateRulesetField('enabled', e.target.checked)}
+                                                                className="w-4 h-4 text-blue-600 bg-white border border-white/10 rounded focus:ring-0"
+                                                            />
+                                                            <label htmlFor={`enabled-${item.id}`} className="text-sm font-medium text-slate-400 mb-0">Enabled</label>
                                                         </div>
                                                         
                                                         <div>
@@ -787,11 +800,35 @@ export default function ChapterEditPage(): React.ReactElement {
                                                     </div>
                                                     
                                                     <div>
-                                                        <label className="text-sm font-medium text-slate-400 mb-2 block">Close Date & Time</label>
+                                                        <label className="text-sm font-medium text-slate-400 mb-2 block">Close Date</label>
                                                         <input
-                                                            type="datetime-local"
-                                                            value={ruleset.closeDateTime ? new Date(ruleset.closeDateTime).toISOString().slice(0, 16) : ''}
-                                                            onChange={(e) => updateRulesetField('closeDateTime', e.target.value ? new Date(e.target.value).toISOString() : undefined)}
+                                                            type="date"
+                                                            value={ruleset.closeDateTime ? new Date(ruleset.closeDateTime).toISOString().slice(0, 10) : ''}
+                                                            onChange={(e) => {
+                                                                const date = e.target.value;
+                                                                const existingTime = ruleset.closeDateTime ? new Date(ruleset.closeDateTime).toISOString().slice(11,16) : '';
+                                                                if (date && existingTime) {
+                                                                    updateRulesetField('closeDateTime', new Date(`${date}T${existingTime}`).toISOString());
+                                                                } else {
+                                                                    updateRulesetField('closeDateTime', undefined);
+                                                                }
+                                                            }}
+                                                            className="w-full bg-slate-800/50 border border-white/10 rounded-lg px-3 py-2 text-white focus:border-blue-500/40 focus:outline-none transition-all"
+                                                        />
+
+                                                        <label className="text-sm font-medium text-slate-400 mb-2 block mt-3">Close Time</label>
+                                                        <input
+                                                            type="time"
+                                                            value={ruleset.closeDateTime ? new Date(ruleset.closeDateTime).toISOString().slice(11,16) : ''}
+                                                            onChange={(e) => {
+                                                                const time = e.target.value;
+                                                                const existingDate = ruleset.closeDateTime ? new Date(ruleset.closeDateTime).toISOString().slice(0,10) : '';
+                                                                if (existingDate && time) {
+                                                                    updateRulesetField('closeDateTime', new Date(`${existingDate}T${time}`).toISOString());
+                                                                } else {
+                                                                    updateRulesetField('closeDateTime', undefined);
+                                                                }
+                                                            }}
                                                             className="w-full bg-slate-800/50 border border-white/10 rounded-lg px-3 py-2 text-white focus:border-blue-500/40 focus:outline-none transition-all"
                                                         />
                                                     </div>
@@ -812,8 +849,8 @@ export default function ChapterEditPage(): React.ReactElement {
                                                 </button>
                                             </div>
                                             {isPreviewMode ? (
-                                                <div className="w-full bg-slate-900/40 border border-white/10 rounded-lg p-6 text-slate-300 min-h-[200px]">
-                                                    <div className="prose prose-invert max-w-none">
+                                                <div className="w-full bg-white border border-gray-200 rounded-lg p-6 text-slate-900 min-h-[200px]">
+                                                    <div className="prose max-w-none">
                                                         <PreviewRenderer value={(activeData.data as Item).finishMessage || ''} />
                                                     </div>
                                                 </div>
