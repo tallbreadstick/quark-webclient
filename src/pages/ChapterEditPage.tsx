@@ -105,6 +105,8 @@ export default function ChapterEditPage(): React.ReactElement {
 
     // Finish message editor preview mode
     const [isPreviewMode, setIsPreviewMode] = useState(false);
+    // UI state: track whether time limit input is enabled per item uiSerialId (UI-only, not sent to server)
+    const [timeLimitEnabledMap, setTimeLimitEnabledMap] = useState<Record<string, boolean>>({});
 
     // Fetch course and chapters on mount
     useEffect(() => {
@@ -784,15 +786,37 @@ export default function ChapterEditPage(): React.ReactElement {
                                                     <h3 className="text-lg font-semibold text-white mb-4">Activity Ruleset</h3>
 
                                                     <div className="grid grid-cols-2 gap-4">
-                                                        <div className="flex items-center gap-3">
-                                                            <input
-                                                                id={`enabled-${item.id}`}
-                                                                type="checkbox"
-                                                                checked={!!ruleset.enabled}
-                                                                onChange={(e) => updateRulesetField('enabled', e.target.checked)}
-                                                                className="w-4 h-4 text-blue-600 bg-white border border-white/10 rounded focus:ring-0"
-                                                            />
-                                                            <label htmlFor={`enabled-${item.id}`} className="text-sm font-medium text-slate-400 mb-0">Enabled</label>
+                                                        <div className="flex items-center gap-4">
+                                                            <div className="flex items-center gap-3">
+                                                                <input
+                                                                    id={`enabled-${item.id}`}
+                                                                    type="checkbox"
+                                                                    checked={!!ruleset.enabled}
+                                                                    onChange={(e) => updateRulesetField('enabled', e.target.checked)}
+                                                                    className="w-4 h-4 text-blue-600 bg-white border border-white/10 rounded focus:ring-0"
+                                                                />
+                                                                <label htmlFor={`enabled-${item.id}`} className="text-sm font-medium text-slate-400 mb-0">Enabled</label>
+                                                            </div>
+
+                                                            <div className="flex items-center gap-3">
+                                                                {(() => {
+                                                                    const serialKey = item.uiSerialId ?? String(item.id);
+                                                                    const enabled = timeLimitEnabledMap[serialKey] ?? (ruleset.timeLimit != null);
+
+                                                                    return (
+                                                                        <>
+                                                                            <input
+                                                                                id={`timelimit-enabled-${serialKey}`}
+                                                                                type="checkbox"
+                                                                                checked={enabled}
+                                                                                onChange={(e) => setTimeLimitEnabledMap(prev => ({ ...prev, [serialKey]: e.target.checked }))}
+                                                                                className="w-4 h-4 text-blue-600 bg-white border border-white/10 rounded focus:ring-0"
+                                                                            />
+                                                                            <label htmlFor={`timelimit-enabled-${serialKey}`} className="text-sm font-medium text-slate-400 mb-0">Enable time limit</label>
+                                                                        </>
+                                                                    );
+                                                                })()}
+                                                            </div>
                                                         </div>
 
                                                         <div>
@@ -819,7 +843,8 @@ export default function ChapterEditPage(): React.ReactElement {
                                                                                 min={0}
                                                                                 value={hrs}
                                                                                 onChange={(e) => setFromParts(e.target.value ? Number(e.target.value) : 0, mins, secs)}
-                                                                                className="w-full bg-slate-800/50 border border-white/10 rounded-lg px-3 py-2 text-white focus:border-blue-500/40 focus:outline-none transition-all"
+                                                                                disabled={! (timeLimitEnabledMap[item.uiSerialId ?? String(item.id)] ?? (ruleset.timeLimit != null))}
+                                                                                className={`w-full bg-slate-800/50 border border-white/10 rounded-lg px-3 py-2 text-white focus:border-blue-500/40 focus:outline-none transition-all ${!(timeLimitEnabledMap[item.uiSerialId ?? String(item.id)] ?? (ruleset.timeLimit != null)) ? 'opacity-40 cursor-not-allowed' : ''}`}
                                                                             />
                                                                         </div>
 
@@ -831,7 +856,8 @@ export default function ChapterEditPage(): React.ReactElement {
                                                                                 max={59}
                                                                                 value={mins}
                                                                                 onChange={(e) => setFromParts(hrs, e.target.value ? Number(e.target.value) : 0, secs)}
-                                                                                className="w-full bg-slate-800/50 border border-white/10 rounded-lg px-3 py-2 text-white focus:border-blue-500/40 focus:outline-none transition-all"
+                                                                                disabled={! (timeLimitEnabledMap[item.uiSerialId ?? String(item.id)] ?? (ruleset.timeLimit != null))}
+                                                                                className={`w-full bg-slate-800/50 border border-white/10 rounded-lg px-3 py-2 text-white focus:border-blue-500/40 focus:outline-none transition-all ${!(timeLimitEnabledMap[item.uiSerialId ?? String(item.id)] ?? (ruleset.timeLimit != null)) ? 'opacity-40 cursor-not-allowed' : ''}`}
                                                                             />
                                                                         </div>
 
@@ -843,7 +869,8 @@ export default function ChapterEditPage(): React.ReactElement {
                                                                                 max={59}
                                                                                 value={secs}
                                                                                 onChange={(e) => setFromParts(hrs, mins, e.target.value ? Number(e.target.value) : 0)}
-                                                                                className="w-full bg-slate-800/50 border border-white/10 rounded-lg px-3 py-2 text-white focus:border-blue-500/40 focus:outline-none transition-all"
+                                                                                disabled={! (timeLimitEnabledMap[item.uiSerialId ?? String(item.id)] ?? (ruleset.timeLimit != null))}
+                                                                                className={`w-full bg-slate-800/50 border border-white/10 rounded-lg px-3 py-2 text-white focus:border-blue-500/40 focus:outline-none transition-all ${!(timeLimitEnabledMap[item.uiSerialId ?? String(item.id)] ?? (ruleset.timeLimit != null)) ? 'opacity-40 cursor-not-allowed' : ''}`}
                                                                             />
                                                                         </div>
                                                                     </div>
