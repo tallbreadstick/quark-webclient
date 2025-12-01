@@ -796,14 +796,59 @@ export default function ChapterEditPage(): React.ReactElement {
                                                         </div>
 
                                                         <div>
-                                                            <label className="text-sm font-medium text-slate-400 mb-2 block">Time Limit (seconds)</label>
-                                                            <input
-                                                                type="number"
-                                                                value={ruleset.timeLimit ?? ''}
-                                                                onChange={(e) => updateRulesetField('timeLimit', e.target.value ? Number(e.target.value) : undefined)}
-                                                                placeholder="e.g. 3600"
-                                                                className="w-full bg-slate-800/50 border border-white/10 rounded-lg px-3 py-2 text-white placeholder-slate-600 focus:border-blue-500/40 focus:outline-none transition-all"
-                                                            />
+                                                            <label className="text-sm font-medium text-slate-400 mb-2 block">Time Limit</label>
+                                                            {/* Hours / Minutes / Seconds inputs */}
+                                                            {(() => {
+                                                                const total = ruleset.timeLimit ? Number(ruleset.timeLimit) : 0;
+                                                                const hrs = Math.floor((total || 0) / 3600);
+                                                                const mins = Math.floor(((total || 0) % 3600) / 60);
+                                                                const secs = (total || 0) % 60;
+
+                                                                const setFromParts = (h: number, m: number, s: number) => {
+                                                                    const totalSec = (Number(h) || 0) * 3600 + (Number(m) || 0) * 60 + (Number(s) || 0);
+                                                                    // If all zero, clear the value (undefined), otherwise set computed seconds
+                                                                    updateRulesetField('timeLimit', totalSec > 0 ? totalSec : undefined);
+                                                                };
+
+                                                                return (
+                                                                    <div className="grid grid-cols-3 gap-2">
+                                                                        <div>
+                                                                            <label className="text-xs text-slate-400">Hours</label>
+                                                                            <input
+                                                                                type="number"
+                                                                                min={0}
+                                                                                value={hrs}
+                                                                                onChange={(e) => setFromParts(e.target.value ? Number(e.target.value) : 0, mins, secs)}
+                                                                                className="w-full bg-slate-800/50 border border-white/10 rounded-lg px-3 py-2 text-white focus:border-blue-500/40 focus:outline-none transition-all"
+                                                                            />
+                                                                        </div>
+
+                                                                        <div>
+                                                                            <label className="text-xs text-slate-400">Minutes</label>
+                                                                            <input
+                                                                                type="number"
+                                                                                min={0}
+                                                                                max={59}
+                                                                                value={mins}
+                                                                                onChange={(e) => setFromParts(hrs, e.target.value ? Number(e.target.value) : 0, secs)}
+                                                                                className="w-full bg-slate-800/50 border border-white/10 rounded-lg px-3 py-2 text-white focus:border-blue-500/40 focus:outline-none transition-all"
+                                                                            />
+                                                                        </div>
+
+                                                                        <div>
+                                                                            <label className="text-xs text-slate-400">Seconds</label>
+                                                                            <input
+                                                                                type="number"
+                                                                                min={0}
+                                                                                max={59}
+                                                                                value={secs}
+                                                                                onChange={(e) => setFromParts(hrs, mins, e.target.value ? Number(e.target.value) : 0)}
+                                                                                className="w-full bg-slate-800/50 border border-white/10 rounded-lg px-3 py-2 text-white focus:border-blue-500/40 focus:outline-none transition-all"
+                                                                            />
+                                                                        </div>
+                                                                    </div>
+                                                                );
+                                                            })()}
                                                         </div>
                                                     </div>
 
