@@ -931,7 +931,7 @@ export default function ChapterEditPage(): React.ReactElement {
 
                                     <div className="flex justify-center pb-12">
                                         <button className="px-6 py-3 rounded-full bg-slate-800/50 border border-white/10 hover:bg-slate-800 hover:border-white/20 text-slate-300 hover:text-white text-sm transition-all flex items-center gap-2 backdrop-blur-md shadow-lg">
-                                            <FontAwesomeIcon icon={faPlus} style={{ width: 16, height: 16 }} /> Add Content Block
+                                            Open In Edit Page
                                         </button>
                                     </div>
                                 </div>
