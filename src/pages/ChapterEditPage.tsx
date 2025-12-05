@@ -22,7 +22,8 @@ import {
     faLayerGroup,
     faSpinner,
     faEye,
-    faEdit
+    faEdit,
+    faArrowLeft
 } from '@fortawesome/free-solid-svg-icons';
 import { loadSessionState } from "../types/UserSession";
 import Page from "../components/page/Page";
@@ -85,7 +86,7 @@ function assignUiSerials(items: Item[]): Item[] {
 
 // Using shared `Page` component from `src/components/page/Page.tsx`
 
-// --- Main Application Component ---
+// Main Application Component
 export default function ChapterEditPage(): React.ReactElement {
     const { courseId } = useParams<{ courseId: string }>();
     const navigate = useNavigate();
@@ -560,6 +561,13 @@ export default function ChapterEditPage(): React.ReactElement {
                 {/* Sidebar */}
                 <aside className="w-80 flex flex-col border-r border-white/5 bg-slate-900/60 backdrop-blur-xl z-10">
                     <div className="p-6 pb-4">
+                        <button
+                            onClick={() => navigate(`/course/${courseId}/edit`)}
+                            className="flex items-center gap-2 text-slate-400 hover:text-indigo-400 transition-colors mb-4 text-sm group"
+                        >
+                            <FontAwesomeIcon icon={faArrowLeft} className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
+                            <span>Back to Edit Course</span>
+                        </button>
                         <div className="flex items-center gap-3 text-slate-100 mb-6">
                             <FontAwesomeIcon icon={faLayerGroup} className="w-6 h-6 text-indigo-400" />
                             <h2 className="text-xl font-bold tracking-tight">Chapter Editor</h2>
@@ -791,26 +799,52 @@ export default function ChapterEditPage(): React.ReactElement {
 
                                                     <div className="grid grid-cols-2 gap-4">
                                                         <div className="flex items-center gap-4">
-                                                            <div className="flex items-center gap-3">
-                                                                <input
-                                                                    id={`enabled-${item.id}`}
-                                                                    type="checkbox"
-                                                                    checked={!!ruleset.enabled}
-                                                                    onChange={(e) => updateRulesetField('enabled', e.target.checked)}
-                                                                    className="w-4 h-4 text-blue-600 bg-white border border-white/10 rounded focus:ring-0"
-                                                                />
-                                                                <label htmlFor={`enabled-${item.id}`} className="text-sm font-medium text-slate-400 mb-0">Enabled</label>
+                                                            <div className="flex items-center gap-3 group/checkbox">
+                                                                <label htmlFor={`enabled-${item.id}`} className="relative flex items-center cursor-pointer">
+                                                                    <input
+                                                                        id={`enabled-${item.id}`}
+                                                                        type="checkbox"
+                                                                        checked={!!ruleset.enabled}
+                                                                        onChange={(e) => updateRulesetField('enabled', e.target.checked)}
+                                                                        className="peer sr-only"
+                                                                    />
+                                                                    <div className={`w-5 h-5 rounded-md border-2 transition-all duration-200 flex items-center justify-center group-hover/checkbox:border-indigo-500 peer-focus:ring-2 peer-focus:ring-indigo-500/30 peer-focus:ring-offset-2 peer-focus:ring-offset-slate-900 ${
+                                                                        !!ruleset.enabled 
+                                                                            ? 'bg-indigo-600 border-indigo-600' 
+                                                                            : 'bg-slate-800/50 border-slate-600'
+                                                                    }`}>
+                                                                        {!!ruleset.enabled && (
+                                                                            <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3">
+                                                                                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                                                                            </svg>
+                                                                        )}
+                                                                    </div>
+                                                                    <span className="ml-3 text-sm font-medium text-slate-400 group-hover/checkbox:text-slate-300 transition-colors select-none">Enabled</span>
+                                                                </label>
                                                             </div>
 
-                                                            <div className="flex items-center gap-3">
-                                                                <input
-                                                                    id={`timelimit-enabled-${serialKey}`}
-                                                                    type="checkbox"
-                                                                    checked={timeLimitEnabled}
-                                                                    onChange={(e) => setTimeLimitEnabledMap(prev => ({ ...prev, [serialKey]: e.target.checked }))}
-                                                                    className="w-4 h-4 text-blue-600 bg-white border border-white/10 rounded focus:ring-0"
-                                                                />
-                                                                <label htmlFor={`timelimit-enabled-${serialKey}`} className="text-sm font-medium text-slate-400 mb-0">Enable time limit</label>
+                                                            <div className="flex items-center gap-3 group/checkbox">
+                                                                <label htmlFor={`timelimit-enabled-${serialKey}`} className="relative flex items-center cursor-pointer">
+                                                                    <input
+                                                                        id={`timelimit-enabled-${serialKey}`}
+                                                                        type="checkbox"
+                                                                        checked={timeLimitEnabled}
+                                                                        onChange={(e) => setTimeLimitEnabledMap(prev => ({ ...prev, [serialKey]: e.target.checked }))}
+                                                                        className="peer sr-only"
+                                                                    />
+                                                                    <div className={`w-5 h-5 rounded-md border-2 transition-all duration-200 flex items-center justify-center group-hover/checkbox:border-indigo-500 peer-focus:ring-2 peer-focus:ring-indigo-500/30 peer-focus:ring-offset-2 peer-focus:ring-offset-slate-900 ${
+                                                                        timeLimitEnabled 
+                                                                            ? 'bg-indigo-600 border-indigo-600' 
+                                                                            : 'bg-slate-800/50 border-slate-600'
+                                                                    }`}>
+                                                                        {timeLimitEnabled && (
+                                                                            <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3">
+                                                                                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                                                                            </svg>
+                                                                        )}
+                                                                    </div>
+                                                                    <span className="ml-3 text-sm font-medium text-slate-400 group-hover/checkbox:text-slate-300 transition-colors select-none">Enable time limit</span>
+                                                                </label>
                                                             </div>
                                                         </div>
 
@@ -947,9 +981,9 @@ export default function ChapterEditPage(): React.ReactElement {
                                                                 disabled={!timeLimitEnabled}
                                                                 className={`w-full bg-slate-800/50 border border-white/10 rounded-lg px-3 py-2 text-white focus:border-blue-500/40 focus:outline-none transition-all ${!timeLimitEnabled ? 'opacity-40 cursor-not-allowed' : ''}`}
                                                             >
-                                                                <option value="NO_TIME_LIMIT">No time limit</option>
-                                                                <option value="CLOSE_ACTIVITY">Close activity</option>
-                                                                <option value="DEDUCT_SCORE">Deduct score</option>
+                                                                <option value="NO_TIME_LIMIT" className="bg-black text-white">No time limit</option>
+                                                                <option value="CLOSE_ACTIVITY" className="bg-black text-white">Close activity</option>
+                                                                <option value="DEDUCT_SCORE" className="bg-black text-white">Deduct score</option>
                                                             </select>
                                                         </div>
 
@@ -963,8 +997,8 @@ export default function ChapterEditPage(): React.ReactElement {
                                                                     disabled={!timeLimitEnabled}
                                                                     className={`w-full bg-slate-800/50 border border-white/10 rounded-lg px-3 py-2 text-white focus:border-blue-500/40 focus:outline-none transition-all ${!timeLimitEnabled ? 'opacity-40 cursor-not-allowed' : ''}`}
                                                                 >
-                                                                    <option value="FLAT">Flat</option>
-                                                                    <option value="PERCENTAGE">Percentage</option>
+                                                                    <option value="FLAT" className="bg-black text-white">Flat</option>
+                                                                    <option value="PERCENTAGE" className="bg-black text-white">Percentage</option>
                                                                 </select>
                                                             </div>
 
