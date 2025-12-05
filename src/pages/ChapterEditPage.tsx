@@ -22,7 +22,8 @@ import {
     faLayerGroup,
     faSpinner,
     faEye,
-    faEdit
+    faEdit,
+    faArrowLeft
 } from '@fortawesome/free-solid-svg-icons';
 import { loadSessionState } from "../types/UserSession";
 import Page from "../components/page/Page";
@@ -85,7 +86,7 @@ function assignUiSerials(items: Item[]): Item[] {
 
 // Using shared `Page` component from `src/components/page/Page.tsx`
 
-// --- Main Application Component ---
+// Main Application Component
 export default function ChapterEditPage(): React.ReactElement {
     const { courseId } = useParams<{ courseId: string }>();
     const navigate = useNavigate();
@@ -105,6 +106,8 @@ export default function ChapterEditPage(): React.ReactElement {
 
     // Finish message editor preview mode
     const [isPreviewMode, setIsPreviewMode] = useState(false);
+    // UI state: track whether time limit input is enabled per item uiSerialId (UI-only, not sent to server)
+    const [timeLimitEnabledMap, setTimeLimitEnabledMap] = useState<Record<string, boolean>>({});
 
     // Fetch course and chapters on mount
     useEffect(() => {
@@ -558,6 +561,13 @@ export default function ChapterEditPage(): React.ReactElement {
                 {/* Sidebar */}
                 <aside className="w-80 flex flex-col border-r border-white/5 bg-slate-900/60 backdrop-blur-xl z-10">
                     <div className="p-6 pb-4">
+                        <button
+                            onClick={() => navigate(`/course/${courseId}/edit`)}
+                            className="flex items-center gap-2 text-slate-400 hover:text-indigo-400 transition-colors mb-4 text-sm group"
+                        >
+                            <FontAwesomeIcon icon={faArrowLeft} className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
+                            <span>Back to Edit Course</span>
+                        </button>
                         <div className="flex items-center gap-3 text-slate-100 mb-6">
                             <FontAwesomeIcon icon={faLayerGroup} className="w-6 h-6 text-indigo-400" />
                             <h2 className="text-xl font-bold tracking-tight">Chapter Editor</h2>
@@ -583,21 +593,14 @@ export default function ChapterEditPage(): React.ReactElement {
                                     onDrop={(e) => onDrop(e, chapter.id, cIdx)}
                                 >
 
-                                    {/* Delete Chapter Trigger (Hover Left) */}
-                                    <button
-                                        onClick={(e) => { e.stopPropagation(); removeChapter(chapter.id); }}
-                                        className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 text-transparent hover:text-slate-300 opacity-0 group-hover/chapter:opacity-100 transition-all duration-200 z-20 hover:scale-110 hover:bg-white/5 rounded-full"
-                                        title="Delete Chapter"
-                                    >
-                                        <FontAwesomeIcon icon={faTrash} style={{ width: 16, height: 16 }} />
-                                    </button>
+                                    
 
                                     {/* Chapter Header */}
                                     <div
                                         draggable
                                         onDragStart={(e) => onDragStart(e, 'chapter', { index: cIdx })}
                                         onClick={() => setSelection({ type: 'chapter', id: chapter.id })}
-                                        className={`
+                                        className={`relative
                                             flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all duration-200 border border-transparent
                                             ${isChapSelected
                                                 ? 'bg-indigo-600/20 border-indigo-500/30 text-indigo-100 shadow-lg shadow-indigo-900/20'
@@ -605,6 +608,14 @@ export default function ChapterEditPage(): React.ReactElement {
                                             }
                                         `}
                                     >
+                                        {/* Delete Chapter Trigger (aligned inside header) */}
+                                        <button
+                                            onClick={(e) => { e.stopPropagation(); removeChapter(chapter.id); }}
+                                            className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 text-transparent hover:text-slate-300 opacity-0 group-hover/chapter:opacity-100 transition-all duration-200 z-20 hover:scale-110 hover:bg-white/5 rounded-full"
+                                            title="Delete Chapter"
+                                        >
+                                            <FontAwesomeIcon icon={faTrash} style={{ width: 16, height: 16 }} />
+                                        </button>
                                         <FontAwesomeIcon icon={faCube} style={{ width: 16, height: 16 }} className={isChapSelected ? 'text-indigo-400' : 'opacity-70'} />
                                         <span className="font-medium text-sm truncate flex-1">{chapter.name}</span>
                                         <FontAwesomeIcon icon={faGripLinesVertical} style={{ width: 14, height: 14 }} className="opacity-0 group-hover/chapter:opacity-40 cursor-grab" />
@@ -779,20 +790,62 @@ export default function ChapterEditPage(): React.ReactElement {
                                                 updateItem((activeData.chapter as Chapter).id, item.id, { ruleset: JSON.stringify(newRuleset) });
                                             };
 
+                                            const serialKey = item.uiSerialId ?? String(item.id);
+                                            const timeLimitEnabled = timeLimitEnabledMap[serialKey] ?? (ruleset.timeLimit != null);
+
                                             return (
                                                 <div className="bg-slate-900/40 border border-white/10 rounded-xl p-6 space-y-4">
                                                     <h3 className="text-lg font-semibold text-white mb-4">Activity Ruleset</h3>
 
                                                     <div className="grid grid-cols-2 gap-4">
-                                                        <div className="flex items-center gap-3">
-                                                            <input
-                                                                id={`enabled-${item.id}`}
-                                                                type="checkbox"
-                                                                checked={!!ruleset.enabled}
-                                                                onChange={(e) => updateRulesetField('enabled', e.target.checked)}
-                                                                className="w-4 h-4 text-blue-600 bg-white border border-white/10 rounded focus:ring-0"
-                                                            />
-                                                            <label htmlFor={`enabled-${item.id}`} className="text-sm font-medium text-slate-400 mb-0">Enabled</label>
+                                                        <div className="flex items-center gap-4">
+                                                            <div className="flex items-center gap-3 group/checkbox">
+                                                                <label htmlFor={`enabled-${item.id}`} className="relative flex items-center cursor-pointer">
+                                                                    <input
+                                                                        id={`enabled-${item.id}`}
+                                                                        type="checkbox"
+                                                                        checked={!!ruleset.enabled}
+                                                                        onChange={(e) => updateRulesetField('enabled', e.target.checked)}
+                                                                        className="peer sr-only"
+                                                                    />
+                                                                    <div className={`w-5 h-5 rounded-md border-2 transition-all duration-200 flex items-center justify-center group-hover/checkbox:border-indigo-500 peer-focus:ring-2 peer-focus:ring-indigo-500/30 peer-focus:ring-offset-2 peer-focus:ring-offset-slate-900 ${
+                                                                        !!ruleset.enabled 
+                                                                            ? 'bg-indigo-600 border-indigo-600' 
+                                                                            : 'bg-slate-800/50 border-slate-600'
+                                                                    }`}>
+                                                                        {!!ruleset.enabled && (
+                                                                            <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3">
+                                                                                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                                                                            </svg>
+                                                                        )}
+                                                                    </div>
+                                                                    <span className="ml-3 text-sm font-medium text-slate-400 group-hover/checkbox:text-slate-300 transition-colors select-none">Enabled</span>
+                                                                </label>
+                                                            </div>
+
+                                                            <div className="flex items-center gap-3 group/checkbox">
+                                                                <label htmlFor={`timelimit-enabled-${serialKey}`} className="relative flex items-center cursor-pointer">
+                                                                    <input
+                                                                        id={`timelimit-enabled-${serialKey}`}
+                                                                        type="checkbox"
+                                                                        checked={timeLimitEnabled}
+                                                                        onChange={(e) => setTimeLimitEnabledMap(prev => ({ ...prev, [serialKey]: e.target.checked }))}
+                                                                        className="peer sr-only"
+                                                                    />
+                                                                    <div className={`w-5 h-5 rounded-md border-2 transition-all duration-200 flex items-center justify-center group-hover/checkbox:border-indigo-500 peer-focus:ring-2 peer-focus:ring-indigo-500/30 peer-focus:ring-offset-2 peer-focus:ring-offset-slate-900 ${
+                                                                        timeLimitEnabled 
+                                                                            ? 'bg-indigo-600 border-indigo-600' 
+                                                                            : 'bg-slate-800/50 border-slate-600'
+                                                                    }`}>
+                                                                        {timeLimitEnabled && (
+                                                                            <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3">
+                                                                                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                                                                            </svg>
+                                                                        )}
+                                                                    </div>
+                                                                    <span className="ml-3 text-sm font-medium text-slate-400 group-hover/checkbox:text-slate-300 transition-colors select-none">Enable time limit</span>
+                                                                </label>
+                                                            </div>
                                                         </div>
 
                                                         <div>
@@ -819,7 +872,8 @@ export default function ChapterEditPage(): React.ReactElement {
                                                                                 min={0}
                                                                                 value={hrs}
                                                                                 onChange={(e) => setFromParts(e.target.value ? Number(e.target.value) : 0, mins, secs)}
-                                                                                className="w-full bg-slate-800/50 border border-white/10 rounded-lg px-3 py-2 text-white focus:border-blue-500/40 focus:outline-none transition-all"
+                                                                                disabled={!timeLimitEnabled}
+                                                                                className={`w-full bg-slate-800/50 border border-white/10 rounded-lg px-3 py-2 text-white focus:border-blue-500/40 focus:outline-none transition-all ${!timeLimitEnabled ? 'opacity-40 cursor-not-allowed' : ''}`}
                                                                             />
                                                                         </div>
 
@@ -831,7 +885,8 @@ export default function ChapterEditPage(): React.ReactElement {
                                                                                 max={59}
                                                                                 value={mins}
                                                                                 onChange={(e) => setFromParts(hrs, e.target.value ? Number(e.target.value) : 0, secs)}
-                                                                                className="w-full bg-slate-800/50 border border-white/10 rounded-lg px-3 py-2 text-white focus:border-blue-500/40 focus:outline-none transition-all"
+                                                                                disabled={!timeLimitEnabled}
+                                                                                className={`w-full bg-slate-800/50 border border-white/10 rounded-lg px-3 py-2 text-white focus:border-blue-500/40 focus:outline-none transition-all ${!timeLimitEnabled ? 'opacity-40 cursor-not-allowed' : ''}`}
                                                                             />
                                                                         </div>
 
@@ -843,7 +898,8 @@ export default function ChapterEditPage(): React.ReactElement {
                                                                                 max={59}
                                                                                 value={secs}
                                                                                 onChange={(e) => setFromParts(hrs, mins, e.target.value ? Number(e.target.value) : 0)}
-                                                                                className="w-full bg-slate-800/50 border border-white/10 rounded-lg px-3 py-2 text-white focus:border-blue-500/40 focus:outline-none transition-all"
+                                                                                disabled={!timeLimitEnabled}
+                                                                                className={`w-full bg-slate-800/50 border border-white/10 rounded-lg px-3 py-2 text-white focus:border-blue-500/40 focus:outline-none transition-all ${!timeLimitEnabled ? 'opacity-40 cursor-not-allowed' : ''}`}
                                                                             />
                                                                         </div>
                                                                     </div>
@@ -856,12 +912,28 @@ export default function ChapterEditPage(): React.ReactElement {
                                                         <label className="text-sm font-medium text-slate-400 mb-2 block">Close Date</label>
                                                         <input
                                                             type="date"
-                                                            value={ruleset.closeDateTime ? new Date(ruleset.closeDateTime).toISOString().slice(0, 10) : ''}
+                                                            value={(() => {
+                                                                if (!ruleset.closeDateTime) return '';
+                                                                const d = new Date(ruleset.closeDateTime);
+                                                                const y = d.getFullYear();
+                                                                const m = String(d.getMonth() + 1).padStart(2, '0');
+                                                                const dd = String(d.getDate()).padStart(2, '0');
+                                                                return `${y}-${m}-${dd}`;
+                                                            })()}
                                                             onChange={(e) => {
-                                                                const date = e.target.value;
-                                                                const existingTime = ruleset.closeDateTime ? new Date(ruleset.closeDateTime).toISOString().slice(11, 16) : '';
-                                                                if (date && existingTime) {
-                                                                    updateRulesetField('closeDateTime', new Date(`${date}T${existingTime}`).toISOString());
+                                                                const date = e.target.value; // 'YYYY-MM-DD'
+                                                                // Use existing time if present, otherwise default to midnight local
+                                                                const existingTime = (() => {
+                                                                    if (!ruleset.closeDateTime) return '00:00';
+                                                                    const d = new Date(ruleset.closeDateTime);
+                                                                    return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+                                                                })();
+
+                                                                if (date) {
+                                                                    const [y, mo, da] = date.split('-').map((v: string) => Number(v));
+                                                                    const [hh, mm] = existingTime.split(':').map((v: string) => Number(v));
+                                                                    const dt = new Date(y, mo - 1, da, hh, mm);
+                                                                    updateRulesetField('closeDateTime', dt.toISOString());
                                                                 } else {
                                                                     updateRulesetField('closeDateTime', undefined);
                                                                 }
@@ -872,18 +944,100 @@ export default function ChapterEditPage(): React.ReactElement {
                                                         <label className="text-sm font-medium text-slate-400 mb-2 block mt-3">Close Time</label>
                                                         <input
                                                             type="time"
-                                                            value={ruleset.closeDateTime ? new Date(ruleset.closeDateTime).toISOString().slice(11, 16) : ''}
+                                                            value={(() => {
+                                                                if (!ruleset.closeDateTime) return '';
+                                                                const d = new Date(ruleset.closeDateTime);
+                                                                return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+                                                            })()}
                                                             onChange={(e) => {
-                                                                const time = e.target.value;
-                                                                const existingDate = ruleset.closeDateTime ? new Date(ruleset.closeDateTime).toISOString().slice(0, 10) : '';
-                                                                if (existingDate && time) {
-                                                                    updateRulesetField('closeDateTime', new Date(`${existingDate}T${time}`).toISOString());
+                                                                const time = e.target.value; // 'HH:MM'
+                                                                // Use existing date if present, otherwise default to today local
+                                                                const existingDate = (() => {
+                                                                    if (!ruleset.closeDateTime) {
+                                                                        const nd = new Date();
+                                                                        return `${nd.getFullYear()}-${String(nd.getMonth() + 1).padStart(2, '0')}-${String(nd.getDate()).padStart(2, '0')}`;
+                                                                    }
+                                                                    const d = new Date(ruleset.closeDateTime);
+                                                                    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+                                                                })();
+
+                                                                if (time) {
+                                                                    const [y, mo, da] = existingDate.split('-').map((v: string) => Number(v));
+                                                                    const [hh, mm] = time.split(':').map((v: string) => Number(v));
+                                                                    const dt = new Date(y, mo - 1, da, hh, mm);
+                                                                    updateRulesetField('closeDateTime', dt.toISOString());
                                                                 } else {
                                                                     updateRulesetField('closeDateTime', undefined);
                                                                 }
                                                             }}
                                                             className="w-full bg-slate-800/50 border border-white/10 rounded-lg px-3 py-2 text-white focus:border-blue-500/40 focus:outline-none transition-all"
                                                         />
+
+                                                        <div className="mt-4">
+                                                            <label className="text-sm font-medium text-slate-400 mb-2 block">Time Exceeded Penalty</label>
+                                                            <select
+                                                                value={ruleset.timeExceededPenalty ?? 'NO_TIME_LIMIT'}
+                                                                onChange={(e) => updateRulesetField('timeExceededPenalty', e.target.value)}
+                                                                disabled={!timeLimitEnabled}
+                                                                className={`w-full bg-slate-800/50 border border-white/10 rounded-lg px-3 py-2 text-white focus:border-blue-500/40 focus:outline-none transition-all ${!timeLimitEnabled ? 'opacity-40 cursor-not-allowed' : ''}`}
+                                                            >
+                                                                <option value="NO_TIME_LIMIT" className="bg-black text-white">No time limit</option>
+                                                                <option value="CLOSE_ACTIVITY" className="bg-black text-white">Close activity</option>
+                                                                <option value="DEDUCT_SCORE" className="bg-black text-white">Deduct score</option>
+                                                            </select>
+                                                        </div>
+
+                                                        <div className="mt-4 grid grid-cols-2 gap-4">
+                                                            {/* Deduction Strategy */}
+                                                            <div>
+                                                                <label className="text-sm font-medium text-slate-400 mb-2 block">Deduction Strategy</label>
+                                                                <select
+                                                                    value={ruleset.deductionStrategy ?? 'FLAT'}
+                                                                    onChange={(e) => updateRulesetField('deductionStrategy', e.target.value)}
+                                                                    disabled={!timeLimitEnabled}
+                                                                    className={`w-full bg-slate-800/50 border border-white/10 rounded-lg px-3 py-2 text-white focus:border-blue-500/40 focus:outline-none transition-all ${!timeLimitEnabled ? 'opacity-40 cursor-not-allowed' : ''}`}
+                                                                >
+                                                                    <option value="FLAT" className="bg-black text-white">Flat</option>
+                                                                    <option value="PERCENTAGE" className="bg-black text-white">Percentage</option>
+                                                                </select>
+                                                            </div>
+
+                                                            {/* Points Deduction */}
+                                                            <div>
+                                                                <label className="text-sm font-medium text-slate-400 mb-2 block">Points Deduction</label>
+                                                                {(() => {
+                                                                    const isDeduct = ruleset.timeExceededPenalty === 'DEDUCT_SCORE';
+                                                                    const strategy = ruleset.deductionStrategy ?? 'FLAT';
+                                                                    const value = ruleset.pointsDeduction ?? '';
+
+                                                                    const onChange = (raw: string) => {
+                                                                        let v: any = raw === '' ? undefined : Number(raw);
+                                                                        if (strategy === 'PERCENTAGE' && v != null) {
+                                                                            if (Number.isNaN(v)) v = undefined;
+                                                                            else {
+                                                                                if (v < 0) v = 0;
+                                                                                if (v > 100) v = 100;
+                                                                            }
+                                                                        }
+                                                                        updateRulesetField('pointsDeduction', v);
+                                                                    };
+
+                                                                    const disabled = !timeLimitEnabled || !isDeduct;
+                                                                    return (
+                                                                        <input
+                                                                            type="number"
+                                                                            step={strategy === 'FLAT' ? 'any' : '0.1'}
+                                                                            min={strategy === 'PERCENTAGE' ? 0 : undefined}
+                                                                            max={strategy === 'PERCENTAGE' ? 100 : undefined}
+                                                                            value={value}
+                                                                            onChange={(e) => onChange(e.target.value)}
+                                                                            disabled={disabled}
+                                                                            className={`w-full bg-slate-800/50 border border-white/10 rounded-lg px-3 py-2 text-white focus:border-blue-500/40 focus:outline-none transition-all ${disabled ? 'opacity-40 cursor-not-allowed' : ''}`}
+                                                                        />
+                                                                    );
+                                                                })()}
+                                                            </div>
+                                                        </div>
                                                     </div>
                                                 </div>
                                             );
