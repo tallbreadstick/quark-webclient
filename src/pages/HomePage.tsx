@@ -80,7 +80,7 @@ export default function HomePage() {
 
     // user type is no longer stored on the session; use profileUserType fetched above when available
     const isEducator = profileUserType === 'educator';
-    const isLearner = profileUserType === 'learner';
+    const isLearner = profileUserType === 'student';
 
     const getWelcomeMessage = () => {
         if (isEducator) {
