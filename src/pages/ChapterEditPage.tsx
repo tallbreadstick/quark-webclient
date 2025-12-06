@@ -1147,7 +1147,6 @@ export default function ChapterEditPage(): React.ReactElement {
                 </div>,
                 document.body
             )}
-
         </Page>
     );
 }

@@ -169,7 +169,9 @@ export default function CourseEditPage() {
             const jwt = userSession?.jwt ?? "";
             const res = await editCourse(Number(courseId), body as any, jwt);
             if (res.status !== "OK") throw new Error(res.err ?? "Failed to update course");
-            navigate(`/course/${courseId}/chapters`);
+
+            // saving does not redirect anymore (yall can change ts)
+            // navigate(`/course/${courseId}/chapters`);
         } catch (e: any) {
             setError(e?.message || "Failed to save");
         } finally {
@@ -211,7 +213,7 @@ export default function CourseEditPage() {
                                     <a href="/login" className="px-4 py-2 bg-[#566fb8] rounded-md text-white cursor-pointer">Sign in</a>
                                 </div>
                             ) : (
-                                <form id="course-edit-form" className="flex flex-col gap-4">
+                                <form id="course-edit-form" onSubmit={handleSubmit} className="flex flex-col gap-4">
                                     {error && <div className="mb-2 text-sm text-red-400">{error}</div>}
                                     <div>
                                         <label className="block mb-2 text-sm font-medium text-[#bdcdff]">Name</label>
@@ -255,11 +257,6 @@ export default function CourseEditPage() {
                                     type="submit"
                                     form="course-edit-form"
                                     disabled={submitting}
-                                    onClick={() =>
-                                        document.querySelector<HTMLFormElement>("#course-edit-form")?.dispatchEvent(
-                                            new Event("submit", { cancelable: true, bubbles: true })
-                                        )
-                                    }
                                     className="flex-1 px-4 py-2 bg-indigo-600 rounded-md text-white text-sm font-medium hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
                                     {submitting ? "Saving..." : "Save Changes"}
