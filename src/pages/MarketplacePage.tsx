@@ -1,15 +1,15 @@
 import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { loadSessionState } from "../types/UserSession";
+import type { MarketplaceCourse } from "../types/CourseTypes"; // Clean import
 import Page from "../components/page/Page";
 import CourseCard from "../components/CourseCard";
 import SearchFilterBar from "../components/SearchFilterBar";
 import Pagination from "../components/Pagination";
-// NOTE: removed mock data fallback; marketplace now uses live API
 import { fetchCourses } from "../endpoints/CourseHandler";
-import type { MarketplaceCourse } from "../types/CourseTypes";
 import { filterCourses, getUniqueTags, paginate, getTotalPages, sortCourses } from "../utils/courseUtils";
 import { fetchUsers } from "../endpoints/UserHandler";
+
 
 export default function MarketplacePage() {
     const { userSession, setUserSession } = loadSessionState();
@@ -67,7 +67,7 @@ export default function MarketplacePage() {
                         });
                         setCourses(mapped);
                     } else {
-                        // API returned an error — show empty list instead of mock data
+                        // API returned an error — show empty list
                         setCourses([]);
                     }
                 }
@@ -93,8 +93,15 @@ export default function MarketplacePage() {
             try {
                 const res = await fetchUsers(lookupId);
                 if (res.status === "OK" && res.ok && res.ok.length > 0) {
-                    const profile = res.ok[0];
-                    setProfileUserType(profile.userType === 'EDUCATOR' ? 'educator' : 'learner');
+                    // Find the exact matching user
+                    const currentUser = res.ok.find((user: any) => 
+                        user.username === userSession.username || 
+                        user.email === userSession.email
+                    );
+                    
+                    if (currentUser) {
+                        setProfileUserType(currentUser.userType === 'EDUCATOR' ? 'educator' : 'learner');
+                    }
                 }
             } catch (e) {
                 // ignore
@@ -125,18 +132,26 @@ export default function MarketplacePage() {
         ));
     };
 
-    const handleFork = (_courseId: number, _courseName: string, e: React.MouseEvent) => {
+    const handleFork = (courseId: number, _courseName: string, e: React.MouseEvent) => {
         e.stopPropagation();
         if (!userSession) return;
-
-        // Navigate to the fork page which will pre-fill the creation form
-        navigate(`/course/${_courseId}/fork`);
+        
+        // Navigate directly to the fork page
+        navigate(`/course/${courseId}/fork`);
     };
 
     const handleCourseClick = (courseId: number) => {
         navigate(`/course/${courseId}`);
     };
 
+    const handleTagClick = (tag: string) => {
+        setSelectedTags(prev => 
+            prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]
+        );
+        setCurrentPage(1);
+    };
+
+    // Check user role
     const isEducator = profileUserType === 'educator';
 
     return (
@@ -169,13 +184,13 @@ export default function MarketplacePage() {
 
                     <SearchFilterBar
                         searchTerm={searchTerm}
-                        onSearchChange={setSearchTerm}
-
+                        onSearchChange={(value) => {
+                            setSearchTerm(value);
+                            setCurrentPage(1);
+                        }}
                         selectedTag={selectedTags[0] ?? ""}
                         allTags={allTags}
-                        onTagSelect={(tag) => {
-                            setSelectedTags(prev => prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]);
-                        }}
+                        onTagSelect={handleTagClick}
                         searchPlaceholder="Search courses..."
                     />
 
@@ -183,7 +198,6 @@ export default function MarketplacePage() {
                         <div className="text-center text-gray-400 py-12">Loading courses...</div>
                     ) : (
                         <>
-                            {/* This section matches your original layout - showing count and sort on same line */}
                             <div className="flex justify-between items-center mb-6">
                                 <span className="text-gray-400">
                                     Showing {currentCourses.length} of {sorted.length} courses
@@ -199,7 +213,7 @@ export default function MarketplacePage() {
                                             <option value="asc">Oldest</option>
                                         </select>
 
-                                        {userSession && (
+                                        {userSession && isEducator && (
                                             <div className="hidden sm:flex items-center gap-3 text-xs text-gray-300 mr-2">
                                                 <label className="inline-flex items-center gap-2 cursor-pointer">
                                                     <input type="checkbox" checked={myCourses} onChange={(e) => setMyCourses(e.target.checked)} className="form-checkbox" />
@@ -251,14 +265,13 @@ export default function MarketplacePage() {
                                             userType={profileUserType}
                                             onEnroll={handleEnroll}
                                             onFork={handleFork}
-                                            onTagClick={(tag) => setSelectedTags(prev => prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag])}
+                                            onTagClick={handleTagClick}
                                             selectedTag={selectedTags[0] ?? ""}
                                             variant="grid"
                                         />
                                     </div>
                                 ))}
                             </div>
-
 
                             {sorted.length === 0 && (
                                 <div className="text-center text-gray-400 py-12">
