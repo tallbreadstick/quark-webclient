@@ -3,27 +3,15 @@ import { useNavigate, Link } from "react-router-dom";
 import Page from "../components/page/Page";
 import { loadSessionState } from "../types/UserSession";
 import { useEffect, useState } from "react";
-import api from "../scripts/api";
 import { fetchUsers } from "../endpoints/UserHandler";
+import { fetchCourses } from "../endpoints/CourseHandler";
 import LoadingSkeleton from "../components/LoadingSkeleton";
-
-type Course = {
-    id: number;
-    name: string;
-    description?: string | null;
-    ownerId?: number | null;
-    owner?: { id?: number; username?: string } | null;
-    version?: number;
-    tags?: string[];
-    enrolled?: boolean;
-    forkable?: boolean;
-    [key: string]: any;
-};
+import type { DatabaseCourse } from "../types/CourseTypes";
 
 export default function HomePage() {
     const { userSession, setUserSession } = loadSessionState();
     const navigate = useNavigate();
-    const [courses, setCourses] = useState<Course[] | null>(null);
+    const [courses, setCourses] = useState<DatabaseCourse[] | null>(null);
     const [loading, setLoading] = useState(true);
     const [profileUserType, setProfileUserType] = useState<"educator" | "learner" | "student" | undefined>(undefined);
     const isLoggedIn = userSession !== null;
@@ -36,9 +24,9 @@ export default function HomePage() {
         async function fetchCoursesForUser() {
             setLoading(true);
             try {
-                let userId: number | null = null;
                 let userType: "educator" | "learner" | undefined = undefined;
 
+                // Get user type
                 if (userSession) {
                     const lookupId = userSession.username || userSession.email;
                     const usersRes = await fetchUsers(lookupId);
@@ -49,34 +37,64 @@ export default function HomePage() {
                         );
                         
                         if (currentUser) {
-                            userId = currentUser.id;
                             userType = currentUser.userType === 'EDUCATOR' ? 'educator' : 'learner';
                             setProfileUserType(userType);
                         }
                     }
                 }
 
-                const res = await api.get("/course");
-                const data = res.data;
+                // Fetch courses for educators
+                if (userType === 'educator') {
+                    // Use the same params as /my-courses page
+                    const params = { my_courses: 'true' };
+                    const res = await fetchCourses(params, userSession?.jwt ?? "");
+                    const data = res.status === "OK" && res.ok ? res.ok : [];
 
-                if (cancelled) return;
+                    if (cancelled) return;
 
-                if (userId != null && userType) {
-                    if (userType === 'educator') {
-                        const myCourses = Array.isArray(data)
-                            ? data.filter((c: Course) => c.ownerId === userId || (c.owner && c.owner.id === userId))
-                            : [];
-                        setCourses(myCourses.slice(0, 5));
+                    if (data && data.length > 0) {
+                        // Map data to DatabaseCourse format - SIMPLIFIED like /my-courses
+                        const mappedCourses: DatabaseCourse[] = await Promise.all(
+                            data.map(async (c: any) => {
+                                const rawTags = (c as any).tags ?? [];
+                                const tags = Array.isArray(rawTags)
+                                    ? rawTags.map((t: any) => typeof t === "string" ? t : (t?.name ?? String(t?.id ?? "")))
+                                    : [];
+
+                                return {
+                                    id: c.id,
+                                    name: c.name,
+                                    description: c.description ?? "",
+                                    tags,
+                                    forkable: Boolean((c as any).forkable),
+                                    owner: { username: c.owner || "—" }, // Use c.owner directly
+                                    ownerId: c.ownerId,
+                                    version: c.version,
+                                    createdAt: c.createdAt,
+                                };
+                            })
+                        );
+
+                        // Show only 2 most recent courses
+                        const recentCourses = mappedCourses
+                            .sort((a, b) => {
+                                // Sort by created date if available, otherwise by ID
+                                const dateA = a.createdAt ? new Date(a.createdAt).getTime() : a.id;
+                                const dateB = b.createdAt ? new Date(b.createdAt).getTime() : b.id;
+                                return dateB - dateA; // Most recent first
+                            })
+                            .slice(0, 2); // Limit to 2 courses
+
+                        setCourses(recentCourses);
                     } else {
-                        const featuredCourses = Array.isArray(data) 
-                            ? data.filter((c: Course) => c.tags && c.tags.includes("featured")).slice(0, 3)
-                            : data.slice(0, 3);
-                        setCourses(featuredCourses);
+                        setCourses([]);
                     }
                 } else {
+                    // For learners/students: show empty (no enroll endpoint yet)
                     setCourses([]);
                 }
             } catch (err: any) {
+                console.error("Failed to load courses:", err);
                 setCourses([]);
             } finally {
                 if (!cancelled) setLoading(false);
@@ -100,11 +118,7 @@ export default function HomePage() {
     };
 
     const handleCourseClick = (courseId: number) => {
-        if (isEducator) {
-            navigate(`/course/${courseId}/edit`);
-        } else {
-            navigate(`/course/${courseId}`);
-        }
+        navigate(`/course/${courseId}/edit`);
     };
 
     return (
@@ -180,7 +194,7 @@ export default function HomePage() {
                             ) : (
                                 <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-6 h-40 flex flex-col justify-center items-center">
                                     <span className="text-gray-400">[UNDER CONSTRUCTION]</span>
-                                    <p className="mt-2 text-sm text-gray-500">Learning Tracks</p>
+                                    <p className="mt-2 text-sm text-gray-500">View Enrolled Courses</p>
                                 </div>
                             )}
                         </section>
@@ -188,18 +202,18 @@ export default function HomePage() {
                         <div className="mb-6">
                             <div className="flex justify-between items-center mb-6">
                                 <h2 className="text-xl font-semibold text-white">
-                                    {isEducator ? "Your Courses" : "Featured Courses"}
+                                    {isEducator ? "Your Recent Courses" : "Your Enrolled Courses"}
                                 </h2>
                                 <Link 
-                                    to={isEducator ? "/my-courses" : "/marketplace"}
+                                    to="/my-courses"
                                     className="text-blue-400 hover:text-blue-300 transition-colors text-sm"
                                 >
-                                    {isEducator ? "View all courses →" : "Browse Marketplace →"}
+                                    {isEducator ? "View all courses →" : "Enrolled Courses →"}
                                 </Link>
                             </div>
 
                             {loading ? (
-                                <LoadingSkeleton count={3} variant="list" showEditButton={isEducator} />
+                                <LoadingSkeleton count={2} variant="list" showEditButton={isEducator} />
                             ) : courses && courses.length > 0 ? (
                                 <div className="space-y-4">
                                     {courses.map((course) => (
@@ -220,37 +234,16 @@ export default function HomePage() {
 
                                                 <div className="flex gap-2 ml-6">
                                                     {isEducator ? (
-                                                        <>
-                                                            <button
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    navigate(`/course/${course.id}/edit`);
-                                                                }}
-                                                                className="px-4 py-2 border border-white/20 rounded-lg text-white/80 hover:bg-white/5 transition"
-                                                            >
-                                                                Edit
-                                                            </button>
-                                                            <button
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    navigate(`/course/${course.id}`);
-                                                                }}
-                                                                className="px-4 py-2 bg-blue-600 rounded-lg text-white hover:bg-blue-700 transition"
-                                                            >
-                                                                Open
-                                                            </button>
-                                                        </>
-                                                    ) : (
                                                         <button
                                                             onClick={(e) => {
                                                                 e.stopPropagation();
-                                                                navigate(`/course/${course.id}`);
+                                                                handleCourseClick(course.id);
                                                             }}
                                                             className="px-4 py-2 bg-blue-600 rounded-lg text-white hover:bg-blue-700 transition"
                                                         >
-                                                            Start
+                                                            Edit
                                                         </button>
-                                                    )}
+                                                    ) : null}
                                                 </div>
                                             </div>
                                         </div>
@@ -258,16 +251,17 @@ export default function HomePage() {
                                 </div>
                             ) : (
                                 <div className="bg-white/5 backdrop-blur-lg border border-white/10 rounded-2xl p-8 text-center text-gray-400">
+                                    <div className="text-4xl mb-4">📚</div>
                                     {isEducator ? (
                                         <>
-                                            <p className="mb-4">You don't have any courses yet.</p>
+                                            <p className="mb-4 text-lg">You haven't created any courses yet.</p>
                                             <Link to="/my-courses/create" className="px-4 py-2 bg-blue-600 rounded-md text-white hover:bg-blue-700 transition text-sm">
                                                 Create your first course
                                             </Link>
                                         </>
                                     ) : (
                                         <>
-                                            <p className="mb-4">No featured courses available.</p>
+                                            <p className="mb-4 text-lg">You haven't enrolled in any courses yet.</p>
                                             <Link to="/marketplace" className="px-4 py-2 bg-blue-600 rounded-md text-white hover:bg-blue-700 transition text-sm">
                                                 Browse Courses
                                             </Link>

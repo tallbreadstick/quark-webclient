@@ -30,7 +30,7 @@ const Page: FunctionComponent<PageProps> = (props) => {
             r: Math.random() * 1.5 + 0.5,
             dx: (Math.random() - 0.5) * 0.15,
             dy: (Math.random() - 0.5) * 0.15,
-            hue: 200 + Math.random() * 40, // Blue tones only (200-240)
+            hue: 200 + Math.random() * 40,
         }));
 
         const symbols = ["π", "Σ", "∫", "Δ", "λ", "Ψ", "ƒ", "∞", "√", "∂"];
@@ -43,7 +43,6 @@ const Page: FunctionComponent<PageProps> = (props) => {
         }));
 
         const draw = () => {
-            // always get updated dimensions in case content grows
             const parent = canvas.parentElement!;
             width = canvas.width = parent.clientWidth;
             height = canvas.height = Math.max(parent.clientHeight, parent.scrollHeight);
@@ -69,11 +68,13 @@ const Page: FunctionComponent<PageProps> = (props) => {
 
             ctx.font = "2rem 'JetBrains Mono', monospace";
             ctx.textAlign = "center";
+
             for (const t of textParticles) {
                 t.y -= t.dy;
                 if (t.y < -20) t.y = height + 20;
-                ctx.fillStyle = `rgba(180, 220, 255, ${t.opacity})`; // Blue tones only
-                ctx.shadowColor = "rgba(150, 200, 255, 0.4)"; // Blue tones only
+
+                ctx.fillStyle = `rgba(180, 220, 255, ${t.opacity})`;
+                ctx.shadowColor = "rgba(150, 200, 255, 0.4)";
                 ctx.shadowBlur = 10;
                 ctx.fillText(t.text, t.x, t.y);
                 ctx.shadowBlur = 0;
@@ -81,33 +82,28 @@ const Page: FunctionComponent<PageProps> = (props) => {
 
             requestAnimationFrame(draw);
         };
-        draw();
 
+        draw();
         window.addEventListener("resize", resizeCanvas);
         return () => window.removeEventListener("resize", resizeCanvas);
     }, [props.title]);
 
     return (
         <div className="relative min-h-screen w-full overflow-hidden text-white">
-            {/* --- Blue gradient base only --- */}
             <div className="absolute inset-0 bg-gradient-to-br from-slate-950 via-blue-900 to-slate-900" />
-
-            {/* --- Canvas for motion background --- */}
             <canvas ref={canvasRef} className="absolute inset-0 z-0" />
 
-            {/* --- Blue glowing blobs only --- */}
             <div className="absolute inset-0 overflow-hidden">
                 <div className="absolute w-[50rem] h-[50rem] bg-blue-500/10 rounded-full blur-3xl animate-[drift1_40s_infinite] top-[-20%] left-[-10%]" />
                 <div className="absolute w-[50rem] h-[50rem] bg-blue-600/10 rounded-full blur-3xl animate-[drift2_50s_infinite] bottom-[-20%] right-[-10%]" />
             </div>
 
-            {/* --- Foreground content --- */}
-            <div className="relative z-10">
+            {/* 🔥 FIX: Added pt-20 so content sits BELOW the fixed navbar */}
+            <div className="relative z-10 pt-20">
                 <Navbar userSession={props.userSession} setUserSession={props.setUserSession} />
                 {props.children}
                 <Footer />
             </div>
-            
         </div>
     );
 };
