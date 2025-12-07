@@ -28,6 +28,21 @@ export default function MarketplacePage() {
     const [currentPage, setCurrentPage] = useState(1);
     const coursesPerPage = 9;
 
+    // Determine user role from localStorage first
+    useEffect(() => {
+        if (userSession) {
+            console.log("🔍 Checking localStorage for userType");
+            const savedUserType = localStorage.getItem('userType') as "educator" | "learner" | "student" | null;
+            
+            if (savedUserType === 'educator' || savedUserType === 'learner' || savedUserType === 'student') {
+                setProfileUserType(savedUserType);
+                console.log("✅ Using saved user type from localStorage:", savedUserType);
+            } else {
+                console.log("ℹ️ No saved user type in localStorage, will fetch from API");
+            }
+        }
+    }, [userSession]);
+
     useEffect(() => {
         let cancelled = false;
 
@@ -42,10 +57,14 @@ export default function MarketplacePage() {
             page: String(currentPage || 1)
         };
 
+        console.log("📡 Fetching courses with params:", params);
+
         const load = async () => {
             setLoading(true);
             try {
                 const res = await fetchCourses(params, userSession?.jwt ?? "");
+                console.log("📦 Course fetch response:", res);
+                
                 if (!cancelled) {
                     if (res.status === "OK" && res.ok) {
                         // map server response to a shape usable by CourseCard
@@ -65,13 +84,16 @@ export default function MarketplacePage() {
                                 owner: { username: (c as any).owner ?? "—" }
                             };
                         });
+                        console.log("🗺️ Mapped courses:", mapped);
                         setCourses(mapped);
                     } else {
+                        console.log("❌ API returned error:", res);
                         // API returned an error — show empty list instead of mock data
                         setCourses([]);
                     }
                 }
             } catch (e) {
+                console.error("💥 Error fetching courses:", e);
                 if (!cancelled) setCourses([]);
             } finally {
                 if (!cancelled) setLoading(false);
@@ -85,21 +107,44 @@ export default function MarketplacePage() {
         };
     }, [searchTerm, selectedTags, sortBy, order, currentPage, myCourses, sharedWithMe, forkableOnly, userSession]);
 
+    // Fetch user profile from API if not in localStorage
     useEffect(() => {
         if (!userSession) return;
 
-        const lookupId = userSession.username || userSession.email;
-        (async () => {
-            try {
-                const res = await fetchUsers(lookupId);
-                if (res.status === "OK" && res.ok && res.ok.length > 0) {
-                    const profile = res.ok[0];
-                    setProfileUserType(profile.userType === 'EDUCATOR' ? 'educator' : 'learner');
+        // Only fetch from API if not already in localStorage
+        if (!localStorage.getItem('userType')) {
+            console.log("👤 Fetching user profile from API");
+            const lookupId = userSession.username || userSession.email;
+            (async () => {
+                try {
+                    const res = await fetchUsers(lookupId);
+                    console.log("👥 User fetch response:", res);
+                    
+                    if (res.status === "OK" && res.ok && res.ok.length > 0) {
+                        // Find the exact matching user (FIXED)
+                        const currentUser = res.ok.find((user: any) => 
+                            user.username === userSession.username || 
+                            user.email === userSession.email
+                        );
+                        
+                        if (currentUser) {
+                            const userType = currentUser.userType === 'EDUCATOR' ? 'educator' : 'learner';
+                            setProfileUserType(userType);
+                            // Save to localStorage for future use
+                            localStorage.setItem('userType', userType);
+                            console.log("✅ Found matching user and saved to localStorage:", currentUser.username, "type:", userType);
+                        } else {
+                            console.log("❌ No matching user found in API response");
+                            // Default to learner
+                            setProfileUserType('learner');
+                            localStorage.setItem('userType', 'learner');
+                        }
+                    }
+                } catch (e) {
+                    console.error("💥 Error fetching user profile:", e);
                 }
-            } catch (e) {
-                // ignore
-            }
-        })();
+            })();
+        }
     }, [userSession]);
 
     const allTags = getUniqueTags(courses);
@@ -125,10 +170,13 @@ export default function MarketplacePage() {
         ));
     };
 
-    const handleFork = (_courseId: number, _courseName: string, e: React.MouseEvent) => {
+    const handleFork = (_courseId: number, courseName: string, e: React.MouseEvent) => {
         e.stopPropagation();
         if (!userSession) return;
 
+        // Show fork alert
+        alert(`"${courseName}" has been added to your courses as a template! You can now customize it for your own use.`);
+        
         // Navigate to the fork page which will pre-fill the creation form
         navigate(`/course/${_courseId}/fork`);
     };
@@ -137,7 +185,23 @@ export default function MarketplacePage() {
         navigate(`/course/${courseId}`);
     };
 
+    const handleTagClick = (tag: string) => {
+        setSelectedTags(prev => 
+            prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]
+        );
+        setCurrentPage(1);
+    };
+
+    // Check user role - with proper fallback
     const isEducator = profileUserType === 'educator';
+    const isLearner = profileUserType === 'learner' || profileUserType === 'student' || profileUserType === undefined;
+
+    console.log("👤 User role debug:", { 
+        profileUserType, 
+        isEducator, 
+        isLearner,
+        localStorageUserType: localStorage.getItem('userType')
+    });
 
     return (
         <Page title="Quark | Marketplace" userSession={userSession} setUserSession={setUserSession}>
@@ -169,13 +233,13 @@ export default function MarketplacePage() {
 
                     <SearchFilterBar
                         searchTerm={searchTerm}
-                        onSearchChange={setSearchTerm}
-
+                        onSearchChange={(value) => {
+                            setSearchTerm(value);
+                            setCurrentPage(1);
+                        }}
                         selectedTag={selectedTags[0] ?? ""}
                         allTags={allTags}
-                        onTagSelect={(tag) => {
-                            setSelectedTags(prev => prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]);
-                        }}
+                        onTagSelect={handleTagClick}
                         searchPlaceholder="Search courses..."
                     />
 
@@ -199,7 +263,7 @@ export default function MarketplacePage() {
                                             <option value="asc">Oldest</option>
                                         </select>
 
-                                        {userSession && (
+                                        {userSession && isEducator && (
                                             <div className="hidden sm:flex items-center gap-3 text-xs text-gray-300 mr-2">
                                                 <label className="inline-flex items-center gap-2 cursor-pointer">
                                                     <input type="checkbox" checked={myCourses} onChange={(e) => setMyCourses(e.target.checked)} className="form-checkbox" />
@@ -251,7 +315,7 @@ export default function MarketplacePage() {
                                             userType={profileUserType}
                                             onEnroll={handleEnroll}
                                             onFork={handleFork}
-                                            onTagClick={(tag) => setSelectedTags(prev => prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag])}
+                                            onTagClick={handleTagClick}
                                             selectedTag={selectedTags[0] ?? ""}
                                             variant="grid"
                                         />
