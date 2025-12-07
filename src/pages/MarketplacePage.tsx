@@ -1,15 +1,15 @@
 import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { loadSessionState } from "../types/UserSession";
+import type { MarketplaceCourse } from "../types/CourseTypes"; // Clean import
 import Page from "../components/page/Page";
 import CourseCard from "../components/CourseCard";
 import SearchFilterBar from "../components/SearchFilterBar";
 import Pagination from "../components/Pagination";
-// NOTE: removed mock data fallback; marketplace now uses live API
 import { fetchCourses } from "../endpoints/CourseHandler";
-import type { MarketplaceCourse } from "../types/CourseTypes";
 import { filterCourses, getUniqueTags, paginate, getTotalPages, sortCourses } from "../utils/courseUtils";
 import { fetchUsers } from "../endpoints/UserHandler";
+
 
 export default function MarketplacePage() {
     const { userSession, setUserSession } = loadSessionState();
@@ -28,21 +28,6 @@ export default function MarketplacePage() {
     const [currentPage, setCurrentPage] = useState(1);
     const coursesPerPage = 9;
 
-    // Determine user role from localStorage first
-    useEffect(() => {
-        if (userSession) {
-            console.log("🔍 Checking localStorage for userType");
-            const savedUserType = localStorage.getItem('userType') as "educator" | "learner" | "student" | null;
-            
-            if (savedUserType === 'educator' || savedUserType === 'learner' || savedUserType === 'student') {
-                setProfileUserType(savedUserType);
-                console.log("✅ Using saved user type from localStorage:", savedUserType);
-            } else {
-                console.log("ℹ️ No saved user type in localStorage, will fetch from API");
-            }
-        }
-    }, [userSession]);
-
     useEffect(() => {
         let cancelled = false;
 
@@ -57,14 +42,10 @@ export default function MarketplacePage() {
             page: String(currentPage || 1)
         };
 
-        console.log("📡 Fetching courses with params:", params);
-
         const load = async () => {
             setLoading(true);
             try {
                 const res = await fetchCourses(params, userSession?.jwt ?? "");
-                console.log("📦 Course fetch response:", res);
-                
                 if (!cancelled) {
                     if (res.status === "OK" && res.ok) {
                         // map server response to a shape usable by CourseCard
@@ -84,16 +65,13 @@ export default function MarketplacePage() {
                                 owner: { username: (c as any).owner ?? "—" }
                             };
                         });
-                        console.log("🗺️ Mapped courses:", mapped);
                         setCourses(mapped);
                     } else {
-                        console.log("❌ API returned error:", res);
-                        // API returned an error — show empty list instead of mock data
+                        // API returned an error — show empty list
                         setCourses([]);
                     }
                 }
             } catch (e) {
-                console.error("💥 Error fetching courses:", e);
                 if (!cancelled) setCourses([]);
             } finally {
                 if (!cancelled) setLoading(false);
@@ -107,44 +85,28 @@ export default function MarketplacePage() {
         };
     }, [searchTerm, selectedTags, sortBy, order, currentPage, myCourses, sharedWithMe, forkableOnly, userSession]);
 
-    // Fetch user profile from API if not in localStorage
     useEffect(() => {
         if (!userSession) return;
 
-        // Only fetch from API if not already in localStorage
-        if (!localStorage.getItem('userType')) {
-            console.log("👤 Fetching user profile from API");
-            const lookupId = userSession.username || userSession.email;
-            (async () => {
-                try {
-                    const res = await fetchUsers(lookupId);
-                    console.log("👥 User fetch response:", res);
+        const lookupId = userSession.username || userSession.email;
+        (async () => {
+            try {
+                const res = await fetchUsers(lookupId);
+                if (res.status === "OK" && res.ok && res.ok.length > 0) {
+                    // Find the exact matching user
+                    const currentUser = res.ok.find((user: any) => 
+                        user.username === userSession.username || 
+                        user.email === userSession.email
+                    );
                     
-                    if (res.status === "OK" && res.ok && res.ok.length > 0) {
-                        // Find the exact matching user (FIXED)
-                        const currentUser = res.ok.find((user: any) => 
-                            user.username === userSession.username || 
-                            user.email === userSession.email
-                        );
-                        
-                        if (currentUser) {
-                            const userType = currentUser.userType === 'EDUCATOR' ? 'educator' : 'learner';
-                            setProfileUserType(userType);
-                            // Save to localStorage for future use
-                            localStorage.setItem('userType', userType);
-                            console.log("✅ Found matching user and saved to localStorage:", currentUser.username, "type:", userType);
-                        } else {
-                            console.log("❌ No matching user found in API response");
-                            // Default to learner
-                            setProfileUserType('learner');
-                            localStorage.setItem('userType', 'learner');
-                        }
+                    if (currentUser) {
+                        setProfileUserType(currentUser.userType === 'EDUCATOR' ? 'educator' : 'learner');
                     }
-                } catch (e) {
-                    console.error("💥 Error fetching user profile:", e);
                 }
-            })();
-        }
+            } catch (e) {
+                // ignore
+            }
+        })();
     }, [userSession]);
 
     const allTags = getUniqueTags(courses);
@@ -170,15 +132,12 @@ export default function MarketplacePage() {
         ));
     };
 
-    const handleFork = (_courseId: number, courseName: string, e: React.MouseEvent) => {
+    const handleFork = (courseId: number, _courseName: string, e: React.MouseEvent) => {
         e.stopPropagation();
         if (!userSession) return;
-
-        // Show fork alert
-        alert(`"${courseName}" has been added to your courses as a template! You can now customize it for your own use.`);
         
-        // Navigate to the fork page which will pre-fill the creation form
-        navigate(`/course/${_courseId}/fork`);
+        // Navigate directly to the fork page
+        navigate(`/course/${courseId}/fork`);
     };
 
     const handleCourseClick = (courseId: number) => {
@@ -192,16 +151,8 @@ export default function MarketplacePage() {
         setCurrentPage(1);
     };
 
-    // Check user role - with proper fallback
+    // Check user role
     const isEducator = profileUserType === 'educator';
-    const isLearner = profileUserType === 'learner' || profileUserType === 'student' || profileUserType === undefined;
-
-    console.log("👤 User role debug:", { 
-        profileUserType, 
-        isEducator, 
-        isLearner,
-        localStorageUserType: localStorage.getItem('userType')
-    });
 
     return (
         <Page title="Quark | Marketplace" userSession={userSession} setUserSession={setUserSession}>
@@ -247,7 +198,6 @@ export default function MarketplacePage() {
                         <div className="text-center text-gray-400 py-12">Loading courses...</div>
                     ) : (
                         <>
-                            {/* This section matches your original layout - showing count and sort on same line */}
                             <div className="flex justify-between items-center mb-6">
                                 <span className="text-gray-400">
                                     Showing {currentCourses.length} of {sorted.length} courses
@@ -322,7 +272,6 @@ export default function MarketplacePage() {
                                     </div>
                                 ))}
                             </div>
-
 
                             {sorted.length === 0 && (
                                 <div className="text-center text-gray-400 py-12">
