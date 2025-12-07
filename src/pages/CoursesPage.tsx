@@ -38,17 +38,33 @@ export default function CoursesPage() {
                     return;
                 }
 
-                // Fetch profile info first
-                const usersRes = await fetchUsers(userSession.username || userSession.email || "");
+                // Fetch profile info first - FIXED: Find exact matching user
+                const lookupId = userSession.username || userSession.email;
+                const usersRes = await fetchUsers(lookupId);
                 let normalized: "educator" | "learner" | undefined = undefined;
+                
                 if (usersRes.status === "OK" && usersRes.ok && usersRes.ok.length > 0) {
-                    const profile = usersRes.ok[0];
-                    normalized = profile.userType === 'EDUCATOR' ? 'educator' : 'learner';
-                    setProfileUserType(normalized);
+                    // Find the exact matching user - SAME AS MARKETPLACE
+                    const currentUser = usersRes.ok.find((user: any) => 
+                        user.username === userSession.username || 
+                        user.email === userSession.email
+                    );
+                    
+                    if (currentUser) {
+                        normalized = currentUser.userType === 'EDUCATOR' ? 'educator' : 'learner';
+                        setProfileUserType(normalized);
+                    }
                 }
 
-                // Fetch courses
-                const params: Record<string, string | undefined> = { my_courses: 'true', page: String(currentPage) };
+                // Fetch courses - ADD USER TYPE FILTER
+                const params: Record<string, string | undefined> = { 
+                    my_courses: 'true', 
+                    page: String(currentPage),
+                    // Add user type specific filtering
+                    ...(normalized === 'educator' && { my_courses: 'true' }),
+                    ...(normalized === 'learner' && { enrolled: 'true' })
+                };
+                
                 const res = await fetchCourses(params, userSession.jwt ?? "");
                 const data = res.status === "OK" && res.ok ? res.ok : [];
 
@@ -134,7 +150,10 @@ export default function CoursesPage() {
                                 <div className="text-red-400 text-center py-12">Error: {error}</div>
                             ) : courses && courses.length === 0 ? (
                                 <EmptyState
-                                    message={canCreateCourse ? "You don't have any courses yet." : "You haven't enrolled in any courses yet."}
+                                    message={canCreateCourse 
+                                        ? "You don't have any courses yet." 
+                                        : "You haven't enrolled in any courses yet."
+                                    }
                                     actionText={canCreateCourse ? "Create your first course" : "Browse Courses"}
                                     actionLink={canCreateCourse ? "/my-courses/create" : "/marketplace"}
                                 />
@@ -142,7 +161,10 @@ export default function CoursesPage() {
                                 <>
                                     <div className="flex justify-between items-center mb-6">
                                         <span className="text-gray-400">
-                                            Showing {currentCourses.length} of {sorted.length} courses
+                                            {profileUserType === 'educator' 
+                                                ? `Showing ${currentCourses.length} of ${sorted.length} courses you created`
+                                                : `Showing ${currentCourses.length} of ${sorted.length} courses you're enrolled in`
+                                            }
                                         </span>
                                         <div className="relative">
                                             <select

@@ -1,24 +1,24 @@
 // types/CourseTypes.ts
-export interface MarketplaceCourse {
+export interface BaseCourse {
     id: number;
     name: string;
-    description: string;
-    owner: { username: string };
-    tags: string[];
-    enrolled: boolean;
+    description?: string | null;
+    ownerId?: number | null;
+    owner?: { id?: number; username?: string } | null;
+    tags?: string[]; // ✅ Make optional
     forkable?: boolean;
+    [key: string]: any;
 }
 
-export interface DatabaseCourse {
-    id: number;
-    name: string;
-    description?: string;
+export interface MarketplaceCourse extends BaseCourse {
+    enrolled: boolean;
+    // tags remains optional here too
+}
+
+export interface DatabaseCourse extends BaseCourse {
     createdAt?: string;
     updatedAt?: string;
     version?: number;
-    forkable?: boolean;
-    owner?: { username: string };
-    tags?: string[];
     chapters?: any[];
     lessons?: any[];
     pages?: any[];

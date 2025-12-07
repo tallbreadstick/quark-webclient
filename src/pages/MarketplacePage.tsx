@@ -50,21 +50,21 @@ export default function MarketplacePage() {
                     if (res.status === "OK" && res.ok) {
                         // map server response to a shape usable by CourseCard
                         const mapped = res.ok.map(c => {
-                            const rawTags = (c as any).tags ?? [];
-                            const tags = Array.isArray(rawTags)
-                                ? rawTags.map((t: any) => typeof t === "string" ? t : (t?.name ?? String(t?.id ?? "")))
-                                : [];
+                        const rawTags = (c as any).tags ?? [];
+                        const tags = Array.isArray(rawTags)
+                            ? rawTags.map((t: any) => typeof t === "string" ? t : (t?.name ?? String(t?.id ?? "")))
+                            : []; // ✅ Returns empty array if no tags
 
-                            return {
-                                id: c.id,
-                                name: c.name,
-                                description: c.description ?? "",
-                                tags,
-                                enrolled: false,
-                                forkable: Boolean((c as any).forkable),
-                                owner: { username: (c as any).owner ?? "—" }
-                            };
-                        });
+                        return {
+                            id: c.id,
+                            name: c.name,
+                            description: c.description ?? "",
+                            tags, // ✅ Always defined (empty array if no tags)
+                            enrolled: false,
+                            forkable: Boolean((c as any).forkable),
+                            owner: { username: (c as any).owner ?? "—" }
+                        };
+                    });
                         setCourses(mapped);
                     } else {
                         // API returned an error — show empty list

@@ -21,14 +21,12 @@ const Navbar: FunctionComponent<NavbarProps> = ({ userSession, setUserSession })
 
     // toggle from clicks inside page (ProfilePage avatar/username)
     useEffect(() => {
-        const onToggle = (e: Event) => {
-            setDropdownOpen((s) => !s);
-        };
-        const onOpen = (e: Event) => {
-            setDropdownOpen(true);
-        };
+        const onToggle = () => setDropdownOpen((s) => !s);
+        const onOpen = () => setDropdownOpen(true);
+
         window.addEventListener('profile-menu-toggle', onToggle as EventListener);
         window.addEventListener('profile-menu-open', onOpen as EventListener);
+
         return () => {
             window.removeEventListener('profile-menu-toggle', onToggle as EventListener);
             window.removeEventListener('profile-menu-open', onOpen as EventListener);
@@ -38,16 +36,20 @@ const Navbar: FunctionComponent<NavbarProps> = ({ userSession, setUserSession })
     // close on outside click / Escape
     useEffect(() => {
         if (!dropdownOpen) return;
+
         const onDoc = (e: MouseEvent) => {
             if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
                 setDropdownOpen(false);
             }
         };
+
         const onKey = (e: KeyboardEvent) => {
             if (e.key === 'Escape') setDropdownOpen(false);
         };
+
         document.addEventListener('mousedown', onDoc);
         document.addEventListener('keydown', onKey);
+
         return () => {
             document.removeEventListener('mousedown', onDoc);
             document.removeEventListener('keydown', onKey);
@@ -55,7 +57,7 @@ const Navbar: FunctionComponent<NavbarProps> = ({ userSession, setUserSession })
     }, [dropdownOpen]);
 
     return (
-        <nav className="w-full flex items-center justify-between px-8 py-4 bg-black/30 backdrop-blur-md text-white shadow-lg">
+        <nav className="fixed top-0 left-0 w-full flex items-center justify-between px-8 py-4 bg-black/30 backdrop-blur-md text-white shadow-lg z-50">
             {/* --- Left side: quick links --- */}
             <div className="flex items-center gap-8 font-medium text-lg">
                 <img src={Logo} alt="Quark Logo" className="w-10 h-10"/>
@@ -68,12 +70,10 @@ const Navbar: FunctionComponent<NavbarProps> = ({ userSession, setUserSession })
             <div className="flex items-center gap-4">
                 {userSession ? (
                     <div className="flex items-center gap-4">
-                        {/* User profile with hover effect */}
-                        <div 
+                        <div
                             onClick={() => setDropdownOpen((s) => !s)}
                             className="flex items-center gap-3 cursor-pointer hover:opacity-90 transition group"
                         >
-                            {/* Profile image (prefer userSession.profilePictureUrl) */}
                             {userSession.profilePictureUrl ? (
                                 <img
                                     src={userSession.profilePictureUrl}
@@ -87,11 +87,11 @@ const Navbar: FunctionComponent<NavbarProps> = ({ userSession, setUserSession })
                                     </span>
                                 </div>
                             )}
+
                             <span className="font-semibold group-hover:text-[#bccdff] transition-colors">
                                 {userSession.username}
                             </span>
                         </div>
-                    
                     </div>
                 ) : (
                     <div className="flex items-center gap-4">
@@ -110,8 +110,15 @@ const Navbar: FunctionComponent<NavbarProps> = ({ userSession, setUserSession })
                     </div>
                 )}
             </div>
+
             {dropdownOpen && portalEl && createPortal(
-                <div ref={dropdownRef} className="fixed z-50" style={{ top: 56, right: 16 }} role="menu" aria-label="Profile menu">
+                <div
+                    ref={dropdownRef}
+                    className="fixed z-50"
+                    style={{ top: 56, right: 16 }}
+                    role="menu"
+                    aria-label="Profile menu"
+                >
                     <div className="bg-[#0f1724] border border-white/10 rounded-lg p-2 w-48 shadow-xl">
                         <button
                             onClick={() => {
