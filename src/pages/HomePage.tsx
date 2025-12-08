@@ -1,29 +1,17 @@
 import { motion } from "framer-motion";
+import { useNavigate, Link } from "react-router-dom";
 import Page from "../components/page/Page";
 import { loadSessionState } from "../types/UserSession";
-import { Link } from "react-router-dom";
 import { useEffect, useState } from "react";
-import api from "../scripts/api";
 import { fetchUsers } from "../endpoints/UserHandler";
-import CourseCard from "../components/CourseCard";
+import { fetchCourses } from "../endpoints/CourseHandler";
 import LoadingSkeleton from "../components/LoadingSkeleton";
-import EmptyState from "../components/EmptyState";
-import { getUserCourses } from "../utils/courseUtils";
-
-type Course = {
-    id: number;
-    name: string;
-    description?: string | null;
-    ownerId?: number | null;
-    owner?: { id?: number; username?: string } | null;
-    version?: number;
-    tags?: string[];
-    [key: string]: any;
-};
+import type { DatabaseCourse } from "../types/CourseTypes";
 
 export default function HomePage() {
     const { userSession, setUserSession } = loadSessionState();
-    const [courses, setCourses] = useState<Course[] | null>(null);
+    const navigate = useNavigate();
+    const [courses, setCourses] = useState<DatabaseCourse[] | null>(null);
     const [loading, setLoading] = useState(true);
     const [profileUserType, setProfileUserType] = useState<"educator" | "learner" | "student" | undefined>(undefined);
     const isLoggedIn = userSession !== null;
@@ -36,32 +24,73 @@ export default function HomePage() {
         async function fetchCoursesForUser() {
             setLoading(true);
             try {
-                const res = await api.get("/course");
-                const data = res.data;
+                let userType: "educator" | "learner" | undefined = undefined;
 
-                if (cancelled) return;
-
-                // if session is slim (only jwt/username/email) try fetching full profile
-                let userId: number | null = null;
-                let userType: string | null = null;
-
+                // Get user type
                 if (userSession) {
                     const lookupId = userSession.username || userSession.email;
                     const usersRes = await fetchUsers(lookupId);
                     if (usersRes.status === "OK" && usersRes.ok && usersRes.ok.length > 0) {
-                        const profile = usersRes.ok[0];
-                        userId = profile.id;
-                        userType = profile.userType;
-                        // normalize backend role strings (EDUCATOR/STUDENT) to lowercase values used in UI
-                        const normalized = profile.userType === 'EDUCATOR' ? 'educator' : 'learner';
-                        setProfileUserType(normalized);
+                        const currentUser = usersRes.ok.find((user: any) => 
+                            user.username === userSession.username || 
+                            user.email === userSession.email
+                        );
+                        
+                        if (currentUser) {
+                            userType = currentUser.userType === 'EDUCATOR' ? 'educator' : 'learner';
+                            setProfileUserType(userType);
+                        }
                     }
                 }
 
-                if (userId != null) {
-                    const userCourses = getUserCourses(data, userId, userType ?? undefined);
-                    setCourses(userCourses.slice(0, 2)); // Limit to 2 courses
+                // Fetch courses for educators
+                if (userType === 'educator') {
+                    // Use the same params as /my-courses page
+                    const params = { my_courses: 'true' };
+                    const res = await fetchCourses(params, userSession?.jwt ?? "");
+                    const data = res.status === "OK" && res.ok ? res.ok : [];
+
+                    if (cancelled) return;
+
+                    if (data && data.length > 0) {
+                        // Map data to DatabaseCourse format - SIMPLIFIED like /my-courses
+                        const mappedCourses: DatabaseCourse[] = await Promise.all(
+                            data.map(async (c: any) => {
+                                const rawTags = (c as any).tags ?? [];
+                                const tags = Array.isArray(rawTags)
+                                    ? rawTags.map((t: any) => typeof t === "string" ? t : (t?.name ?? String(t?.id ?? "")))
+                                    : [];
+
+                                return {
+                                    id: c.id,
+                                    name: c.name,
+                                    description: c.description ?? "",
+                                    tags,
+                                    forkable: Boolean((c as any).forkable),
+                                    owner: { username: c.owner || "—" }, // Use c.owner directly
+                                    ownerId: c.ownerId,
+                                    version: c.version,
+                                    createdAt: c.createdAt,
+                                };
+                            })
+                        );
+
+                        // Show only 2 most recent courses
+                        const recentCourses = mappedCourses
+                            .sort((a, b) => {
+                                // Sort by created date if available, otherwise by ID
+                                const dateA = a.createdAt ? new Date(a.createdAt).getTime() : a.id;
+                                const dateB = b.createdAt ? new Date(b.createdAt).getTime() : b.id;
+                                return dateB - dateA; // Most recent first
+                            })
+                            .slice(0, 2); // Limit to 2 courses
+
+                        setCourses(recentCourses);
+                    } else {
+                        setCourses([]);
+                    }
                 } else {
+                    // For learners/students: show empty (no enroll endpoint yet)
                     setCourses([]);
                 }
             } catch (err: any) {
@@ -78,17 +107,19 @@ export default function HomePage() {
         };
     }, [userSession, isLoggedIn]);
 
-    // user type is no longer stored on the session; use profileUserType fetched above when available
     const isEducator = profileUserType === 'educator';
     const isLearner = profileUserType === 'student';
 
     const getWelcomeMessage = () => {
         if (isEducator) {
             return "Ready to inspire the next generation of learners?";
-        } else if (isLearner) {
+        } else {
             return "Your learning adventure continues — explore, discover, and grow.";
         }
-        return "Continue your journey through knowledge — explore your active courses and track your progress.";
+    };
+
+    const handleCourseClick = (courseId: number) => {
+        navigate(`/course/${courseId}/edit`);
     };
 
     return (
@@ -138,37 +169,47 @@ export default function HomePage() {
                             {getWelcomeMessage()}
                         </p>
 
-                        {/* Quick Access / Dashboard Section */}
                         <section className="grid grid-cols-3 gap-6 mb-16">
                             <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-6 h-40 flex flex-col justify-center items-center">
                                 <span className="text-gray-400">[UNDER CONSTRUCTION]</span>
                                 <p className="mt-2 text-sm text-gray-500">Recent Activity</p>
                             </div>
 
-                            <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-6 h-40 flex flex-col justify-center items-center">
-                                <span className="text-gray-400">[UNDER CONSTRUCTION]</span>
-                                <p className="mt-2 text-sm text-gray-500">
-                                    {isEducator ? "Course Analytics" : "Learning Progress"}
-                                </p>
-                            </div>
+                            {isEducator ? (
+                                <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-6 h-40 flex flex-col justify-center items-center">
+                                    <span className="text-gray-400">[UNDER CONSTRUCTION]</span>
+                                    <p className="mt-2 text-sm text-gray-500">Course Analytics</p>
+                                </div>
+                            ) : (
+                                <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-6 h-40 flex flex-col justify-center items-center">
+                                    <span className="text-gray-400">[UNDER CONSTRUCTION]</span>
+                                    <p className="mt-2 text-sm text-gray-500">Learning Progress</p>
+                                </div>
+                            )}
 
-                            <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-6 h-40 flex flex-col justify-center items-center">
-                                <span className="text-gray-400">[UNDER CONSTRUCTION]</span>
-                                <p className="mt-2 text-sm text-gray-500">
-                                    {isEducator ? "Student Engagement" : "Learning Tracks"}
-                                </p>
-                            </div>
+                            {isEducator ? (
+                                <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-6 h-40 flex flex-col justify-center items-center">
+                                    <span className="text-gray-400">[UNDER CONSTRUCTION]</span>
+                                    <p className="mt-2 text-sm text-gray-500">Student Engagement</p>
+                                </div>
+                            ) : (
+                                <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-6 h-40 flex flex-col justify-center items-center">
+                                    <span className="text-gray-400">[UNDER CONSTRUCTION]</span>
+                                    <p className="mt-2 text-sm text-gray-500">View Enrolled Courses</p>
+                                </div>
+                            )}
                         </section>
 
-                        {/* Your Courses section */}
                         <div className="mb-6">
                             <div className="flex justify-between items-center mb-6">
-                                <h2 className="text-xl font-semibold text-white">Your Courses</h2>
+                                <h2 className="text-xl font-semibold text-white">
+                                    {isEducator ? "Your Recent Courses" : "Your Enrolled Courses"}
+                                </h2>
                                 <Link 
-                                    to="/my-courses" 
+                                    to="/my-courses"
                                     className="text-blue-400 hover:text-blue-300 transition-colors text-sm"
                                 >
-                                    View all courses →
+                                    {isEducator ? "View all courses →" : "Enrolled Courses →"}
                                 </Link>
                             </div>
 
@@ -177,20 +218,57 @@ export default function HomePage() {
                             ) : courses && courses.length > 0 ? (
                                 <div className="space-y-4">
                                     {courses.map((course) => (
-                                        <CourseCard
-                                            key={course.id}
-                                            course={course}
-                                            userType={profileUserType}
-                                            variant="list"
-                                        />
+                                        <div 
+                                            key={course.id} 
+                                            onClick={() => handleCourseClick(course.id)}
+                                            className="bg-white/5 backdrop-blur-lg border border-white/10 rounded-2xl p-6 hover:border-blue-500/50 transition-all duration-300 cursor-pointer"
+                                        >
+                                            <div className="flex justify-between items-center">
+                                                <div className="flex-1">
+                                                    <h3 className="text-lg font-semibold text-white mb-2">
+                                                        {course.name}
+                                                    </h3>
+                                                    <p className="text-gray-400 text-sm">
+                                                        {course.description ?? "No description provided."}
+                                                    </p>
+                                                </div>
+
+                                                <div className="flex gap-2 ml-6">
+                                                    {isEducator ? (
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                handleCourseClick(course.id);
+                                                            }}
+                                                            className="px-4 py-2 bg-blue-600 rounded-lg text-white hover:bg-blue-700 transition"
+                                                        >
+                                                            Edit
+                                                        </button>
+                                                    ) : null}
+                                                </div>
+                                            </div>
+                                        </div>
                                     ))}
                                 </div>
                             ) : (
-                                <EmptyState
-                                    message={isEducator ? "You don't have any courses yet." : "You haven't enrolled in any courses yet."}
-                                    actionText={isEducator ? "Create your first course" : "Browse Courses"}
-                                    actionLink={isEducator ? "/my-courses/create" : "/marketplace"}
-                                />
+                                <div className="bg-white/5 backdrop-blur-lg border border-white/10 rounded-2xl p-8 text-center text-gray-400">
+                                    <div className="text-4xl mb-4">📚</div>
+                                    {isEducator ? (
+                                        <>
+                                            <p className="mb-4 text-lg">You haven't created any courses yet.</p>
+                                            <Link to="/my-courses/create" className="px-4 py-2 bg-blue-600 rounded-md text-white hover:bg-blue-700 transition text-sm">
+                                                Create your first course
+                                            </Link>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <p className="mb-4 text-lg">You haven't enrolled in any courses yet.</p>
+                                            <Link to="/marketplace" className="px-4 py-2 bg-blue-600 rounded-md text-white hover:bg-blue-700 transition text-sm">
+                                                Browse Courses
+                                            </Link>
+                                        </>
+                                    )}
+                                </div>
                             )}
                         </div>
                     </motion.div>

@@ -1,27 +1,25 @@
-// Base course properties that both types share
-export type BaseCourse = {
+// types/CourseTypes.ts
+export interface BaseCourse {
     id: number;
     name: string;
     description?: string | null;
-    tags: string[];
-};
-
-// Marketplace Course (from mock data)
-export type MarketplaceCourse = BaseCourse & {
-    description: string; // Make description required for marketplace courses
-    owner: {
-        username: string;
-    };
-    enrolled: boolean;
-};
-
-// Database Course (from PHP MyAdmin)
-export type DatabaseCourse = BaseCourse & {
     ownerId?: number | null;
     owner?: { id?: number; username?: string } | null;
-    version?: number;
+    tags?: string[]; // ✅ Make optional
+    forkable?: boolean;
     [key: string]: any;
-};
+}
 
-// Union type for utilities that work with both
-export type AnyCourse = MarketplaceCourse | DatabaseCourse;
+export interface MarketplaceCourse extends BaseCourse {
+    enrolled: boolean;
+    // tags remains optional here too
+}
+
+export interface DatabaseCourse extends BaseCourse {
+    createdAt?: string;
+    updatedAt?: string;
+    version?: number;
+    chapters?: any[];
+    lessons?: any[];
+    pages?: any[];
+}
