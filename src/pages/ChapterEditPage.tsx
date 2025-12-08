@@ -230,7 +230,7 @@ export default function ChapterEditPage(): React.ReactElement {
                         <EmptySelectionState />
                     ) : (
                         <div className="max-w-4xl mx-auto space-y-8 animate-in zoom-in-95 duration-300">
-                            {activeData.type === 'chapter' && activeData.chapter === undefined ? (
+                            {activeData.type === 'chapter' ? (
                                 <ChapterEditor
                                     chapter={activeData.data as Chapter}
                                     onNameChange={(name) => updateChapterAction((activeData.data as Chapter).id, { name }, chapters, userSession?.jwt ?? "", setChapters)}
