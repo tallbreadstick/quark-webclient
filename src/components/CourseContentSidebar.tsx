@@ -61,7 +61,7 @@ export function CourseContentSidebar({
                                     <div>
                                         <div className="text-sm font-semibold text-white truncate">{ch.name}</div>
                                         <div className="text-xs text-gray-400">
-                                            {ch.items?.length ?? 0} {ch.items?.length === 1 ? 'item' : 'items'}
+                                            {ch.items?.length ?? 0} {ch.items?.length === 1 ? 'lesson' : 'lessons'}
                                         </div>
                                     </div>
                                     {ch.number && <div className="text-xs text-gray-400">{ch.number}</div>}
