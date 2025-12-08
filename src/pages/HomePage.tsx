@@ -108,6 +108,7 @@ export default function HomePage() {
     }, [userSession, isLoggedIn]);
 
     const isEducator = profileUserType === 'educator';
+    const isLearner = profileUserType === 'student';
 
     const getWelcomeMessage = () => {
         if (isEducator) {
