@@ -1,4 +1,5 @@
 import React from "react";
+import { useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faChevronRight, faEye, faEdit } from '@fortawesome/free-solid-svg-icons';
 import Editor from "@monaco-editor/react";
@@ -31,6 +32,12 @@ export const ItemEditor: React.FC<ItemEditorProps> = ({
     onRulesetFieldUpdate,
     onPreviewModeToggle,
 }) => {
+    const navigate = useNavigate();
+    const handleOpenEditPage = () => {
+        if (item.itemType === "LESSON" && item.id) {
+            navigate(`/lesson/${item.id}/edit`);
+        }
+    };
     return (
         <div className="space-y-8">
             {/* Header Inputs */}
@@ -109,7 +116,10 @@ export const ItemEditor: React.FC<ItemEditorProps> = ({
 
             {/* Footer Button */}
             <div className="flex justify-center pb-12">
-                <button className="px-6 py-3 rounded-full bg-slate-800/50 border border-white/10 hover:bg-slate-800 hover:border-white/20 text-slate-300 hover:text-white text-sm transition-all flex items-center gap-2 backdrop-blur-md shadow-lg">
+                <button
+                    className="px-6 py-3 rounded-full bg-slate-800/50 border border-white/10 hover:bg-slate-800 hover:border-white/20 text-slate-300 hover:text-white text-sm transition-all flex items-center gap-2 backdrop-blur-md shadow-lg"
+                    onClick={handleOpenEditPage}
+                >
                     Open In Edit Page
                 </button>
             </div>
