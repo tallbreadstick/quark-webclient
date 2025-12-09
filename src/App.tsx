@@ -8,9 +8,10 @@ import MarketplacePage from "./pages/MarketplacePage";
 import CourseContentPage from "./pages/CourseContentPage";
 import CourseEditPage from "./pages/CourseEditPage";
 import CourseForkPage from "./pages/CourseForkPage";
-import Profile from "./pages/ProfilePage"; // Add this import
+import Profile from "./pages/ProfilePage"; 
 import "katex/dist/katex.min.css";
 import ChapterEditPage from "./pages/ChapterEditPage";
+import LessonEditPage from "./pages/LessonEditPage";
 
 export default function App() {
     return (
@@ -28,6 +29,7 @@ export default function App() {
                     <Route path="/course/:courseId/edit" element={<CourseEditPage />} />
                     <Route path="/course/:courseId/fork" element={<CourseForkPage />} />
                     <Route path="/profile" element={<Profile />} />
+                    <Route path="/lesson/:lessonId/edit" element={<LessonEditPage />} />
                 </Routes>
             </BrowserRouter>
         </div>
