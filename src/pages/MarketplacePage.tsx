@@ -232,18 +232,18 @@ export default function MarketplacePage() {
                                         </label>
                                     </div>
 
-                                    <div className="relative">
+                                    <div className="relative inline-block">
                                         <select
                                             value={sortBy}
                                             onChange={(e) => setSortBy(e.target.value)}
-                                            className="px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition cursor-pointer"
+                                            className="appearance-none px-4 py-2 pr-10 bg-white/5 border border-white/20 hover:border-white/30 rounded-lg text-white text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500 transition cursor-pointer"
                                         >
                                             <option value="newest">Sort by: Newest</option>
                                             <option value="popular">Sort by: Popular</option>
                                             <option value="name">Sort by: Name</option>
                                         </select>
 
-                                        <div className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
+                                        <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
                                             <svg
                                                 className="h-4 w-4 text-gray-400"
                                                 fill="none"
