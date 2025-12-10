@@ -118,10 +118,6 @@ export default function HomePage() {
         }
     };
 
-    const handleCourseClick = (courseId: number) => {
-        navigate(`/course/${courseId}/edit`);
-    };
-
     return (
         <Page title="Quark | Home" userSession={userSession} setUserSession={setUserSession}>
             <div className="relative z-10 flex flex-col items-center justify-center min-h-[85vh] px-12 py-16 text-gray-200">
@@ -219,9 +215,8 @@ export default function HomePage() {
                                 <div className="space-y-4">
                                     {courses.map((course) => (
                                         <div 
-                                            key={course.id} 
-                                            onClick={() => handleCourseClick(course.id)}
-                                            className="bg-white/5 backdrop-blur-lg border border-white/10 rounded-2xl p-6 hover:border-blue-500/50 transition-all duration-300 cursor-pointer"
+                                            key={course.id}
+                                            className="bg-white/5 backdrop-blur-lg border border-white/10 rounded-2xl p-6 hover:border-blue-500/50 transition-all duration-300"
                                         >
                                             <div className="flex justify-between items-center">
                                                 <div className="flex-1">
@@ -235,16 +230,28 @@ export default function HomePage() {
 
                                                 <div className="flex gap-2 ml-6">
                                                     {isEducator ? (
-                                                        <button
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                handleCourseClick(course.id);
-                                                            }}
+                                                        <>
+                                                            <Link 
+                                                                to={`/course/${course.id}/edit`} 
+                                                                className="px-4 py-2 border border-white/20 rounded-lg text-white/80 hover:bg-white/5 transition"
+                                                            >
+                                                                Edit
+                                                            </Link>
+                                                            <Link 
+                                                                to={`/course/${course.id}/chapters`} 
+                                                                className="px-4 py-2 bg-blue-600 rounded-lg text-white hover:bg-blue-700 transition"
+                                                            >
+                                                                Open
+                                                            </Link>
+                                                        </>
+                                                    ) : (
+                                                        <Link 
+                                                            to={`/course/${course.id}/chapters`} 
                                                             className="px-4 py-2 bg-blue-600 rounded-lg text-white hover:bg-blue-700 transition"
                                                         >
-                                                            Edit
-                                                        </button>
-                                                    ) : null}
+                                                            Open
+                                                        </Link>
+                                                    )}
                                                 </div>
                                             </div>
                                         </div>
@@ -276,4 +283,4 @@ export default function HomePage() {
             </div>
         </Page>
     );
-}
+}	
