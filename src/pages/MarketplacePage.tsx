@@ -1,15 +1,15 @@
 import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { loadSessionState } from "../types/UserSession";
-import type { MarketplaceCourse } from "../types/CourseTypes"; // Clean import
+import type { MarketplaceCourse } from "../types/CourseTypes";
 import Page from "../components/page/Page";
 import CourseCard from "../components/CourseCard";
 import SearchFilterBar from "../components/SearchFilterBar";
 import Pagination from "../components/Pagination";
+import EnrollmentSuccessModal from "../components/EnrollmentSuccessModal";
 import { fetchCourses } from "../endpoints/CourseHandler";
 import { filterCourses, getUniqueTags, paginate, getTotalPages, sortCourses } from "../utils/courseUtils";
 import { fetchUsers } from "../endpoints/UserHandler";
-
 
 export default function MarketplacePage() {
     const { userSession, setUserSession } = loadSessionState();
@@ -18,56 +18,75 @@ export default function MarketplacePage() {
     const [loading, setLoading] = useState(true);
     const [profileUserType, setProfileUserType] = useState<"educator" | "learner" | "student" | undefined>(undefined);
     const [searchTerm, setSearchTerm] = useState("");
-    // allow selecting multiple tags for the server-side 'tags' param
     const [selectedTags, setSelectedTags] = useState<string[]>([]);
     const [sortBy, setSortBy] = useState("newest");
-    const [order, setOrder] = useState<"desc" | "asc">("desc");
-    const [myCourses, setMyCourses] = useState<boolean>(false);
-    const [sharedWithMe, setSharedWithMe] = useState<boolean>(false);
-    const [forkableOnly, setForkableOnly] = useState<boolean>(false);
     const [currentPage, setCurrentPage] = useState(1);
+    const [showForkableOnly, setShowForkableOnly] = useState<boolean>(false);
+    const [showEnrollmentModal, setShowEnrollmentModal] = useState(false);
+    const [enrolledCourseName, setEnrolledCourseName] = useState("");
     const coursesPerPage = 9;
 
     useEffect(() => {
         let cancelled = false;
 
+        // Build params object based on user type
         const params: Record<string, string | undefined> = {
             search: searchTerm || undefined,
             tags: selectedTags.length ? selectedTags.join(",") : undefined,
-            sort_by: sortBy || undefined,
-            order: order || undefined,
-            my_courses: myCourses ? String(myCourses) : undefined,
-            shared_with_me: sharedWithMe ? String(sharedWithMe) : undefined,
-            forkable: forkableOnly ? String(forkableOnly) : undefined,
             page: String(currentPage || 1)
         };
+
+        // Add sort_by based on sortBy state
+        if (sortBy === "newest") {
+            params.sort_by = "created_at";
+            params.order = "desc";
+        } else if (sortBy === "oldest") {
+            params.sort_by = "created_at";
+            params.order = "asc";
+        } else if (sortBy === "name") {
+            params.sort_by = "name";
+            params.order = "asc";
+        }
+
+        // Add forkable filter for educators when showForkableOnly is true
+        const isEducator = profileUserType === 'educator';
+        if (isEducator && showForkableOnly && userSession) {
+            params.forkable = "true";
+        }
 
         const load = async () => {
             setLoading(true);
             try {
-                const res = await fetchCourses(params, userSession?.jwt ?? "");
+                // Allow fetching courses without JWT for logged-out users
+                const jwt = userSession?.jwt ?? "";
+                const res = await fetchCourses(params, jwt);
                 if (!cancelled) {
                     if (res.status === "OK" && res.ok) {
-                        // map server response to a shape usable by CourseCard
                         const mapped = res.ok.map(c => {
-                        const rawTags = (c as any).tags ?? [];
-                        const tags = Array.isArray(rawTags)
-                            ? rawTags.map((t: any) => typeof t === "string" ? t : (t?.name ?? String(t?.id ?? "")))
-                            : []; // ✅ Returns empty array if no tags
+                            const rawTags = (c as any).tags ?? [];
+                            const tags = Array.isArray(rawTags)
+                                ? rawTags.map((t: any) => typeof t === "string" ? t : (t?.name ?? String(t?.id ?? "")))
+                                : [];
 
-                        return {
-                            id: c.id,
-                            name: c.name,
-                            description: c.description ?? "",
-                            tags, // ✅ Always defined (empty array if no tags)
-                            enrolled: false,
-                            forkable: Boolean((c as any).forkable),
-                            owner: { username: (c as any).owner ?? "—" }
-                        };
-                    });
-                        setCourses(mapped);
+                            return {
+                                id: c.id,
+                                name: c.name,
+                                description: c.description ?? "",
+                                tags,
+                                enrolled: false,
+                                forkable: Boolean((c as any).forkable),
+                                owner: { username: (c as any).owner ?? "—" }
+                            };
+                        });
+                        
+                        // Client-side filtering as backup
+                        let filteredCourses = mapped;
+                        if (isEducator && showForkableOnly && userSession) {
+                            filteredCourses = mapped.filter(course => course.forkable);
+                        }
+                        
+                        setCourses(filteredCourses);
                     } else {
-                        // API returned an error — show empty list
                         setCourses([]);
                     }
                 }
@@ -83,17 +102,19 @@ export default function MarketplacePage() {
         return () => {
             cancelled = true;
         };
-    }, [searchTerm, selectedTags, sortBy, order, currentPage, myCourses, sharedWithMe, forkableOnly, userSession]);
+    }, [searchTerm, selectedTags, sortBy, currentPage, userSession, profileUserType, showForkableOnly]);
 
     useEffect(() => {
-        if (!userSession) return;
+        if (!userSession) {
+            setProfileUserType(undefined);
+            return;
+        }
 
         const lookupId = userSession.username || userSession.email;
         (async () => {
             try {
                 const res = await fetchUsers(lookupId);
                 if (res.status === "OK" && res.ok && res.ok.length > 0) {
-                    // Find the exact matching user
                     const currentUser = res.ok.find((user: any) => 
                         user.username === userSession.username || 
                         user.email === userSession.email
@@ -110,10 +131,10 @@ export default function MarketplacePage() {
     }, [userSession]);
 
     const allTags = getUniqueTags(courses);
+    const isEducator = profileUserType === 'educator';
 
     // Apply filters and sorting
     const searchFiltered = filterCourses(courses, searchTerm);
-    // client-side tag filtering supports multi-tag OR match
     const tagFiltered = selectedTags.length > 0
         ? searchFiltered.filter(course => selectedTags.some(t => course.tags.includes(t)))
         : searchFiltered;
@@ -121,27 +142,45 @@ export default function MarketplacePage() {
     const currentCourses = paginate(sorted, currentPage, coursesPerPage);
     const totalPages = getTotalPages(sorted.length, coursesPerPage);
 
-    const handleEnroll = (courseId: number, courseName: string, e: React.MouseEvent) => {
+    const handleEnroll = async (courseId: number, courseName: string, e: React.MouseEvent) => {
         e.stopPropagation();
         if (!userSession) return;
 
-        alert(`Successfully enrolled in "${courseName}"! You can now access this course from your My Courses page.`);
+        try {
+            // TODO: Call enrollment API when ready
+            // const result = await enrollInCourse(courseId, userSession.jwt ?? "");
+            // if (result.status === "OK") { ... }
+            
+            // For now, just update UI
+            setCourses(courses.map(course =>
+                course.id === courseId ? { ...course, enrolled: true } : course
+            ));
 
-        setCourses(courses.map(course =>
-            course.id === courseId ? { ...course, enrolled: !course.enrolled } : course
-        ));
+            // Show success modal
+            setEnrolledCourseName(courseName);
+            setShowEnrollmentModal(true);
+        } catch (error: any) {
+            alert(`Failed to enroll: ${error?.message || "Unknown error"}`);
+        }
+    };
+
+    const handleCloseModal = () => {
+        setShowEnrollmentModal(false);
+        setEnrolledCourseName("");
     };
 
     const handleFork = (courseId: number, _courseName: string, e: React.MouseEvent) => {
         e.stopPropagation();
         if (!userSession) return;
         
-        // Navigate directly to the fork page
         navigate(`/course/${courseId}/fork`);
     };
 
     const handleCourseClick = (courseId: number) => {
-        navigate(`/course/${courseId}`);
+        // Only navigate if user is logged in
+        if (userSession) {
+            navigate(`/course/${courseId}`);
+        }
     };
 
     const handleTagClick = (tag: string) => {
@@ -151,32 +190,37 @@ export default function MarketplacePage() {
         setCurrentPage(1);
     };
 
-    // Check user role
-    const isEducator = profileUserType === 'educator';
+    const handleSortChange = (value: string) => {
+        if (value === "forkable") {
+            setShowForkableOnly(true);
+            setSortBy("newest");
+        } else {
+            setSortBy(value);
+            setShowForkableOnly(false);
+        }
+        setCurrentPage(1);
+    };
 
     return (
         <Page title="Quark | Marketplace" userSession={userSession} setUserSession={setUserSession}>
             <div className="relative z-10 min-h-[calc(100vh-7rem)] px-6 py-8 text-gray-200">
-                <style>{`
-                    .marketplace-select option {
-                        background-color: #0b1020;
-                        color: #fff;
-                    }
-                `}</style>
                 <div className="max-w-7xl mx-auto">
                     <div className="mb-8">
                         <h1 className="text-3xl font-bold text-white mb-2">Course Marketplace</h1>
                         <p className="text-gray-400">
-                            {isEducator
-                                ? "Discover courses to use as templates for your own curriculum"
-                                : "Discover and enroll in courses tailored to your learning journey"
-                            }
+                            {userSession ? (
+                                isEducator
+                                    ? "Discover courses to use as templates for your own curriculum"
+                                    : "Discover and enroll in courses tailored to your learning journey"
+                            ) : (
+                                "Discover courses - sign in to enroll and track your progress"
+                            )}
                         </p>
                     </div>
 
                     {!userSession && (
                         <div className="bg-white/5 border border-white/10 rounded-2xl p-6 mb-8 text-center">
-                            <p className="text-gray-300 mb-4">Sign in to enroll in courses and track your progress</p>
+                            <p className="text-gray-300 mb-4">Sign in to enroll in courses, make courses, and track your progress</p>
                             <div className="flex justify-center gap-3">
                                 <Link to="/login" className="px-4 py-2 bg-blue-600 rounded-md text-white hover:bg-blue-700 transition cursor-pointer">
                                     Sign in
@@ -209,47 +253,22 @@ export default function MarketplacePage() {
                                     Showing {currentCourses.length} of {sorted.length} courses
                                 </span>
                                 <div className="flex items-center gap-3">
-                                    <div className="flex items-center gap-2">
+                                    {/* Single unified sort dropdown with forkable filter option */}
+                                    <div className="relative">
                                         <select
-                                            value={order}
-                                            onChange={(e) => setOrder(e.target.value as any)}
-                                            className="marketplace-select px-2 py-2 bg-black/30 border border-white/15 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 transition cursor-pointer mr-2"
-                                        >
-                                            <option value="desc">Newest</option>
-                                            <option value="asc">Oldest</option>
-                                        </select>
-
-                                        {userSession && isEducator && (
-                                            <div className="hidden sm:flex items-center gap-3 text-xs text-gray-300 mr-2">
-                                                <label className="inline-flex items-center gap-2 cursor-pointer">
-                                                    <input type="checkbox" checked={myCourses} onChange={(e) => setMyCourses(e.target.checked)} className="form-checkbox" />
-                                                    <span>My courses</span>
-                                                </label>
-                                                <label className="inline-flex items-center gap-2 cursor-pointer">
-                                                    <input type="checkbox" checked={sharedWithMe} onChange={(e) => setSharedWithMe(e.target.checked)} className="form-checkbox" />
-                                                    <span>Shared</span>
-                                                </label>
-                                            </div>
-                                        )}
-
-                                        <label className="inline-flex items-center gap-2 cursor-pointer text-xs text-gray-300 mr-3">
-                                            <input type="checkbox" checked={forkableOnly} onChange={(e) => setForkableOnly(e.target.checked)} className="form-checkbox" />
-                                            <span>Forkable</span>
-                                        </label>
-                                    </div>
-
-                                    <div className="relative inline-block">
-                                        <select
-                                            value={sortBy}
-                                            onChange={(e) => setSortBy(e.target.value)}
-                                            className="marketplace-select appearance-none px-4 py-2 pr-10 bg-black/30 border border-white/15 hover:border-white/30 rounded-lg text-white text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500 transition cursor-pointer"
+                                            value={showForkableOnly ? "forkable" : sortBy}
+                                            onChange={(e) => handleSortChange(e.target.value)}
+                                            className="px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500/50 appearance-none pr-8 transition hover:bg-blue-500/10 hover:border-blue-500/30 [&>option]:bg-slate-900 [&>option]:text-white [&>option:checked]:bg-blue-600 [&>option:hover]:bg-blue-500 cursor-pointer"
+                                            style={{
+                                                minWidth: "180px"
+                                            }}
                                         >
                                             <option value="newest">Sort by: Newest</option>
-                                            <option value="popular">Sort by: Popular</option>
+                                            <option value="oldest">Sort by: Oldest</option>
                                             <option value="name">Sort by: Name</option>
+                                            {userSession && isEducator && <option value="forkable">Show: Forkable Only</option>}
                                         </select>
-
-                                        <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                                        <div className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
                                             <svg
                                                 className="h-4 w-4 text-gray-400"
                                                 fill="none"
@@ -265,7 +284,11 @@ export default function MarketplacePage() {
 
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
                                 {currentCourses.map((course) => (
-                                    <div key={course.id} onClick={() => handleCourseClick(course.id)} className="h-full">
+                                    <div 
+                                        key={course.id} 
+                                        onClick={() => handleCourseClick(course.id)} 
+                                        className={`h-full ${userSession ? 'cursor-pointer' : ''}`}
+                                    >
                                         <CourseCard
                                             course={course}
                                             userType={profileUserType}
@@ -274,6 +297,8 @@ export default function MarketplacePage() {
                                             onTagClick={handleTagClick}
                                             selectedTag={selectedTags[0] ?? ""}
                                             variant="grid"
+                                            isLoggedIn={!!userSession}
+                                            isEducator={isEducator}
                                         />
                                     </div>
                                 ))}
@@ -281,7 +306,10 @@ export default function MarketplacePage() {
 
                             {sorted.length === 0 && (
                                 <div className="text-center text-gray-400 py-12">
-                                    No courses found matching your criteria.
+                                    {showForkableOnly 
+                                        ? "No forkable courses found matching your criteria." 
+                                        : "No courses found matching your criteria."
+                                    }
                                 </div>
                             )}
 
@@ -294,6 +322,13 @@ export default function MarketplacePage() {
                     )}
                 </div>
             </div>
+
+            {/* Enrollment Success Modal */}
+            <EnrollmentSuccessModal
+                isOpen={showEnrollmentModal}
+                courseName={enrolledCourseName}
+                onClose={handleCloseModal}
+            />
         </Page>
     );
 }
