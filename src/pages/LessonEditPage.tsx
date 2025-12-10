@@ -9,7 +9,7 @@ import LoadingSkeleton from "../components/LoadingSkeleton";
 import Page from "../components/page/Page";
 import { loadSessionState } from "../types/UserSession";
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faPlus, faTrash, faGripVertical } from '@fortawesome/free-solid-svg-icons';
+import { faPlus, faTrash, faGripVertical, faArrowLeft } from '@fortawesome/free-solid-svg-icons';
 import PreviewRenderer from "../components/PreviewRenderer";
 
 interface PageData {
@@ -244,7 +244,8 @@ const LessonEditPage: React.FC = () => {
             ) : !lesson ? (
                 <div className="p-8">Lesson not found.</div>
             ) : (
-                <div className="relative z-10 h-[calc(100vh-7rem)] px-3 py-4 text-gray-200">
+                <div className="relative z-10 min-h-screen px-3 py-4 text-gray-200 flex flex-col">
+                    <div className="relative z-10 flex-1 h-[calc(100vh-7rem)] px-3 py-4 text-gray-200">
                     <div
                         ref={containerRef}
                         className="w-full mx-auto gap-6 items-start h-full relative"
@@ -275,6 +276,13 @@ const LessonEditPage: React.FC = () => {
 
                         {/* LEFT: Pages List */}
                         <div className="w-full bg-black/20 backdrop-blur-lg border border-white/10 rounded-2xl p-6 h-full flex flex-col min-h-0">
+                            <button
+                                onClick={() => navigate(-1)}
+                                className="flex items-center gap-2 text-indigo-300 hover:text-indigo-200 transition-colors mb-4 text-sm font-medium w-fit"
+                            >
+                                <FontAwesomeIcon icon={faArrowLeft} className="w-4 h-4" />
+                                Back to Chapter Edit
+                            </button>
                             <h1 className="text-2xl font-semibold text-white mb-4">Pages</h1>
                             
                             <div className="flex-1 overflow-y-auto space-y-2 mb-4">
@@ -374,7 +382,8 @@ const LessonEditPage: React.FC = () => {
                             </div>
                         )}
                     </div>
-                </div>
+                    </div>
+                    </div>
             )}
         </Page>
     );
