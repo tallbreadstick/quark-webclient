@@ -279,7 +279,6 @@ const ActivityEditPage: React.FC = () => {
                                                         <span className={`text-xs font-bold px-2 py-1 rounded ${s.sectionType === 'MCQ' ? 'bg-blue-500/40 text-blue-200' : 'bg-emerald-500/40 text-emerald-200'}`}>
                                                             {s.sectionType}
                                                         </span>
-                                                        <span className="text-xs text-gray-400">#{s.id}</span>
                                                     </div>
                                                     <div className="text-xs text-gray-300 line-clamp-2">{s.sectionType === 'MCQ' ? (s.mcq?.instructions || 'No title') : (s.code?.instructions || 'No title')}</div>
                                                 </div>
@@ -377,8 +376,7 @@ function MCQEditor({ section, onSave }: { section: LocalSection, onSave: (s: Par
     return (
         <div className="space-y-6">
             <div>
-                <h2 className="text-2xl font-bold text-white mb-2">MCQ Section #{section.id}</h2>
-                <p className="text-gray-400 text-sm">Multiple choice questions assessment</p>
+                <h2 className="text-2xl font-bold text-white mb-2">Multiple Choice Questions Assessment</h2>
             </div>
 
             <div>
