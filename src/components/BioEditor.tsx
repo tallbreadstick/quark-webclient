@@ -64,7 +64,7 @@ const BioEditor: FC<BioEditorProps> = ({ userSession, setUserSession }) => {
   return (
     <div className="w-full">
       {!editing ? (
-        <div className="flex justify-between items-start gap-4">
+        <div className="flex justify-between items-center gap-4"> {/* Changed from items-start to items-center */}
           <p className="text-gray-200 text-sm leading-relaxed break-words max-w-xl">
             {userSession?.bio ? (
               userSession.bio
