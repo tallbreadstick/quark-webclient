@@ -76,7 +76,7 @@ const BioEditor: FC<BioEditorProps> = ({ userSession, setUserSession }) => {
           </p>
           <button
             onClick={() => setEditing(true)}
-            className="px-3 py-1 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition text-sm"
+            className="inline-flex items-center justify-center px-4 py-2 rounded-lg font-semibold text-sm text-white bg-gradient-to-r from-indigo-500 to-blue-500 border border-indigo-400 shadow-lg shadow-indigo-500/30 hover:brightness-110 active:scale-[0.99] transition"
           >
             Edit
           </button>
@@ -90,24 +90,24 @@ const BioEditor: FC<BioEditorProps> = ({ userSession, setUserSession }) => {
             className="w-full px-3 py-2 rounded-md bg-white/10 text-white placeholder-gray-400 text-sm"
             placeholder="Write something about yourself..."
           />
-          <div className="flex gap-2">
+          <div className="flex gap-3 flex-wrap">
             <button
               onClick={handleSave}
               disabled={saving}
-              className="px-4 py-1 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition"
+              className="inline-flex items-center justify-center px-4 py-2 rounded-lg font-semibold text-sm text-white bg-gradient-to-r from-indigo-500 to-blue-500 border border-indigo-400 shadow-lg shadow-indigo-500/30 hover:brightness-110 active:scale-[0.99] transition disabled:opacity-60 disabled:cursor-not-allowed"
             >
               {saving ? "Saving..." : "Save"}
             </button>
             <button
               onClick={handleClear}
               disabled={saving}
-              className="px-4 py-1 bg-red-600 text-white rounded-md hover:bg-red-700 transition"
+              className="inline-flex items-center justify-center px-4 py-2 rounded-lg font-semibold text-sm text-white bg-gradient-to-r from-rose-500 to-red-600 border border-red-400 shadow-lg shadow-red-500/30 hover:brightness-110 active:scale-[0.99] transition disabled:opacity-60 disabled:cursor-not-allowed"
             >
               Clear
             </button>
             <button
               onClick={handleCancel}
-              className="px-4 py-1 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition"
+              className="inline-flex items-center justify-center px-4 py-2 rounded-lg font-semibold text-sm text-white/90 bg-slate-700 border border-slate-500 shadow-md shadow-slate-900/40 hover:bg-slate-600 active:scale-[0.99] transition"
             >
               Cancel
             </button>
