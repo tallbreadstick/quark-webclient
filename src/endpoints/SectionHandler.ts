@@ -63,8 +63,11 @@ export async function addSection(
         return Err(response.data ?? "Unknown error");
     } catch (e: any) {
         console.error(e);
-        if (e.response) return Err(e.response.data?.error ?? "Request failed");
-        return Err("Network Error");
+        if (e.response) {
+            const body = e.response.data;
+            return Err(typeof body === 'object' ? JSON.stringify(body) : String(body));
+        }
+        return Err(e.message ?? "Network Error");
     }
 }
 
@@ -88,8 +91,11 @@ export async function editSection(
         return Err(response.data ?? "Unknown error");
     } catch (e: any) {
         console.error(e);
-        if (e.response) return Err(e.response.data?.error ?? "Request failed");
-        return Err("Network Error");
+        if (e.response) {
+            const body = e.response.data;
+            return Err(typeof body === 'object' ? JSON.stringify(body) : String(body));
+        }
+        return Err(e.message ?? "Network Error");
     }
 }
 
@@ -111,8 +117,11 @@ export async function deleteSection(
         return Err(response.data ?? "Unknown error");
     } catch (e: any) {
         console.error(e);
-        if (e.response) return Err(e.response.data?.error ?? "Request failed");
-        return Err("Network Error");
+        if (e.response) {
+            const body = e.response.data;
+            return Err(typeof body === 'object' ? JSON.stringify(body) : String(body));
+        }
+        return Err(e.message ?? "Network Error");
     }
 }
 
@@ -135,8 +144,11 @@ export async function reorderSections(
         return Err(response.data ?? "Unknown error");
     } catch (e: any) {
         console.error(e);
-        if (e.response) return Err(e.response.data?.error ?? "Request failed");
-        return Err("Network Error");
+        if (e.response) {
+            const body = e.response.data;
+            return Err(typeof body === 'object' ? JSON.stringify(body) : String(body));
+        }
+        return Err(e.message ?? "Network Error");
     }
 }
 

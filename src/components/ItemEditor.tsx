@@ -6,6 +6,8 @@ import Editor from "@monaco-editor/react";
 import PreviewRenderer from "./PreviewRenderer";
 import type { Chapter, Item } from "../types/ChapterEditorTypes";
 import { ActivityRuleset } from "./ActivityRuleset";
+import { fetchActivity } from "../endpoints/ActivityHandler";
+import { loadSessionState } from "../types/UserSession";
 
 interface ItemEditorProps {
     item: Item;
@@ -33,9 +35,30 @@ export const ItemEditor: React.FC<ItemEditorProps> = ({
     onPreviewModeToggle,
 }) => {
     const navigate = useNavigate();
+    const { userSession } = loadSessionState();
+
     const handleOpenEditPage = () => {
         if (item.itemType === "LESSON" && item.id) {
             navigate(`/lesson/${item.id}/edit`);
+            return;
+        }
+        if (item.itemType === "ACTIVITY" && item.id) {
+            (async () => {
+                try {
+                    const jwt = userSession?.jwt ?? "";
+                    const res = await fetchActivity(item.id, jwt);
+                    if (res.ok) {
+                        const ids = res.ok.sections.map(s => s.id).join(",");
+                        navigate(`/activity/${item.id}|${ids}/edit`);
+                        return;
+                    }
+                } catch (e) {
+                    console.error("Failed fetch activity for edit route", e);
+                }
+
+                // fallback: navigate to activity edit route without section ids
+                navigate(`/activity/${item.id}/edit`);
+            })();
         }
     };
     return (

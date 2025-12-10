@@ -12,6 +12,7 @@ import Profile from "./pages/ProfilePage";
 import "katex/dist/katex.min.css";
 import ChapterEditPage from "./pages/ChapterEditPage";
 import LessonEditPage from "./pages/LessonEditPage";
+import ActivityEditPage from "./pages/ActivityEditPage";
 
 export default function App() {
     return (
@@ -30,6 +31,7 @@ export default function App() {
                     <Route path="/course/:courseId/fork" element={<CourseForkPage />} />
                     <Route path="/profile" element={<Profile />} />
                     <Route path="/lesson/:lessonId/edit" element={<LessonEditPage />} />
+                    <Route path="/activity/:activityId/edit" element={<ActivityEditPage />} />
                 </Routes>
             </BrowserRouter>
         </div>
