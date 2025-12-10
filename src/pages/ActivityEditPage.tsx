@@ -530,8 +530,7 @@ function CodeEditor({ section, onSave }: { section: LocalSection, onSave: (s: Pa
     return (
         <div className="space-y-6">
             <div>
-                <h2 className="text-2xl font-bold text-white mb-2">Code Section #{section.id}</h2>
-                <p className="text-gray-400 text-sm">Coding challenge with test cases</p>
+                <h2 className="text-2xl font-bold text-white mb-2">Coding Challenge</h2>
             </div>
 
             {/* Renderer Selection */}
