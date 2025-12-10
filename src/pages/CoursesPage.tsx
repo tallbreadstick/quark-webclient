@@ -22,7 +22,8 @@ export default function CoursesPage() {
     const [searchTerm, setSearchTerm] = useState("");
     const [currentPage, setCurrentPage] = useState(1);
     const [sortBy, setSortBy] = useState("newest");
-    const coursesPerPage = 9;
+    const [showForkableOnly, setShowForkableOnly] = useState<boolean>(false);
+    const coursesPerPage = 5;
     const [profileUserType, setProfileUserType] = useState<"educator" | "learner" | "student" | undefined>(undefined);
 
     useEffect(() => {
@@ -58,30 +59,45 @@ export default function CoursesPage() {
 
                 // Fetch courses - ADD USER TYPE FILTER
                 const params: Record<string, string | undefined> = { 
-                    my_courses: 'true', 
                     page: String(currentPage),
                     // Add user type specific filtering
                     ...(normalized === 'educator' && { my_courses: 'true' }),
-                    ...(normalized === 'learner' && { enrolled: 'true' })
+                    // Add forkable filter for educators
+                    ...(normalized === 'educator' && showForkableOnly && { forkable: 'true' })
                 };
+                
+                // TODO: For learners, we need the enrollment endpoint
+                // For now, learners will see empty state
+                if (normalized === 'learner') {
+                    setCourses([]);
+                    setLoading(false);
+                    return;
+                }
                 
                 const res = await fetchCourses(params, userSession.jwt ?? "");
                 const data = res.status === "OK" && res.ok ? res.ok : [];
 
                 if (cancelled) return;
 
-                // Map courses to include owner info
+                // Map courses to include owner info and forkable status
                 const coursesWithOwners: DatabaseCourse[] = await Promise.all(
                     data.map(async (c: any) => {
                         const ownerUsername = c.owner || "—";
                         return {
                             ...c,
-                            owner: { username: ownerUsername }
+                            owner: { username: ownerUsername },
+                            forkable: Boolean(c.forkable)
                         };
                     })
                 );
 
-                setCourses(coursesWithOwners);
+                // Client-side filtering as backup for forkable
+                let filteredCourses = coursesWithOwners;
+                if (normalized === 'educator' && showForkableOnly) {
+                    filteredCourses = coursesWithOwners.filter(course => course.forkable);
+                }
+
+                setCourses(filteredCourses);
             } catch (err: any) {
                 if (!cancelled) setError(err?.message || "Failed to load courses");
             } finally {
@@ -91,9 +107,10 @@ export default function CoursesPage() {
 
         loadCourses();
         return () => { cancelled = true; };
-    }, [userSession, currentPage]);
+    }, [userSession, currentPage, showForkableOnly]);
 
     const canCreateCourse = profileUserType === 'educator';
+    const isEducator = profileUserType === 'educator';
 
     const filtered = filterCourses(courses || [], searchTerm);
     const sorted = sortCourses(filtered, sortBy);
@@ -102,6 +119,17 @@ export default function CoursesPage() {
 
     const handleSearchChange = (value: string) => {
         setSearchTerm(value);
+        setCurrentPage(1);
+    };
+
+    const handleSortChange = (value: string) => {
+        if (value === "forkable") {
+            setShowForkableOnly(true);
+            setSortBy("newest");
+        } else {
+            setSortBy(value);
+            setShowForkableOnly(false);
+        }
         setCurrentPage(1);
     };
 
@@ -114,7 +142,7 @@ export default function CoursesPage() {
                         <p className="text-gray-400">
                             {profileUserType === 'educator'
                                 ? "Manage and create your courses"
-                                : "View your enrolled courses and learning progress"
+                                : "To view your enrolled or managed courses, sign in first"
                             }
                         </p>
                     </div>
@@ -134,10 +162,10 @@ export default function CoursesPage() {
                             icon={<FontAwesomeIcon icon={faLock} />}
                         >
                             <div className="flex justify-center gap-3 mt-4">
-                                <Link to="/login" className="px-4 py-2 bg-[#566fb8] rounded-md text-white hover:bg-[#475a9c] transition">
+                                <Link to="/login" className="px-4 py-2 border border-[#566fb8] rounded-lg hover:bg-blue-500 hover:text-white transition font-semibold cursor-pointer">
                                     Sign in
                                 </Link>
-                                <Link to="/register" className="px-4 py-2 border border-white/20 rounded-md text-white/80 hover:bg-white/5 transition">
+                                <Link to="/register" className="px-4 py-2 bg-blue-600 rounded-md text-white hover:bg-blue-700 transition cursor-pointer">
                                     Register
                                 </Link>
                             </div>
@@ -168,13 +196,17 @@ export default function CoursesPage() {
                                         </span>
                                         <div className="relative">
                                             <select
-                                                value={sortBy}
-                                                onChange={(e) => setSortBy(e.target.value)}
-                                                className="px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500/50 appearance-none pr-8 transition [&>option]:bg-slate-900 [&>option]:text-white [&>option:checked]:bg-blue-600 cursor-pointer"
+                                                value={showForkableOnly ? "forkable" : sortBy}
+                                                onChange={(e) => handleSortChange(e.target.value)}
+                                                className="px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500/50 appearance-none pr-8 transition hover:bg-blue-500/10 hover:border-blue-500/30 [&>option]:bg-slate-900 [&>option]:text-white [&>option:checked]:bg-blue-600 [&>option:hover]:bg-blue-500 cursor-pointer"
+                                                style={{
+                                                    minWidth: "180px"
+                                                }}
                                             >
                                                 <option value="newest">Sort by: Newest</option>
-                                                <option value="popular">Sort by: Popular</option>
+                                                <option value="oldest">Sort by: Oldest</option>
                                                 <option value="name">Sort by: Name</option>
+                                                {isEducator && <option value="forkable">Show: Forkable Only</option>}
                                             </select>
                                             <div className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
                                                 <svg
@@ -189,20 +221,25 @@ export default function CoursesPage() {
                                         </div>
                                     </div>
 
-                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+                                    <div className="space-y-4 mb-8">
                                         {currentCourses.map((course) => (
                                             <CourseCard
                                                 key={course.id}
                                                 course={course}
                                                 userType={profileUserType}
-                                                variant="grid"
+                                                variant="list"
+                                                isLoggedIn={!!userSession}
+                                                isEducator={isEducator}
                                             />
                                         ))}
                                     </div>
 
                                     {sorted.length === 0 && (
                                         <div className="text-center text-gray-400 py-12">
-                                            No courses found matching your criteria.
+                                            {showForkableOnly 
+                                                ? "No forkable courses found matching your criteria." 
+                                                : "No courses found matching your criteria."
+                                            }
                                         </div>
                                     )}
 
