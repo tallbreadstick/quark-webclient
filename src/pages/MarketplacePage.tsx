@@ -6,7 +6,7 @@ import Page from "../components/page/Page";
 import CourseCard from "../components/CourseCard";
 import SearchFilterBar from "../components/SearchFilterBar";
 import Pagination from "../components/Pagination";
-import EnrollmentSuccessModal from "../components/EnrollmentSuccessModal";
+import AlertModal from "../components/modals/AlertModal"; // Import AlertModal
 import { fetchCourses } from "../endpoints/CourseHandler";
 import { filterCourses, getUniqueTags, paginate, getTotalPages, sortCourses } from "../utils/courseUtils";
 import { fetchUsers } from "../endpoints/UserHandler";
@@ -323,11 +323,21 @@ export default function MarketplacePage() {
                 </div>
             </div>
 
-            {/* Enrollment Success Modal */}
-            <EnrollmentSuccessModal
+            {/* Enrollment Success Modal using AlertModal */}
+            <AlertModal
                 isOpen={showEnrollmentModal}
-                courseName={enrolledCourseName}
                 onClose={handleCloseModal}
+                title="Enrollment Successful!"
+                message={
+                    <>
+                        <p>You've successfully enrolled in "{enrolledCourseName}".</p>
+                        <p className="text-sm text-gray-400 mt-2">
+                            You can now access this course from your My Courses page.
+                        </p>
+                    </>
+                }
+                variant="success"
+                buttonText="Got it!"
             />
         </Page>
     );
