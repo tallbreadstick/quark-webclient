@@ -244,11 +244,11 @@ const LessonEditPage: React.FC = () => {
             ) : !lesson ? (
                 <div className="p-8">Lesson not found.</div>
             ) : (
-                <div className="relative z-10 min-h-screen px-3 py-4 text-gray-200 flex flex-col">
-                    <div className="relative z-10 flex-1 h-[calc(100vh-7rem)] px-3 py-4 text-gray-200">
+                <div className="relative z-10 px-3 py-4 text-gray-200 flex flex-col h-[calc(100vh-4rem)] min-h-0">
+                    <div className="relative z-10 flex-1 h-[calc(100vh-7rem)] px-3 py-4 text-gray-200 min-h-0 overflow-hidden">
                     <div
                         ref={containerRef}
-                        className="w-full mx-auto gap-6 items-start h-full relative"
+                        className="w-full mx-auto gap-6 items-start h-full relative min-h-0"
                         style={{
                             display: "grid",
                             gridTemplateColumns: isLarge ? `${leftWidth}px 1fr 1fr` : "1fr",
