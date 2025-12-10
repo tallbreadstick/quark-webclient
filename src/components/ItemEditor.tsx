@@ -1,5 +1,5 @@
 import React from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faChevronRight, faEye, faEdit } from '@fortawesome/free-solid-svg-icons';
 import Editor from "@monaco-editor/react";
@@ -33,9 +33,11 @@ export const ItemEditor: React.FC<ItemEditorProps> = ({
     onPreviewModeToggle,
 }) => {
     const navigate = useNavigate();
+    const { courseId } = useParams<{ courseId: string }>();
     const handleOpenEditPage = () => {
         if (item.itemType === "LESSON" && item.id) {
-            navigate(`/lesson/${item.id}/edit`);
+            const search = courseId ? `?courseId=${courseId}` : "";
+            navigate(`/lesson/${item.id}/edit${search}`);
         }
     };
     return (
