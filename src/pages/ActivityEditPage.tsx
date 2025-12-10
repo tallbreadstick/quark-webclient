@@ -119,6 +119,29 @@ const ActivityEditPage: React.FC = () => {
         const res = await addSection(aid, req, userSession.jwt);
         setLoading(false);
         if (res.ok) {
+            // The backend often returns a message rather than the new ID. Refresh
+            // the activity's sections list so the UI reflects the new section.
+            try {
+                const actRes = await fetchActivity(aid, userSession.jwt!);
+                if (actRes.ok) {
+                    const ids = actRes.ok.sections.map(s => s.id);
+                    const loaded = await Promise.all(
+                        ids.map(async (id) => {
+                            const r = await fetchSection(id, userSession.jwt!);
+                            if (r.ok) return r.ok as LocalSection;
+                            return null;
+                        })
+                    );
+                    const list = loaded.filter(Boolean) as LocalSection[];
+                    setSections(list);
+                    if (list.length > 0) setSelectedId(list[list.length - 1].id || null);
+                    return;
+                }
+            } catch (e) {
+                console.warn("Failed to refresh sections after create", e);
+            }
+
+            // fallback: try to parse id from response message
             const maybeId = Number(res.ok);
             if (!isNaN(maybeId) && maybeId > 0) {
                 const fetched = await fetchSection(maybeId, userSession.jwt!);
@@ -128,6 +151,7 @@ const ActivityEditPage: React.FC = () => {
                     return;
                 }
             }
+
             setError(res.ok);
         } else setError(res.err);
     };
@@ -239,48 +263,161 @@ const ActivityEditPage: React.FC = () => {
 };
 
 function MCQEditor({ section, onSave }: { section: LocalSection, onSave: (s: Partial<LocalSection>)=>void }) {
-    const [instructions, setInstructions] = useState(section.mcq?.instructions || "");
+    const initial: MCQSection = section.mcq ?? { instructions: '', questions: [ { question: '', points: 1, correct: '', choices: ['', ''] } ] };
+    const [mcq, setMcq] = useState<MCQSection>(initial);
 
-    useEffect(()=>{ setInstructions(section.mcq?.instructions || ""); }, [section.id]);
+    useEffect(()=>{
+        setMcq(section.mcq ?? { instructions: '', questions: [ { question: '', points: 1, correct: '', choices: ['', ''] } ] });
+    }, [section.id]);
+
+    const updateQuestion = (idx: number, patch: Partial<import("../endpoints/SectionHandler").Question>) => {
+        setMcq(prev => {
+            const copy = { ...prev, questions: prev.questions.map(q => ({ ...q })) };
+            copy.questions[idx] = { ...copy.questions[idx], ...patch } as any;
+            return copy;
+        });
+    };
+
+    const updateChoice = (qIdx: number, cIdx: number, value: string) => {
+        setMcq(prev => {
+            const copy = { ...prev, questions: prev.questions.map(q => ({ ...q, choices: [...q.choices] })) };
+            copy.questions[qIdx].choices[cIdx] = value;
+            return copy;
+        });
+    };
+
+    const addQuestion = () => {
+        setMcq(prev => ({ ...prev, questions: [...prev.questions, { question: '', points: 1, correct: '', choices: ['', ''] }] }));
+    };
+
+    const removeQuestion = (idx: number) => {
+        setMcq(prev => ({ ...prev, questions: prev.questions.filter((_, i)=>i!==idx) }));
+    };
+
+    const addChoice = (qIdx: number) => {
+        setMcq(prev => {
+            const copy = { ...prev, questions: prev.questions.map(q => ({ ...q, choices: [...q.choices] })) };
+            copy.questions[qIdx].choices.push('');
+            return copy;
+        });
+    };
+
+    const removeChoice = (qIdx: number, cIdx: number) => {
+        setMcq(prev => {
+            const copy = { ...prev, questions: prev.questions.map(q => ({ ...q, choices: [...q.choices] })) };
+            copy.questions[qIdx].choices = copy.questions[qIdx].choices.filter((_, i)=>i!==cIdx);
+            return copy;
+        });
+    };
 
     return (
         <div>
             <h3 className="font-medium mb-2">MCQ Section #{section.id}</h3>
             <label className="block text-sm mb-1">Instructions</label>
-            <textarea className="w-full p-2 mb-3 bg-slate-900 border rounded" value={instructions} onChange={(e)=>setInstructions(e.target.value)} />
-            <div className="flex gap-2">
-                <button className="btn" onClick={()=>{
-                    const mcqPayload = { ...(section.mcq ?? { instructions: '', questions: [] }), instructions } as MCQSection;
-                    onSave({ mcq: mcqPayload });
-                }}>Save</button>
+            <textarea className="w-full p-2 mb-3 bg-slate-900 border rounded" value={mcq.instructions} onChange={(e)=>setMcq(prev=>({ ...prev, instructions: e.target.value }))} />
+
+            <div className="space-y-4">
+                {mcq.questions.map((q, qi) => (
+                    <div key={qi} className="p-3 bg-slate-800 rounded">
+                        <div className="flex justify-between items-center mb-2">
+                            <div className="font-medium">Question {qi+1}</div>
+                            <div className="flex items-center gap-2">
+                                <button className="text-sm text-red-400" onClick={()=>removeQuestion(qi)}>Remove</button>
+                            </div>
+                        </div>
+
+                        <label className="text-xs">Question text</label>
+                        <input className="w-full p-1 mb-2 bg-slate-900 border rounded" value={q.question} onChange={(e)=>updateQuestion(qi, { question: e.target.value })} />
+
+                        <div className="flex gap-2 mb-2">
+                            <div>
+                                <label className="text-xs">Points</label>
+                                <input type="number" className="w-24 p-1 ml-2 bg-slate-900 border rounded" value={q.points} onChange={(e)=>updateQuestion(qi, { points: Number(e.target.value) || 0 })} />
+                            </div>
+                            <div>
+                                <label className="text-xs">Correct choice</label>
+                                <input className="w-36 p-1 ml-2 bg-slate-900 border rounded" value={q.correct} onChange={(e)=>updateQuestion(qi, { correct: e.target.value })} />
+                            </div>
+                        </div>
+
+                        <div className="mb-2">
+                            <div className="text-sm font-medium mb-1">Choices</div>
+                            {q.choices.map((c, ci) => (
+                                <div key={ci} className="flex items-center gap-2 mb-1">
+                                    <input className="flex-1 p-1 bg-slate-900 border rounded" value={c} onChange={(e)=>updateChoice(qi, ci, e.target.value)} />
+                                    <button className="text-sm text-red-400" onClick={()=>removeChoice(qi, ci)}>x</button>
+                                </div>
+                            ))}
+                            <button className="btn mt-1" onClick={()=>addChoice(qi)}>Add Choice</button>
+                        </div>
+                    </div>
+                ))}
+
+                <div>
+                    <button className="btn mr-2" onClick={addQuestion}>Add Question</button>
+                    <button className="btn" onClick={()=>onSave({ mcq })}>Save Section</button>
+                </div>
             </div>
         </div>
     );
 }
 
 function CodeEditor({ section, onSave }: { section: LocalSection, onSave: (s: Partial<LocalSection>)=>void }) {
-    const [instructions, setInstructions] = useState(section.code?.instructions || "");
-    const [renderer, setRenderer] = useState<"MARKDOWN"|"LATEX">((section.code?.renderer || "MARKDOWN") as "MARKDOWN"|"LATEX");
+    const initial = section.code ?? { renderer: 'MARKDOWN' as const, instructions: '', defaultCode: '', sources: [], testCases: [ { expected: '', driver: '', points: 1, hidden: false } ] };
+    const [code, setCode] = useState<CodeSection>(initial as CodeSection);
 
-    useEffect(()=>{ setInstructions(section.code?.instructions || ""); setRenderer((section.code?.renderer || "MARKDOWN") as "MARKDOWN"|"LATEX"); }, [section.id]);
+    useEffect(()=>{ setCode(section.code ?? { renderer: 'MARKDOWN' as const, instructions: '', defaultCode: '', sources: [], testCases: [ { expected: '', driver: '', points: 1, hidden: false } ] } as CodeSection); }, [section.id]);
+
+    const updateTestCase = (idx: number, patch: Partial<TestCase>) => {
+        setCode(prev => {
+            const copy = { ...prev, testCases: prev.testCases.map(t=>({ ...t })) } as CodeSection & { testCases: TestCase[] };
+            copy.testCases[idx] = { ...copy.testCases[idx], ...patch };
+            return copy;
+        });
+    };
+
+    const addTestCase = () => setCode(prev => ({ ...prev, testCases: [...prev.testCases, { expected: '', driver: '', points: 1, hidden: false }] }));
+    const removeTestCase = (idx: number) => setCode(prev => ({ ...prev, testCases: prev.testCases.filter((_,i)=>i!==idx) }));
 
     return (
         <div>
             <h3 className="font-medium mb-2">Code Section #{section.id}</h3>
             <label className="block text-sm mb-1">Renderer</label>
-            <select className="mb-2 p-1 bg-slate-900 border rounded" value={renderer} onChange={(e)=>setRenderer(e.target.value as "MARKDOWN"|"LATEX")}>
+            <select className="mb-2 p-1 bg-slate-900 border rounded" value={code.renderer} onChange={(e)=>setCode(prev=>({ ...prev, renderer: e.target.value as CodeSection['renderer'] }))}>
                 <option value="MARKDOWN">MARKDOWN</option>
                 <option value="LATEX">LATEX</option>
             </select>
 
             <label className="block text-sm mb-1">Instructions</label>
-            <textarea className="w-full p-2 mb-3 bg-slate-900 border rounded" value={instructions} onChange={(e)=>setInstructions(e.target.value)} />
+            <textarea className="w-full p-2 mb-3 bg-slate-900 border rounded" value={code.instructions} onChange={(e)=>setCode(prev=>({ ...prev, instructions: e.target.value }))} />
 
-            <div className="flex gap-2">
-                <button className="btn" onClick={()=>{
-                    const codePayload = { ...(section.code ?? { renderer: 'MARKDOWN', instructions: '', testCases: [] }), instructions, renderer } as CodeSection;
-                    onSave({ code: codePayload });
-                }}>Save</button>
+            <label className="block text-sm mb-1">Default Code</label>
+            <textarea className="w-full p-2 mb-3 bg-slate-900 border rounded" value={code.defaultCode ?? ''} onChange={(e)=>setCode(prev=>({ ...prev, defaultCode: e.target.value }))} />
+
+            <div className="space-y-3 mb-3">
+                <div className="font-medium">Test Cases</div>
+                {code.testCases.map((t, ti) => (
+                    <div key={ti} className="p-2 bg-slate-800 rounded">
+                        <div className="flex justify-between items-center mb-2">
+                            <div>Case {ti+1}</div>
+                            <button className="text-sm text-red-400" onClick={()=>removeTestCase(ti)}>Remove</button>
+                        </div>
+                        <label className="text-xs">Expected</label>
+                        <input className="w-full p-1 mb-1 bg-slate-900 border rounded" value={t.expected} onChange={(e)=>updateTestCase(ti, { expected: e.target.value })} />
+                        <label className="text-xs">Driver</label>
+                        <textarea className="w-full p-1 mb-1 bg-slate-900 border rounded" value={t.driver} onChange={(e)=>updateTestCase(ti, { driver: e.target.value })} />
+                        <div className="flex gap-2 items-center">
+                            <label className="text-xs">Points</label>
+                            <input type="number" className="w-20 p-1 bg-slate-900 border rounded" value={t.points} onChange={(e)=>updateTestCase(ti, { points: Number(e.target.value) || 0 })} />
+                            <label className="text-xs ml-4">Hidden</label>
+                            <input type="checkbox" checked={t.hidden} onChange={(e)=>updateTestCase(ti, { hidden: e.target.checked })} />
+                        </div>
+                    </div>
+                ))}
+                <div className="mt-2">
+                    <button className="btn mr-2" onClick={addTestCase}>Add Test Case</button>
+                    <button className="btn" onClick={()=>onSave({ code })}>Save Section</button>
+                </div>
             </div>
         </div>
     );
