@@ -52,6 +52,37 @@ const UploadControls: FC<UploadControlsProps> = ({ userSession, setUserSession }
     );
   };
 
+  // Resize/compress client-side to avoid 413s while keeping quality reasonable.
+  const compressImage = (file: File, maxSide = 720, quality = 0.82) => new Promise<File>((resolve, reject) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      const canvas = document.createElement("canvas");
+      const ratio = Math.min(1, maxSide / Math.max(img.width, img.height));
+      canvas.width = Math.max(1, Math.round(img.width * ratio));
+      canvas.height = Math.max(1, Math.round(img.height * ratio));
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return reject(new Error("Canvas not supported"));
+
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      canvas.toBlob((blob) => {
+        if (!blob) return reject(new Error("Failed to compress image"));
+        const compressed = new File([blob], "profile.jpg", { type: "image/jpeg" });
+        resolve(compressed);
+      }, "image/jpeg", quality);
+    };
+
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error("Unable to read image"));
+    };
+
+    img.src = url;
+  });
+
+  // Upload selected image and refresh session profile picture.
   const doUpload = async (fileParam?: File | null) => {
     setError(null);
     const fileToUpload = fileParam ?? selected;
@@ -96,6 +127,7 @@ const UploadControls: FC<UploadControlsProps> = ({ userSession, setUserSession }
     }
   };
 
+  // Remove profile picture on the server and locally.
   const doClear = async () => {
     if (!userSession?.jwt) return setError("Not authenticated");
     setUploading(true);
@@ -186,9 +218,23 @@ const UploadControls: FC<UploadControlsProps> = ({ userSession, setUserSession }
         className="hidden"
         onChange={(e) => {
           const f = e.target.files?.[0] ?? null;
-          if (!f) return;
-          setSelected(f);
-          void doUpload(f);
+          if (!f || uploading) return;
+          setError(null);
+
+          if (!f.type.startsWith("image/")) {
+            setError("Only image files are allowed");
+            return;
+          }
+
+          void (async () => {
+            try {
+              const compressed = await compressImage(f);
+              setSelected(compressed);
+              await doUpload(compressed);
+            } catch (err: any) {
+              setError(err?.message ?? "Failed to process image");
+            }
+          })();
         }}
       />
 
