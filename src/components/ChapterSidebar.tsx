@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
@@ -41,6 +41,8 @@ export const ChapterSidebar: React.FC<ChapterSidebarProps> = ({
     onDrop,
 }) => {
     const navigate = useNavigate();
+    const [hoveredChapter, setHoveredChapter] = useState<number | null>(null);
+    const [hoveredItem, setHoveredItem] = useState<{chapterId: number, itemId: number} | null>(null);
 
     return (
         <aside className="w-80 flex flex-col border-r border-white/5 bg-slate-900/60 backdrop-blur-xl z-10">
@@ -48,7 +50,7 @@ export const ChapterSidebar: React.FC<ChapterSidebarProps> = ({
             <div className="p-6 pb-4">
                 <button
                     onClick={() => navigate(`/course/${courseId}/edit`)}
-                    className="flex items-center gap-2 text-slate-400 hover:text-indigo-400 transition-colors mb-4 text-sm group"
+                    className="flex items-center gap-2 text-slate-400 hover:text-indigo-400 transition-colors mb-4 text-sm group cursor-pointer"
                 >
                     <FontAwesomeIcon icon={faArrowLeft} className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
                     <span>Back to Edit Course</span>
@@ -63,22 +65,27 @@ export const ChapterSidebar: React.FC<ChapterSidebarProps> = ({
             <div className="flex-1 overflow-y-auto px-4 pb-4 space-y-4 custom-scrollbar">
                 {chapters.map((chapter, cIdx) => {
                     const isChapSelected = selection?.type === 'chapter' && selection.id === chapter.id;
+                    // Only show chapter delete when hovering chapter AND not hovering any item
+                    const isChapterHovered = hoveredChapter === chapter.id && !hoveredItem;
 
                     return (
                         <div
                             key={chapter.id}
                             className="relative group/chapter animate-in slide-in-from-left-4 duration-300"
                             style={{ animationDelay: `${cIdx * 50}ms`, animationFillMode: 'backwards' }}
-                            draggable
-                            onDragStart={(e) => onDragStart(e, "chapter", { id: chapter.id, index: cIdx })}
-                            onDragOver={onDragOver}
-                            onDrop={(e) => onDrop(e, chapter.id, cIdx)}
                         >
                             {/* Chapter Header */}
                             <div
                                 draggable
-                                onDragStart={(e) => onDragStart(e, 'chapter', { index: cIdx })}
+                                onDragStart={(e) => onDragStart(e, 'chapter', { id: chapter.id, index: cIdx })}
+                                onDragOver={onDragOver}
+                                onDrop={(e) => {
+                                    e.stopPropagation();
+                                    onDrop(e, chapter.id, cIdx);
+                                }}
                                 onClick={() => onSelectionChange({ type: 'chapter', id: chapter.id })}
+                                onMouseEnter={() => setHoveredChapter(chapter.id)}
+                                onMouseLeave={() => setHoveredChapter(null)}
                                 className={`relative
                                     flex items-center gap-3 p-3 rounded-xl cursor-pointer transition-all duration-200 border border-transparent
                                     ${isChapSelected
@@ -87,38 +94,69 @@ export const ChapterSidebar: React.FC<ChapterSidebarProps> = ({
                                     }
                                 `}
                             >
-                                {/* Delete Chapter Trigger */}
+                                {/* Delete Chapter Button */}
                                 <button
-                                    onClick={(e) => { e.stopPropagation(); onRemoveChapter(chapter.id); }}
-                                    className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 text-transparent hover:text-slate-300 opacity-0 group-hover/chapter:opacity-100 transition-all duration-200 z-20 hover:scale-110 hover:bg-white/5 rounded-full"
+                                    onClick={(e) => { 
+                                        e.stopPropagation(); 
+                                        onRemoveChapter(chapter.id); 
+                                    }}
+                                    className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 text-slate-400 hover:text-red-400 transition-all duration-200 z-20 hover:scale-110 hover:bg-red-500/20 rounded-full cursor-pointer"
                                     title="Delete Chapter"
+                                    style={{
+                                        opacity: isChapterHovered ? 1 : 0,
+                                        pointerEvents: isChapterHovered ? 'auto' : 'none'
+                                    }}
                                 >
                                     <FontAwesomeIcon icon={faTrash} style={{ width: 16, height: 16 }} />
                                 </button>
                                 <FontAwesomeIcon icon={faCube} style={{ width: 16, height: 16 }} className={isChapSelected ? 'text-indigo-400' : 'opacity-70'} />
                                 <span className="font-medium text-sm truncate flex-1">{chapter.name}</span>
-                                <FontAwesomeIcon icon={faGripLinesVertical} style={{ width: 14, height: 14 }} className="opacity-0 group-hover/chapter:opacity-40 cursor-grab" />
+                                {/* Drag Handle - Hide when delete button is shown */}
+                                <FontAwesomeIcon 
+                                    icon={faGripLinesVertical} 
+                                    style={{ width: 14, height: 14 }} 
+                                    className={`transition-opacity duration-200 cursor-grab ${isChapterHovered ? 'opacity-0' : 'opacity-40'}`}
+                                />
                             </div>
 
                             {/* Items List */}
                             <div className="mt-1 ml-4 pl-3 border-l border-white/5 space-y-0.5">
                                 {chapter.items.map((item, iIdx) => {
                                     const isItemSelected = selection?.type === 'item' && selection.chapterId === chapter.id && selection.serialId === item.uiSerialId;
+                                    const isItemHovered = hoveredItem?.chapterId === chapter.id && hoveredItem?.itemId === item.id;
 
                                     return (
                                         <div
                                             key={`${chapter.id}-${item.id ?? 'na'}-${iIdx}`}
                                             draggable
-                                            onDragStart={(e) => onDragStart(e, 'item', { chapterId: chapter.id, index: iIdx })}
-                                            onDragOver={onDragOver}
-                                            onDrop={(e) => { e.stopPropagation(); onDrop(e, chapter.id, iIdx); }}
+                                            onDragStart={(e) => {
+                                                e.stopPropagation();
+                                                onDragStart(e, 'item', { chapterId: chapter.id, itemId: item.id, index: iIdx });
+                                            }}
+                                            onDragOver={(e) => {
+                                                e.stopPropagation();
+                                                onDragOver(e);
+                                            }}
+                                            onDrop={(e) => { 
+                                                e.stopPropagation(); 
+                                                onDrop(e, chapter.id, iIdx); 
+                                            }}
                                             className="relative group/item"
+                                            onMouseEnter={() => setHoveredItem({chapterId: chapter.id, itemId: item.id})}
+                                            onMouseLeave={() => setHoveredItem(null)}
                                         >
-                                            {/* Delete Item Trigger */}
+                                            {/* Delete Item Button */}
                                             <button
-                                                onClick={(e) => { e.stopPropagation(); onRemoveItem(chapter.id, item.id); }}
-                                                className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-transparent hover:text-slate-300 opacity-0 group-hover/item:opacity-100 transition-all duration-200 z-20 hover:scale-110 hover:bg-white/5 rounded-full"
+                                                onClick={(e) => { 
+                                                    e.stopPropagation(); 
+                                                    onRemoveItem(chapter.id, item.id); 
+                                                }}
+                                                className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-red-400 transition-all duration-200 z-20 hover:scale-110 hover:bg-red-500/20 rounded-full cursor-pointer"
                                                 title="Delete Item"
+                                                style={{
+                                                    opacity: isItemHovered ? 1 : 0,
+                                                    pointerEvents: isItemHovered ? 'auto' : 'none'
+                                                }}
                                             >
                                                 <FontAwesomeIcon icon={faTrash} style={{ width: 14, height: 14 }} />
                                             </button>
@@ -128,7 +166,7 @@ export const ChapterSidebar: React.FC<ChapterSidebarProps> = ({
                                                 className={`
                                                     flex items-center gap-3 p-2.5 rounded-lg cursor-pointer text-sm transition-all duration-200 border border-transparent
                                                     ${isItemSelected
-                                                        ? 'bg-blue-500/20 border-blue-500/20 text-blue-100 shadow-md shadow-blue-900/10 translate-x-1'
+                                                        ? 'bg-blue-500/20 border-blue-500/20 text-blue-100 shadow-md shadow-blue-900/10'
                                                         : 'hover:bg-white/5 text-slate-400 hover:text-slate-300'
                                                     }
                                                 `}
@@ -146,7 +184,7 @@ export const ChapterSidebar: React.FC<ChapterSidebarProps> = ({
                                 {/* Add Item Button */}
                                 <button
                                     onClick={() => onOpenItemTypeModal(chapter.id)}
-                                    className="group/btn text-xs text-slate-500 hover:text-blue-400 py-2 pl-2 flex items-center gap-2 transition-colors mt-1 w-full text-left"
+                                    className="group/btn text-xs text-slate-500 hover:text-blue-400 py-2 pl-2 flex items-center gap-2 transition-colors mt-1 w-full text-left cursor-pointer"
                                 >
                                     <div className="w-5 h-5 rounded-full bg-white/5 group-hover/btn:bg-blue-500/20 flex items-center justify-center transition-colors">
                                         <FontAwesomeIcon icon={faPlus} style={{ width: 12, height: 12 }} />
@@ -158,7 +196,10 @@ export const ChapterSidebar: React.FC<ChapterSidebarProps> = ({
                                 <div
                                     className="h-2 -my-1"
                                     onDragOver={onDragOver}
-                                    onDrop={(e) => onDrop(e, chapter.id, chapter.items.length)}
+                                    onDrop={(e) => {
+                                        e.stopPropagation();
+                                        onDrop(e, chapter.id, chapter.items.length);
+                                    }}
                                 />
                             </div>
                         </div>
@@ -168,7 +209,7 @@ export const ChapterSidebar: React.FC<ChapterSidebarProps> = ({
                 {/* Add Chapter Button */}
                 <button
                     onClick={onAddChapter}
-                    className="w-full py-4 border border-dashed border-white/10 rounded-xl text-slate-500 hover:border-indigo-500/40 hover:text-indigo-400 hover:bg-indigo-500/5 transition-all flex items-center justify-center gap-2 text-sm font-medium mt-6 group"
+                    className="w-full py-4 border border-dashed border-white/10 rounded-xl text-slate-500 hover:border-indigo-500/40 hover:text-indigo-400 hover:bg-indigo-500/5 transition-all flex items-center justify-center gap-2 text-sm font-medium mt-6 group cursor-pointer"
                 >
                     <div className="w-6 h-6 rounded-full bg-white/5 group-hover:bg-indigo-500/20 flex items-center justify-center transition-colors">
                         <FontAwesomeIcon icon={faPlus} style={{ width: 14, height: 14 }} />
