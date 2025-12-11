@@ -316,7 +316,7 @@ export default function CourseContent() {
                         </div>
                     )}
 
-                    <div className="flex-1 overflow-y-auto">
+                    <div className="flex-1">
                         {!loading && !error && chapters.map((chapter, chapterIdx) => (
                         <div key={chapter.id} className="border-b border-white/10">
                             <div className="px-6 py-4 bg-white/3">
