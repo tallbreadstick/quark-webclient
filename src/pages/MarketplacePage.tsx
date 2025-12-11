@@ -8,6 +8,7 @@ import SearchFilterBar from "../components/SearchFilterBar";
 import Pagination from "../components/Pagination";
 import AlertModal from "../components/modals/AlertModal"; // Import AlertModal
 import { fetchCourses } from "../endpoints/CourseHandler";
+import { enrollInCourse } from "../endpoints/ProgressHandler";
 import { filterCourses, getUniqueTags, paginate, getTotalPages, sortCourses } from "../utils/courseUtils";
 import { fetchUsers } from "../endpoints/UserHandler";
 
@@ -147,18 +148,18 @@ export default function MarketplacePage() {
         if (!userSession) return;
 
         try {
-            // TODO: Call enrollment API when ready
-            // const result = await enrollInCourse(courseId, userSession.jwt ?? "");
-            // if (result.status === "OK") { ... }
-            
-            // For now, just update UI
-            setCourses(courses.map(course =>
-                course.id === courseId ? { ...course, enrolled: true } : course
-            ));
+            const result = await enrollInCourse(courseId, userSession.jwt ?? "");
 
-            // Show success modal
-            setEnrolledCourseName(courseName);
-            setShowEnrollmentModal(true);
+            if (result.status === "OK") {
+                setCourses(prev => prev.map(course =>
+                    course.id === courseId ? { ...course, enrolled: true } : course
+                ));
+
+                setEnrolledCourseName(courseName);
+                setShowEnrollmentModal(true);
+            } else {
+                alert(`Failed to enroll: ${result.err ?? "Unknown error"}`);
+            }
         } catch (error: any) {
             alert(`Failed to enroll: ${error?.message || "Unknown error"}`);
         }
