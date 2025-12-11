@@ -281,7 +281,7 @@ export default function CourseContent() {
         <Page title={`Quark | ${courseTitle}`} userSession={userSession} setUserSession={setUserSession}>
             <div className="relative z-10 h-[calc(100vh-7rem)] flex">
                 {/* Sidebar */}
-                <aside className="w-64 border-r border-white/10 bg-white/5 overflow-y-auto flex flex-col" style={{ height: 'calc(100vh - 7rem)' }}>
+                <aside className="w-80 border-r border-white/10 bg-white/5 overflow-y-auto flex flex-col" style={{ height: 'calc(100vh - 7rem)' }}>
                     <div className="p-6 border-b border-white/10">
                         <h2 className="text-xl font-bold text-white mb-2">{courseTitle}</h2>
                         {course?.description && (
@@ -377,7 +377,7 @@ export default function CourseContent() {
                     ) : (
                         <>
                             <div className="flex-1 overflow-y-auto">
-                                <div className="max-w-6xl mx-auto px-8 py-12">
+                                <div className="max-w-8xl mx-auto px-12 py-8">
                                     {currentItem && (
                                         <div className="mb-8">
                                             <h1 className="text-3xl font-bold text-white mb-4">{currentItem.name}</h1>
@@ -394,7 +394,7 @@ export default function CourseContent() {
                             </div>
                             {currentItem?.type === "LESSON" && (currentItem.pages?.length ?? 0) > 1 && (
                                 <div className="border-t border-white/10 backdrop-blur-sm px-8 py-4">
-                                    <div className="max-w-6xl mx-auto flex items-center justify-between">
+                                    <div className="max-w-7xl mx-auto flex items-center justify-between">
                                         <button
                                             onClick={() => setCurrentPageIndex(prev => Math.max(0, prev - 1))}
                                             disabled={currentPageIndex === 0}
