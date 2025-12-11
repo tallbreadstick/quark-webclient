@@ -108,3 +108,24 @@ export async function fetchChapterWithItems(chapterId: number, jwt: string): Pro
         return Err("Network Error");
     }
 }
+
+// ---------------------- REORDER CHAPTER ITEMS ----------------------
+export async function reorderItems(
+    chapterId: number, 
+    itemIds: number[], 
+    jwt: string
+): Promise<Response<string>> {
+    try {
+        const config: any = { responseType: "text" };
+        if (jwt) config.headers = { "Authorization": `Bearer ${jwt}` };
+
+        const response = await axios.patch(`${baseUrl}/api/chapter/${chapterId}/item`, itemIds, config);
+        if (response.status === 200) return Ok(response.data);
+        return Err(response.data ?? "Unknown error");
+
+    } catch (e: any) {
+        console.error(e);
+        if (e.response) return Err(e.response.data ?? "Request failed");
+        return Err("Network Error");
+    }
+}
