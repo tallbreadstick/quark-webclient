@@ -120,7 +120,7 @@ export default function HomePage() {
 
     return (
         <Page title="Quark | Home" userSession={userSession} setUserSession={setUserSession}>
-            <div className="relative z-10 flex flex-col items-center justify-center min-h-[85vh] px-12 py-16 text-gray-200">
+            <div className="relative z-10 flex flex-col items-center justify-center min-h-[calc(100vh-7rem)] px-12 py-16 text-gray-200">
                 {!isLoggedIn ? (
                     <motion.div
                         initial={{ opacity: 0, y: 20 }}
