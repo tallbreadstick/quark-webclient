@@ -1,8 +1,10 @@
-import React, { Suspense } from "react";
+import React, { Suspense, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPlay, faPaperPlane } from "@fortawesome/free-solid-svg-icons";
 import Editor from "@monaco-editor/react";
 import type { Item, ItemSection } from "../types/CourseContentTypes";
+import { runCode, submitCode, type CodeSubmissionRequest } from "../endpoints/CodeExecutionHandler";
+import { loadSessionState } from "../types/UserSession";
 
 type PreviewProps = {
     value: string;
@@ -38,6 +40,63 @@ export default function ActivityCodeLayout({
     PreviewRenderer,
 }: Props) {
     const testCases = section.code?.testCases || [];
+    const { userSession } = loadSessionState();
+    const [isRunningLocal, setIsRunningLocal] = useState(false);
+    const [testResultsLocal, setTestResultsLocal] = useState<string | null>(null);
+
+    const effectiveIsRunning = (isRunning ?? isRunningLocal) as boolean;
+    const effectiveTestResults = testResults ?? testResultsLocal;
+
+    const performRun = async () => {
+        // Build request
+        const req: CodeSubmissionRequest = {
+            activityId: item.id,
+            sectionId: section.id,
+            code: codeValue,
+            language: "python"
+        };
+
+        setIsRunningLocal(true);
+        setTestResultsLocal(null);
+            try {
+            const res = await runCode(req, userSession?.jwt ?? "");
+            console.log("runCode response:", res);
+            if (res.ok) {
+                setTestResultsLocal(JSON.stringify(res.ok, null, 2));
+            } else {
+                setTestResultsLocal(res.err);
+            }
+        } catch (e: any) {
+            setTestResultsLocal(String(e?.message ?? e));
+        } finally {
+            setIsRunningLocal(false);
+        }
+    };
+
+    const performSubmit = async () => {
+        const req: CodeSubmissionRequest = {
+            activityId: item.id,
+            sectionId: section.id,
+            code: codeValue,
+            language: "python"
+        };
+
+        setIsRunningLocal(true);
+        setTestResultsLocal(null);
+            try {
+            const res = await submitCode(req, userSession?.jwt ?? "");
+            console.log("submitCode response:", res);
+            if (res.ok) {
+                setTestResultsLocal(JSON.stringify(res.ok, null, 2));
+            } else {
+                setTestResultsLocal(res.err);
+            }
+        } catch (e: any) {
+            setTestResultsLocal(String(e?.message ?? e));
+        } finally {
+            setIsRunningLocal(false);
+        }
+    };
 
     return (
         <div className="flex flex-1 h-full">
@@ -89,16 +148,16 @@ export default function ActivityCodeLayout({
                         <span className="text-sm text-gray-400">Code</span>
                         <div className="flex gap-2">
                             <button
-                                onClick={onRun}
-                                disabled={isRunning}
+                                onClick={async () => { await performRun(); try { onRun && onRun(); } catch {} }}
+                                disabled={effectiveIsRunning}
                                 className="px-4 py-1.5 bg-white/10 hover:bg-white/15 border border-white/20 rounded text-sm text-white transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                             >
                                 <FontAwesomeIcon icon={faPlay} className="text-xs" />
                                 Run
                             </button>
                             <button
-                                onClick={onSubmit}
-                                disabled={isRunning}
+                                onClick={async () => { await performSubmit(); try { onSubmit && onSubmit(); } catch {} }}
+                                disabled={effectiveIsRunning}
                                 className="px-4 py-1.5 bg-green-600 hover:bg-green-700 rounded text-sm text-white transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                             >
                                 <FontAwesomeIcon icon={faPaperPlane} className="text-xs" />
