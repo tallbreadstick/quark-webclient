@@ -76,7 +76,7 @@ const BioEditor: FC<BioEditorProps> = ({ userSession, setUserSession }) => {
           </p>
           <button
             onClick={() => setEditing(true)}
-            className="inline-flex items-center justify-center px-4 py-2 rounded-lg font-semibold text-sm text-white bg-gradient-to-r from-indigo-500 to-blue-500 border border-indigo-400 shadow-lg shadow-indigo-500/30 hover:brightness-110 active:scale-[0.99] transition"
+            className="inline-flex items-center justify-center px-4 py-2 rounded-lg font-semibold text-sm text-white bg-gradient-to-r from-indigo-500 to-blue-500 border border-indigo-400 shadow-lg shadow-indigo-500/30 hover:brightness-110 active:scale-[0.99] transition cursor-pointer"
           >
             Edit
           </button>
@@ -94,20 +94,20 @@ const BioEditor: FC<BioEditorProps> = ({ userSession, setUserSession }) => {
             <button
               onClick={handleSave}
               disabled={saving}
-              className="inline-flex items-center justify-center px-4 py-2 rounded-lg font-semibold text-sm text-white bg-gradient-to-r from-indigo-500 to-blue-500 border border-indigo-400 shadow-lg shadow-indigo-500/30 hover:brightness-110 active:scale-[0.99] transition disabled:opacity-60 disabled:cursor-not-allowed"
+              className="inline-flex items-center justify-center px-4 py-2 rounded-lg font-semibold text-sm text-white bg-gradient-to-r from-indigo-500 to-blue-500 border border-indigo-400 shadow-lg shadow-indigo-500/30 hover:brightness-110 active:scale-[0.99] transition disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer"
             >
               {saving ? "Saving..." : "Save"}
             </button>
             <button
               onClick={handleClear}
               disabled={saving}
-              className="inline-flex items-center justify-center px-4 py-2 rounded-lg font-semibold text-sm text-white bg-gradient-to-r from-rose-500 to-red-600 border border-red-400 shadow-lg shadow-red-500/30 hover:brightness-110 active:scale-[0.99] transition disabled:opacity-60 disabled:cursor-not-allowed"
+              className="inline-flex items-center justify-center px-4 py-2 rounded-lg font-semibold text-sm text-white bg-gradient-to-r from-rose-500 to-red-600 border border-red-400 shadow-lg shadow-red-500/30 hover:brightness-110 active:scale-[0.99] transition disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer"
             >
               Clear
             </button>
             <button
               onClick={handleCancel}
-              className="inline-flex items-center justify-center px-4 py-2 rounded-lg font-semibold text-sm text-white/90 bg-slate-700 border border-slate-500 shadow-md shadow-slate-900/40 hover:bg-slate-600 active:scale-[0.99] transition"
+              className="inline-flex items-center justify-center px-4 py-2 rounded-lg font-semibold text-sm text-white/90 bg-slate-700 border border-slate-500 shadow-md shadow-slate-900/40 hover:bg-slate-600 active:scale-[0.99] transition cursor-pointer"
             >
               Cancel
             </button>
