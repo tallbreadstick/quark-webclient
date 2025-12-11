@@ -115,7 +115,6 @@ export default function RegisterPage() {
                                         required
                                         className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500/50 appearance-none pr-10 transition [&>option]:bg-slate-900 [&>option]:text-white [&>option:checked]:bg-blue-600 cursor-pointer"
                                     >
-                                        <option value="" disabled className="text-gray-400">Select User Type</option>
                                         <option value="STUDENT">Learner</option>
                                         <option value="EDUCATOR">Educator</option>
                                     </select>
@@ -152,22 +151,12 @@ export default function RegisterPage() {
                         </div>
                     </div>
                     
-                    <div className="flex items-center justify-between mb-8 mt-6">
-                        <label className="flex items-center gap-2 text-sm cursor-pointer">
-                            <input 
-                                type="checkbox" 
-                                name="remember" 
-                                className="w-4 h-4 bg-white/5 border border-white/10 rounded focus:ring-blue-500 focus:ring-2 cursor-pointer" 
-                            />
-                            <p className="text-[#bdcdff]">Remember me</p>
-                        </label>
-                        <a href="/forgot" className="text-sm text-[#bdcdff] hover:underline hover:text-blue-300 transition cursor-pointer">Forgot Password?</a>
-                    </div>
-                    
+                    {/* <div className="flex items-center justify-end mb-8 mt-6">
+                    </div>                     */}
                     <button 
                         type="submit" 
                         disabled={submitting} 
-                        className="w-full px-4 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                        className="mt-6 w-full px-4 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                     >
                         {submitting ? "Creating Account..." : "Create Account"}
                     </button>
