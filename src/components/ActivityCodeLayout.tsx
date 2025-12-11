@@ -58,7 +58,7 @@ export default function ActivityCodeLayout({
                         </div>
 
                         {section.code && (
-                            <div className="space-y-6">
+                            <div className="space-y-5">
                                 <div className="prose prose-invert max-w-none prose-headings:text-white prose-p:text-gray-300 prose-code:text-blue-300">
                                     <Suspense fallback={<div className="text-gray-400">Loading...</div>}>
                                         <PreviewRenderer value={section.code.instructions} />
@@ -126,7 +126,7 @@ export default function ActivityCodeLayout({
                 </div>
 
                 {/* Test Cases Panel */}
-                <div className="h-64 flex flex-col bg-black/40">
+                <div className="h-64 flex flex-col bg-black/40 overflow-y-hidden">
                     <div className="px-4 py-2 bg-white/5 border-b border-white/10">
                         <div className="flex gap-2">
                             {testCases.map((_testCase, idx) => (

@@ -224,9 +224,8 @@ export default function CourseContent() {
 
 
     /**
-     *  HANDLES RUN AND SUBMIT, STILL SIMULATED FOR NOW
+     *  HANDLES RUN, STILL SIMULATED FOR NOW
      */
-
     const handleRunCode = () => {
         setIsRunning(true);
         // Simulate code execution
@@ -235,6 +234,9 @@ export default function CourseContent() {
             setIsRunning(false);
         }, 1000);
     };
+    /**
+     *  HANDLES SUBMIT, STILL SIMULATED FOR NOW
+     */
     const handleSubmitCode = () => {
         setIsRunning(true);
         // Simulate code submission
@@ -449,8 +451,8 @@ export default function CourseContent() {
                         </div>
                     ) : (
                         <>
-                                                    {currentItem?.type === "LESSON" && (currentItem.pages?.length ?? 0) > 1 && (
-                                <div className="border-t border-white/10 backdrop-blur-sm px-8 py-4">
+                        {currentItem?.type === "LESSON" && (currentItem.pages?.length ?? 0) > 1 && (
+                                <div className="border-t border-white/10 backdrop-blur-sm px-8 py-2">
                                     <div className="max-w-7xl mx-auto flex items-center justify-between">
                                         <button
                                             onClick={() => setCurrentPageIndex(prev => Math.max(0, prev - 1))}
