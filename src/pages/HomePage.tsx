@@ -297,7 +297,9 @@ export default function HomePage() {
                                 </div>
                             ) : (
                                 <div className="bg-white/5 backdrop-blur-lg border border-white/10 rounded-2xl p-8 text-center text-gray-400">
-                                    <div className="text-4xl mb-4">📚</div>
+                                    <div className="w-16 h-16 mx-auto mb-4 bg-gray-700/30 rounded-full flex items-center justify-center">
+                                        <FontAwesomeIcon icon={faBook} className="text-gray-500 text-3xl" />
+                                    </div>
                                     {isEducator ? (
                                         <>
                                             <p className="mb-4 text-lg">You haven't created any courses yet.</p>
