@@ -38,16 +38,15 @@ export async function addChapterAction(
             }
         } else {
             console.error("Failed to add chapter:", result.err);
-            alert("Failed to add chapter: " + result.err);
         }
     } catch (err) {
         console.error("Error adding chapter:", err);
-        alert("Error adding chapter");
     }
 }
 
 /**
  * Remove/delete a chapter
+ * Note: Confirmation is handled by ActionModal in the UI
  */
 export async function removeChapterAction(
     chapterId: number,
@@ -57,23 +56,22 @@ export async function removeChapterAction(
     onChaptersUpdate: (chapters: Chapter[]) => void,
     onSelectionUpdate: (selection: Selection) => void
 ) {
-    if (!confirm("Are you sure you want to delete this chapter?")) return;
-
     try {
         const result = await apiDeleteChapter(chapterId, jwt);
 
         if (result.ok) {
             onChaptersUpdate(chapters.filter(c => c.id !== chapterId));
+            
             if (selection?.type === 'chapter' && selection.id === chapterId) {
                 onSelectionUpdate(null);
             }
         } else {
             console.error("Failed to delete chapter:", result.err);
-            alert("Failed to delete chapter: " + result.err);
+            throw new Error(result.err ?? "Failed to delete chapter");
         }
     } catch (err) {
         console.error("Error deleting chapter:", err);
-        alert("Error deleting chapter");
+        throw err;
     }
 }
 
@@ -138,10 +136,12 @@ export async function reorderChaptersAction(
 
         if (!result.ok) {
             console.error("Failed to reorder chapters:", result.err);
-            // Optionally revert the change
+            // Revert the change
             onChaptersUpdate(chapters);
         }
     } catch (err) {
         console.error("Error reordering chapters:", err);
+        // Revert the change
+        onChaptersUpdate(chapters);
     }
 }
