@@ -6,10 +6,39 @@ export type PageContent = {
     renderer?: string | null;
 };
 
+export type Question = {
+    question: string;
+    points: number;
+    correct: string;
+    choices: string[];
+};
+
+export type MCQSection = {
+    instructions: string;
+    questions: Question[];
+};
+
+export type TestCase = {
+    expected: string;
+    driver: string;
+    points: number;
+    hidden: boolean;
+};
+
+export type CodeSection = {
+    renderer: "MARKDOWN" | "LATEX";
+    instructions: string;
+    defaultCode?: string;
+    sources?: string[];
+    testCases: TestCase[];
+};
+
 export type ItemSection = {
     id: number;
     idx?: number;
-    sectionType?: string;
+    sectionType: "MCQ" | "CODE";
+    mcq?: MCQSection;
+    code?: CodeSection;
 };
 
 export type Item = {
