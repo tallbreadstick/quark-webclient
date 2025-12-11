@@ -3,6 +3,13 @@ export type PageContent = {
     id: number;
     number?: number;
     content?: string | null;
+    renderer?: string | null;
+};
+
+export type ItemSection = {
+    id: number;
+    idx?: number;
+    sectionType?: string;
 };
 
 export type Item = {
@@ -15,6 +22,7 @@ export type Item = {
     pages?: PageContent[];
     type: "LESSON" | "ACTIVITY";
     ruleset?: string | null;
+    sections?: ItemSection[];
 };
 
 export type Chapter = {
