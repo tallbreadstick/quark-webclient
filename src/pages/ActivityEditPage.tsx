@@ -584,7 +584,7 @@ function CodeEditor({ section, onSave }: { section: LocalSection, onSave: (s: Pa
                 <div className="border border-slate-700 rounded-lg overflow-hidden">
                     <Editor
                         height="260px"
-                        defaultLanguage="javascript"
+                        defaultLanguage="python"
                         theme="vs-dark"
                         value={code.defaultCode ?? ''}
                         onChange={(value) => setCode(prev => ({ ...prev, defaultCode: value ?? '' }))}
