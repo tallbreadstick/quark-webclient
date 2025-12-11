@@ -1,7 +1,11 @@
 import React, { useEffect, useState } from "react";
+import Editor from "@monaco-editor/react";
 import { useParams, useNavigate } from "react-router-dom";
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faEye, faEdit } from '@fortawesome/free-solid-svg-icons';
 import Page from "../components/page/Page";
 import LoadingSkeleton from "../components/LoadingSkeleton";
+import PreviewRenderer from "../components/PreviewRenderer";
 import {
     addSection,
     editSection,
@@ -10,7 +14,8 @@ import {
     fetchSection,
     type SectionRequest,
     type MCQSection,
-    type CodeSection
+    type CodeSection,
+    type TestCase
 } from "../endpoints/SectionHandler";
 import { fetchActivity } from "../endpoints/ActivityHandler";
 import { loadSessionState } from "../types/UserSession";
@@ -279,7 +284,6 @@ const ActivityEditPage: React.FC = () => {
                                                         <span className={`text-xs font-bold px-2 py-1 rounded ${s.sectionType === 'MCQ' ? 'bg-blue-500/40 text-blue-200' : 'bg-emerald-500/40 text-emerald-200'}`}>
                                                             {s.sectionType}
                                                         </span>
-                                                        <span className="text-xs text-gray-400">#{s.id}</span>
                                                     </div>
                                                     <div className="text-xs text-gray-300 line-clamp-2">{s.sectionType === 'MCQ' ? (s.mcq?.instructions || 'No title') : (s.code?.instructions || 'No title')}</div>
                                                 </div>
@@ -377,8 +381,7 @@ function MCQEditor({ section, onSave }: { section: LocalSection, onSave: (s: Par
     return (
         <div className="space-y-6">
             <div>
-                <h2 className="text-2xl font-bold text-white mb-2">MCQ Section #{section.id}</h2>
-                <p className="text-gray-400 text-sm">Multiple choice questions assessment</p>
+                <h2 className="text-2xl font-bold text-white mb-2">Multiple Choice Questions Assessment</h2>
             </div>
 
             <div>
@@ -515,8 +518,12 @@ function MCQEditor({ section, onSave }: { section: LocalSection, onSave: (s: Par
 function CodeEditor({ section, onSave }: { section: LocalSection, onSave: (s: Partial<LocalSection>)=>void }) {
     const initial = section.code ?? { renderer: 'MARKDOWN' as const, instructions: '', defaultCode: '', sources: [], testCases: [ { expected: '', driver: '', points: 1, hidden: false } ] };
     const [code, setCode] = useState<CodeSection>(initial as CodeSection);
+    const [isPreviewMode, setIsPreviewMode] = useState(false);
 
-    useEffect(()=>{ setCode(section.code ?? { renderer: 'MARKDOWN' as const, instructions: '', defaultCode: '', sources: [], testCases: [ { expected: '', driver: '', points: 1, hidden: false } ] } as CodeSection); }, [section.id]);
+    useEffect(()=>{ 
+        setCode(section.code ?? { renderer: 'MARKDOWN' as const, instructions: '', defaultCode: '', sources: [], testCases: [ { expected: '', driver: '', points: 1, hidden: false } ] } as CodeSection); 
+        setIsPreviewMode(false); // Reset preview mode when section changes
+    }, [section.id]);
 
     const updateTestCase = (idx: number, patch: Partial<TestCase>) => {
         setCode(prev => {
@@ -532,43 +539,62 @@ function CodeEditor({ section, onSave }: { section: LocalSection, onSave: (s: Pa
     return (
         <div className="space-y-6">
             <div>
-                <h2 className="text-2xl font-bold text-white mb-2">Code Section #{section.id}</h2>
-                <p className="text-gray-400 text-sm">Coding challenge with test cases</p>
+                <h2 className="text-2xl font-bold text-white mb-2">Coding Challenge</h2>
             </div>
 
-            {/* Renderer Selection */}
+            {/* Instructions (Monaco with Preview Toggle) */}
             <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">Renderer Format</label>
-                <select 
-                    className="w-full px-4 py-2 bg-slate-900/50 border border-slate-600 rounded-lg text-white focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
-                    value={code.renderer} 
-                    onChange={(e) => setCode(prev => ({ ...prev, renderer: e.target.value as CodeSection['renderer'] }))}
-                >
-                    <option value="MARKDOWN">Markdown</option>
-                    <option value="LATEX">LaTeX</option>
-                </select>
+                <div className="flex items-center justify-between mb-2">
+                    <label className="block text-sm font-medium text-white">Instructions (Markdown/KaTeX)</label>
+                    <button
+                        onClick={() => setIsPreviewMode(!isPreviewMode)}
+                        className="flex items-center gap-2 px-3 py-1.5 bg-indigo-600/20 hover:bg-indigo-600/30 border border-indigo-500/30 text-indigo-300 rounded-lg text-sm font-medium transition-colors"
+                    >
+                        <FontAwesomeIcon icon={isPreviewMode ? faEdit : faEye} className="w-4 h-4" />
+                        {isPreviewMode ? 'Edit' : 'Preview'}
+                    </button>
+                </div>
+                {isPreviewMode ? (
+                    <div className="w-full bg-white border border-gray-200 rounded-lg p-6 text-slate-900 min-h-[240px]">
+                        <div className="prose max-w-none">
+                            <PreviewRenderer value={code.instructions} />
+                        </div>
+                    </div>
+                ) : (
+                    <div className="border border-slate-700 rounded-lg overflow-hidden">
+                        <Editor
+                            height="240px"
+                            defaultLanguage="markdown"
+                            theme="vs-dark"
+                            value={code.instructions}
+                            onChange={(value) => setCode(prev => ({ ...prev, instructions: value ?? '' }))}
+                            options={{
+                                minimap: { enabled: false },
+                                fontSize: 14,
+                                wordWrap: "on",
+                            }}
+                        />
+                    </div>
+                )}
             </div>
 
-            {/* Instructions */}
-            <div>
-                <label className="block text-sm font-medium text-white mb-2">Instructions</label>
-                <textarea 
-                    className="w-full px-4 py-3 bg-slate-900/50 border border-slate-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 resize-vertical min-h-20" 
-                    placeholder="Provide clear instructions for the coding task..." 
-                    value={code.instructions} 
-                    onChange={(e) => setCode(prev => ({ ...prev, instructions: e.target.value }))} 
-                />
-            </div>
-
-            {/* Default Code */}
+            {/* Starter Code (Monaco) */}
             <div>
                 <label className="block text-sm font-medium text-white mb-2">Starter Code (Optional)</label>
-                <textarea 
-                    className="w-full px-4 py-3 bg-slate-900/50 border border-slate-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 font-mono text-sm resize-vertical min-h-24" 
-                    placeholder="Provide initial code template for students..." 
-                    value={code.defaultCode ?? ''} 
-                    onChange={(e) => setCode(prev => ({ ...prev, defaultCode: e.target.value }))} 
-                />
+                <div className="border border-slate-700 rounded-lg overflow-hidden">
+                    <Editor
+                        height="260px"
+                        defaultLanguage="javascript"
+                        theme="vs-dark"
+                        value={code.defaultCode ?? ''}
+                        onChange={(value) => setCode(prev => ({ ...prev, defaultCode: value ?? '' }))}
+                        options={{
+                            minimap: { enabled: false },
+                            fontSize: 14,
+                            wordWrap: "on",
+                        }}
+                    />
+                </div>
             </div>
 
             {/* Test Cases */}
