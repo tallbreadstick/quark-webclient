@@ -16,12 +16,13 @@ import {
     addChapterAction, 
     removeChapterAction, 
     updateChapterAction, 
-    reorderChaptersAction 
+    reorderChaptersAction, 
 } from "../utils/chapterActions";
 import { 
     createItemAction, 
     removeItemAction, 
-    updateItemAction 
+    updateItemAction,
+    reorderItemsAction  // Add this import
 } from "../utils/itemActions";
 
 // Component imports
@@ -30,6 +31,8 @@ import { ChapterEditor } from "../components/ChapterEditor";
 import { ItemEditor } from "../components/ItemEditor";
 import { ItemTypeModal } from "../components/ItemTypeModal";
 import { LoadingState, ErrorState, EmptySelectionState } from "../components/ChapterEditorStates";
+import AlertModal from "../components/modals/AlertModal";
+import ActionModal from "../components/modals/ActionModal";
 
 // Main Application Component
 export default function ChapterEditPage(): React.ReactElement {
@@ -52,6 +55,17 @@ export default function ChapterEditPage(): React.ReactElement {
     const [isPreviewMode, setIsPreviewMode] = useState(false);
     // UI state: track whether time limit input is enabled per item uiSerialId
     const [timeLimitEnabledMap, setTimeLimitEnabledMap] = useState<Record<string, boolean>>({});
+
+    // Delete modal states
+    const [showDeleteConfirmModal, setShowDeleteConfirmModal] = useState(false);
+    const [showDeleteSuccessModal, setShowDeleteSuccessModal] = useState(false);
+    const [deleteTarget, setDeleteTarget] = useState<{
+        type: 'chapter' | 'item';
+        chapterId: number;
+        itemId?: number;
+    } | null>(null);
+    const [isDeleting, setIsDeleting] = useState(false);
+    const [deleteSuccessMessage, setDeleteSuccessMessage] = useState("");
 
     // Fetch course and chapters on mount
     useEffect(() => {
@@ -122,6 +136,92 @@ export default function ChapterEditPage(): React.ReactElement {
         loadChapterItems();
     }, [selection, chapters, userSession?.jwt]);
 
+    // Handle delete button click (show confirmation modal)
+    const handleDeleteClick = (chapterId: number, itemId?: number) => {
+        if (itemId !== undefined) {
+            // Deleting an item
+            const chapter = chapters.find(c => c.id === chapterId);
+            const item = chapter?.items.find(i => i.id === itemId);
+            if (chapter && item) {
+                setDeleteTarget({ type: 'item', chapterId, itemId });
+                setShowDeleteConfirmModal(true);
+            }
+        } else {
+            // Deleting a chapter
+            const chapter = chapters.find(c => c.id === chapterId);
+            if (chapter) {
+                setDeleteTarget({ type: 'chapter', chapterId });
+                setShowDeleteConfirmModal(true);
+            }
+        }
+    };
+
+    // Handle confirmed delete
+    const handleConfirmDelete = async () => {
+        if (!deleteTarget || !userSession?.jwt) return;
+
+        setIsDeleting(true);
+        try {
+            if (deleteTarget.type === 'chapter') {
+                // Find chapter name before deleting
+                const chapter = chapters.find(c => c.id === deleteTarget.chapterId);
+                const chapterName = chapter?.name || "Chapter";
+                
+                // Delete chapter
+                await removeChapterAction(
+                    deleteTarget.chapterId,
+                    userSession.jwt,
+                    chapters,
+                    selection,
+                    setChapters,
+                    setSelection
+                );
+                
+                setDeleteSuccessMessage(`Chapter "${chapterName}" has been deleted successfully.`);
+            } else {
+                // Deleting an item
+                const chapter = chapters.find(c => c.id === deleteTarget.chapterId);
+                const item = chapter?.items.find(i => i.id === deleteTarget.itemId);
+                const itemName = item?.name || "Item";
+                
+                if (deleteTarget.itemId) {
+                    await removeItemAction(
+                        deleteTarget.chapterId,
+                        deleteTarget.itemId,
+                        chapters,
+                        selection,
+                        userSession.jwt,
+                        setChapters,
+                        setSelection
+                    );
+                    
+                    setDeleteSuccessMessage(`Item "${itemName}" has been deleted successfully.`);
+                }
+            }
+            
+            // Show success modal
+            setShowDeleteConfirmModal(false);
+            setShowDeleteSuccessModal(true);
+        } catch (error) {
+            console.error("Failed to delete:", error);
+            setError("Failed to delete. Please try again.");
+        } finally {
+            setIsDeleting(false);
+        }
+    };
+
+    // Handle delete cancellation
+    const handleCancelDelete = () => {
+        setShowDeleteConfirmModal(false);
+        setDeleteTarget(null);
+    };
+
+    // Handle success modal close
+    const handleSuccessModalClose = () => {
+        setShowDeleteSuccessModal(false);
+        setDeleteTarget(null);
+    };
+
     // --- Drag & Drop Handlers ---
 
     function onDragStart(e: React.DragEvent, type: 'chapter' | 'item', data: any) {
@@ -139,26 +239,30 @@ export default function ChapterEditPage(): React.ReactElement {
 
             // Reorder Chapters
             if (data.type === 'chapter' && typeof targetIndex === 'number') {
-                await reorderChaptersAction(Number(courseId), data.index, targetIndex, chapters, userSession?.jwt ?? "", setChapters);
+                await reorderChaptersAction(
+                    Number(courseId), 
+                    data.index, 
+                    targetIndex, 
+                    chapters, 
+                    userSession?.jwt ?? "", 
+                    setChapters
+                );
             }
 
-            // Reorder Items (TODO: needs item reorder API endpoint)
+            // Reorder Items - now with API call
             if (data.type === 'item') {
                 const { chapterId: fromChapId, index: fromIdx } = data;
-                setChapters(prev => {
-                    const copy = prev.map(c => ({ ...c, items: [...c.items] }));
-                    const sourceChap = copy.find(c => c.id === fromChapId);
-                    const destChap = copy.find(c => c.id === targetChapterId);
-
-                    if (!sourceChap || !destChap) return prev;
-
-                    const [movedItem] = sourceChap.items.splice(fromIdx, 1);
-                    const finalIndex = targetIndex ?? destChap.items.length;
-                    destChap.items.splice(finalIndex, 0, movedItem);
-
-                    return copy;
-                });
-                // TODO: Call item reorder API when available
+                const toIdx = targetIndex ?? 0;
+                
+                await reorderItemsAction(
+                    fromChapId,
+                    fromIdx,
+                    targetChapterId,
+                    toIdx,
+                    chapters,
+                    userSession?.jwt ?? "",
+                    setChapters
+                );
             }
         } catch (e) {
             console.error("Error during drop:", e);
@@ -201,6 +305,25 @@ export default function ChapterEditPage(): React.ReactElement {
                         cursor: pointer;
                         filter: invert(32%) sepia(10%) saturate(1348%) hue-rotate(179deg) brightness(93%) contrast(87%);
                     }
+                    
+                    /* Add pointer cursor to all clickable elements */
+                    .chapter-editor button,
+                    .chapter-editor [role="button"],
+                    .chapter-editor a,
+                    .chapter-editor select,
+                    .chapter-editor input[type="checkbox"],
+                    .chapter-editor input[type="radio"] {
+                        cursor: pointer !important;
+                    }
+                    
+                    /* Style for draggable elements */
+                    .chapter-editor [draggable="true"] {
+                        cursor: grab !important;
+                    }
+                    
+                    .chapter-editor [draggable="true"]:active {
+                        cursor: grabbing !important;
+                    }
                 `}</style>
 
                 {/* Background ambient effect */}
@@ -213,12 +336,12 @@ export default function ChapterEditPage(): React.ReactElement {
                     selection={selection}
                     onSelectionChange={setSelection}
                     onAddChapter={() => addChapterAction(Number(courseId), chapters, userSession?.jwt ?? "", setChapters, setSelection)}
-                    onRemoveChapter={(id) => removeChapterAction(id, userSession?.jwt ?? "", chapters, selection, setChapters, setSelection)}
+                    onRemoveChapter={(chapterId) => handleDeleteClick(chapterId)}
                     onOpenItemTypeModal={(chapterId) => {
                         setPendingChapterId(chapterId);
                         setShowItemTypeModal(true);
                     }}
-                    onRemoveItem={(chapterId, itemId) => removeItemAction(chapterId, itemId, chapters, selection, userSession?.jwt ?? "", setChapters, setSelection)}
+                    onRemoveItem={(chapterId, itemId) => handleDeleteClick(chapterId, itemId)}
                     onDragStart={onDragStart}
                     onDragOver={(e) => e.preventDefault()}
                     onDrop={onDrop}
@@ -286,6 +409,33 @@ export default function ChapterEditPage(): React.ReactElement {
                     setShowItemTypeModal(false);
                     setPendingChapterId(null);
                 }}
+            />
+
+            {/* Delete Confirmation Modal */}
+            <ActionModal
+                isOpen={showDeleteConfirmModal}
+                onClose={handleCancelDelete}
+                onConfirm={handleConfirmDelete}
+                title={deleteTarget?.type === 'chapter' ? "Delete Chapter" : "Delete Item"}
+                message={
+                    deleteTarget?.type === 'chapter' 
+                        ? "Are you sure you want to delete this chapter? This will also delete all items within it."
+                        : "Are you sure you want to delete this item?"
+                }
+                confirmText="Delete"
+                cancelText="Cancel"
+                variant="danger"
+                isLoading={isDeleting}
+            />
+
+            {/* Delete Success Modal */}
+            <AlertModal
+                isOpen={showDeleteSuccessModal}
+                onClose={handleSuccessModalClose}
+                title="Deleted Successfully"
+                message={deleteSuccessMessage}
+                variant="success"
+                buttonText="Okay"
             />
         </Page>
     );
