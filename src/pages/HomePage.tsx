@@ -1,5 +1,7 @@
 import { motion } from "framer-motion";
-import { useNavigate, Link } from "react-router-dom";
+import { Link } from "react-router-dom";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faClock } from "@fortawesome/free-solid-svg-icons";
 import Page from "../components/page/Page";
 import { loadSessionState } from "../types/UserSession";
 import { useEffect, useState } from "react";
@@ -10,7 +12,6 @@ import type { DatabaseCourse } from "../types/CourseTypes";
 
 export default function HomePage() {
     const { userSession, setUserSession } = loadSessionState();
-    const navigate = useNavigate();
     const [courses, setCourses] = useState<DatabaseCourse[] | null>(null);
     const [loading, setLoading] = useState(true);
     const [profileUserType, setProfileUserType] = useState<"educator" | "learner" | "student" | undefined>(undefined);
@@ -108,7 +109,6 @@ export default function HomePage() {
     }, [userSession, isLoggedIn]);
 
     const isEducator = profileUserType === 'educator';
-    const isLearner = profileUserType === 'student';
 
     const getWelcomeMessage = () => {
         if (isEducator) {
@@ -165,40 +165,10 @@ export default function HomePage() {
                             {getWelcomeMessage()}
                         </p>
 
-                        <section className="grid grid-cols-3 gap-6 mb-16">
-                            <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-6 h-40 flex flex-col justify-center items-center">
-                                <span className="text-gray-400">[UNDER CONSTRUCTION]</span>
-                                <p className="mt-2 text-sm text-gray-500">Recent Activity</p>
-                            </div>
-
-                            {isEducator ? (
-                                <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-6 h-40 flex flex-col justify-center items-center">
-                                    <span className="text-gray-400">[UNDER CONSTRUCTION]</span>
-                                    <p className="mt-2 text-sm text-gray-500">Course Analytics</p>
-                                </div>
-                            ) : (
-                                <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-6 h-40 flex flex-col justify-center items-center">
-                                    <span className="text-gray-400">[UNDER CONSTRUCTION]</span>
-                                    <p className="mt-2 text-sm text-gray-500">Learning Progress</p>
-                                </div>
-                            )}
-
-                            {isEducator ? (
-                                <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-6 h-40 flex flex-col justify-center items-center">
-                                    <span className="text-gray-400">[UNDER CONSTRUCTION]</span>
-                                    <p className="mt-2 text-sm text-gray-500">Student Engagement</p>
-                                </div>
-                            ) : (
-                                <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-6 h-40 flex flex-col justify-center items-center">
-                                    <span className="text-gray-400">[UNDER CONSTRUCTION]</span>
-                                    <p className="mt-2 text-sm text-gray-500">View Enrolled Courses</p>
-                                </div>
-                            )}
-                        </section>
-
                         <div className="mb-6">
                             <div className="flex justify-between items-center mb-6">
-                                <h2 className="text-xl font-semibold text-white">
+                                <h2 className="text-xl font-semibold text-white flex items-center gap-2">
+                                    <FontAwesomeIcon icon={faClock} className="text-blue-400" />
                                     {isEducator ? "Your Recent Courses" : "Your Enrolled Courses"}
                                 </h2>
                                 <Link 
