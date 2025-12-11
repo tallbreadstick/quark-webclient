@@ -1,7 +1,7 @@
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faClock } from "@fortawesome/free-solid-svg-icons";
+import { faClock, faBook, faPlus, faStore, faChartLine, faGraduationCap } from "@fortawesome/free-solid-svg-icons";
 import Page from "../components/page/Page";
 import { loadSessionState } from "../types/UserSession";
 import { useEffect, useState } from "react";
@@ -164,6 +164,74 @@ export default function HomePage() {
                         <p className="text-gray-400 mb-12">
                             {getWelcomeMessage()}
                         </p>
+
+
+                        {/* Quick Actions */}
+                        <section className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-12">
+                            {isEducator ? (
+                                <>
+                                    <Link
+                                        to="/my-courses/create"
+                                        className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-6 hover:border-blue-500/50 transition-all duration-300 group"
+                                    >
+                                        <div className="flex items-center gap-4">
+                                            <div className="w-12 h-12 bg-blue-500/20 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                                                <FontAwesomeIcon icon={faPlus} className="text-blue-400 text-xl" />
+                                            </div>
+                                            <div>
+                                                <h3 className="text-lg font-semibold text-white mb-1">Create New Course</h3>
+                                                <p className="text-sm text-gray-400">Start building your next course</p>
+                                            </div>
+                                        </div>
+                                    </Link>
+                                    <Link
+                                        to="/my-courses"
+                                        className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-6 hover:border-purple-500/50 transition-all duration-300 group"
+                                    >
+                                        <div className="flex items-center gap-4">
+                                            <div className="w-12 h-12 bg-purple-500/20 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                                                <FontAwesomeIcon icon={faBook} className="text-purple-400 text-xl" />
+                                            </div>
+                                            <div>
+                                                <h3 className="text-lg font-semibold text-white mb-1">Manage Courses</h3>
+                                                <p className="text-sm text-gray-400">View and edit your courses</p>
+                                            </div>
+                                        </div>
+                                    </Link>
+                                </>
+                            ) : (
+                                <>
+                                    <Link
+                                        to="/marketplace"
+                                        className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-6 hover:border-blue-500/50 transition-all duration-300 group"
+                                    >
+                                        <div className="flex items-center gap-4">
+                                            <div className="w-12 h-12 bg-blue-500/20 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                                                <FontAwesomeIcon icon={faStore} className="text-blue-400 text-xl" />
+                                            </div>
+                                            <div>
+                                                <h3 className="text-lg font-semibold text-white mb-1">Browse Marketplace</h3>
+                                                <p className="text-sm text-gray-400">Discover new courses to learn</p>
+                                            </div>
+                                        </div>
+                                    </Link>
+                                    <Link
+                                        to="/my-courses"
+                                        className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-6 hover:border-green-500/50 transition-all duration-300 group"
+                                    >
+                                        <div className="flex items-center gap-4">
+                                            <div className="w-12 h-12 bg-green-500/20 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                                                <FontAwesomeIcon icon={faGraduationCap} className="text-green-400 text-xl" />
+                                            </div>
+                                            <div>
+                                                <h3 className="text-lg font-semibold text-white mb-1">My Learning</h3>
+                                                <p className="text-sm text-gray-400">Continue your enrolled courses</p>
+                                            </div>
+                                        </div>
+                                    </Link>
+                                </>
+                            )}
+                        </section>
 
                         <div className="mb-6">
                             <div className="flex justify-between items-center mb-6">
