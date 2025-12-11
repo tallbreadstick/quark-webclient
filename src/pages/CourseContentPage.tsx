@@ -5,7 +5,7 @@ import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
 import "katex/dist/katex.min.css";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faBook, faPencil } from "@fortawesome/free-solid-svg-icons";
+import { faBook, faPencil, faCheckCircle } from "@fortawesome/free-solid-svg-icons";
 import Page from "../components/page/Page";
 import { loadSessionState } from "../types/UserSession";
 import type { Chapter, Course, Item, PageContent, ItemSection } from "../types/CourseContentTypes";
@@ -213,10 +213,13 @@ export default function CourseContent() {
                 return <p className="text-gray-400">No content available for this lesson.</p>;
             }
 
+            const isLastPage = currentPageIndex === totalPages - 1;
+            const finishMessage = isLastPage ? currentItem.finishMessage : null;
+
             return (
-                <>
-                    {currentPage && (
-                        <div className="bg-black/40 backdrop-blur-sm border border-white/10 rounded-xl p-6 mb-6">
+                currentPage && (
+                    <div className="space-y-6">
+                        <div className="bg-black/40 backdrop-blur-sm border border-white/10 rounded-xl p-6">
                             <div className="prose prose-lg max-w-none prose-invert prose-headings:text-white prose-p:text-gray-200 prose-strong:text-white prose-code:text-blue-300 prose-li:text-gray-200">
                                 {currentPage.content ? (
                                     <Suspense fallback={<div className="text-gray-400">Loading content...</div>}>
@@ -227,33 +230,21 @@ export default function CourseContent() {
                                 )}
                             </div>
                         </div>
-                    )}
-
-                    {/* Pagination Controls */}
-                    {totalPages > 1 && (
-                        <div className="flex items-center justify-between bg-black/40 backdrop-blur-sm border border-white/10 rounded-xl p-4">
-                            <button
-                                onClick={() => setCurrentPageIndex(prev => Math.max(0, prev - 1))}
-                                disabled={currentPageIndex === 0}
-                                className="px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed transition"
-                            >
-                                ← Previous
-                            </button>
-                            
-                            <div className="text-sm text-gray-400">
-                                Page {currentPageIndex + 1} of {totalPages}
+                        {finishMessage && (
+                            <div className="bg-green-500/10 border border-green-500/30 backdrop-blur-sm rounded-xl p-6">
+                                <div className="flex items-start gap-3">
+                                    <div className="w-10 h-10 flex items-center justify-center rounded-full bg-green-500/20">
+                                        <FontAwesomeIcon icon={faCheckCircle} className="text-green-400 text-2xl" />
+                                    </div>
+                                    <div>
+                                        <h3 className="text-lg font-semibold text-green-400 mb-2">Lesson Complete!</h3>
+                                        <p className="text-gray-300">{finishMessage}</p>
+                                    </div>
+                                </div>
                             </div>
-                            
-                            <button
-                                onClick={() => setCurrentPageIndex(prev => Math.min(totalPages - 1, prev + 1))}
-                                disabled={currentPageIndex === totalPages - 1}
-                                className="px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed transition"
-                            >
-                                Next →
-                            </button>
-                        </div>
-                    )}
-                </>
+                        )}
+                    </div>
+                )
             );
         }
 
@@ -290,7 +281,7 @@ export default function CourseContent() {
         <Page title={`Quark | ${courseTitle}`} userSession={userSession} setUserSession={setUserSession}>
             <div className="relative z-10 h-[calc(100vh-7rem)] flex">
                 {/* Sidebar */}
-                <aside className="w-80 border-r border-white/10 bg-white/5 overflow-y-auto h-full flex flex-col">
+                <aside className="w-64 border-r border-white/10 bg-white/5 overflow-y-auto flex flex-col" style={{ height: 'calc(100vh - 7rem)' }}>
                     <div className="p-6 border-b border-white/10">
                         <h2 className="text-xl font-bold text-white mb-2">{courseTitle}</h2>
                         {course?.description && (
@@ -319,7 +310,7 @@ export default function CourseContent() {
                     <div className="flex-1">
                         {!loading && !error && chapters.map((chapter, chapterIdx) => (
                         <div key={chapter.id} className="border-b border-white/10">
-                            <div className="px-6 py-4 bg-white/3">
+                            <div className="px-6 py-2 bg-white/3">
                                 <h3 className="text-sm font-semibold text-white uppercase tracking-wide">
                                     {chapter.name}
                                 </h3>
@@ -374,7 +365,7 @@ export default function CourseContent() {
                 </aside>
 
                 {/* Main Content */}
-                <main className="flex-1 overflow-y-auto">
+                <main className="flex-1 flex flex-col overflow-hidden">
                     {loading ? (
                         <div className="flex items-center justify-center h-full">
                             <p className="text-gray-400">Loading content...</p>
@@ -384,20 +375,49 @@ export default function CourseContent() {
                             <p className="text-red-400">{error}</p>
                         </div>
                     ) : (
-                        <div className="max-w-4xl mx-auto px-8 py-12">
-                            {currentItem && (
-                                <div className="mb-8">
-                                    <h1 className="text-3xl font-bold text-white mb-4">{currentItem.name}</h1>
-                                    {currentItem.description && (
-                                        <p className="text-lg text-gray-300 mb-6">{currentItem.description}</p>
+                        <>
+                            <div className="flex-1 overflow-y-auto">
+                                <div className="max-w-6xl mx-auto px-8 py-12">
+                                    {currentItem && (
+                                        <div className="mb-8">
+                                            <h1 className="text-3xl font-bold text-white mb-4">{currentItem.name}</h1>
+                                            {currentItem.description && (
+                                                <p className="text-lg text-gray-300 mb-6">{currentItem.description}</p>
+                                            )}
+                                        </div>
                                     )}
+                                    
+                                    <div className="text-gray-200">
+                                        {renderContent()}
+                                    </div>
+                                </div>
+                            </div>
+                            {currentItem?.type === "LESSON" && (currentItem.pages?.length ?? 0) > 1 && (
+                                <div className="border-t border-white/10 backdrop-blur-sm px-8 py-4">
+                                    <div className="max-w-6xl mx-auto flex items-center justify-between">
+                                        <button
+                                            onClick={() => setCurrentPageIndex(prev => Math.max(0, prev - 1))}
+                                            disabled={currentPageIndex === 0}
+                                            className="px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                                        >
+                                            ← Previous
+                                        </button>
+                                        
+                                        <div className="text-sm text-gray-400">
+                                            Page {currentPageIndex + 1} of {currentItem.pages?.length ?? 0}
+                                        </div>
+                                        
+                                        <button
+                                            onClick={() => setCurrentPageIndex(prev => Math.min((currentItem.pages?.length ?? 1) - 1, prev + 1))}
+                                            disabled={currentPageIndex === (currentItem.pages?.length ?? 1) - 1}
+                                            className="px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                                        >
+                                            Next →
+                                        </button>
+                                    </div>
                                 </div>
                             )}
-                            
-                            <div className="text-gray-200">
-                                {renderContent()}
-                            </div>
-                        </div>
+                        </>
                     )}
                 </main>
             </div>
