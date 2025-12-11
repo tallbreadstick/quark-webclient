@@ -5,12 +5,13 @@ import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
 import "katex/dist/katex.min.css";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faBook, faPencil, faCheckCircle, faPlay, faPaperPlane } from "@fortawesome/free-solid-svg-icons";
-import Editor from "@monaco-editor/react";
+import { faBook, faPencil, faCheckCircle } from "@fortawesome/free-solid-svg-icons";
 import Page from "../components/page/Page";
 import { loadSessionState } from "../types/UserSession";
 import type { Chapter, Course, Item, PageContent, ItemSection } from "../types/CourseContentTypes";
 import api from "../scripts/api";
+import ActivityCodeLayout from "../components/ActivityCodeLayout";
+import ActivityMcqSection from "../components/ActivityMcqSection";
 
 // Lazy Markdown+KaTeX renderer
 const PreviewRenderer = React.lazy(async () => ({
@@ -197,6 +198,8 @@ export default function CourseContent() {
 
     const courseTitle = course?.name ?? `Course ${courseId ?? ""}`;
     const currentItem = selectedItem ? chapters[selectedItem.chapterIdx]?.items?.[selectedItem.itemIdx] : null;
+    const currentSection = currentItem?.sections?.[currentSectionIndex] ?? null;
+    const totalSections = currentItem?.sections?.length ?? 0;
 
     // Reset page/section index when item changes
     useEffect(() => {
@@ -319,50 +322,7 @@ export default function CourseContent() {
                         </div>
 
                         {currentSection?.sectionType === "MCQ" && currentSection.mcq && (
-                            <div className="space-y-6">
-                                <div className="prose prose-lg max-w-none prose-invert prose-headings:text-white prose-p:text-gray-200">
-                                    <Suspense fallback={<div className="text-gray-400">Loading instructions...</div>}>
-                                        <PreviewRenderer value={currentSection.mcq.instructions} />
-                                    </Suspense>
-                                </div>
-
-                                <div className="space-y-6 mt-8">
-                                    {currentSection.mcq.questions.map((q, qIdx) => (
-                                        <div key={qIdx} className="bg-white/5 border border-white/10 rounded-lg p-6">
-                                            <div className="flex items-start justify-between mb-4">
-                                                <h4 className="text-lg font-medium text-white">Question {qIdx + 1}</h4>
-                                                <span className="px-2 py-1 bg-yellow-500/20 border border-yellow-500/30 rounded text-sm text-yellow-400">
-                                                    {q.points} {q.points === 1 ? "point" : "points"}
-                                                </span>
-                                            </div>
-                                            <p className="text-gray-200 mb-4">{q.question}</p>
-                                            <div className="space-y-2">
-                                                {q.choices.map((choice, cIdx) => (
-                                                    <div
-                                                        key={cIdx}
-                                                        className="p-3 bg-white/5 border border-white/10 rounded-lg hover:bg-white/10 transition cursor-pointer"
-                                                    >
-                                                        <label className="flex items-center gap-3 cursor-pointer">
-                                                            <input
-                                                                type="radio"
-                                                                name={`question-${qIdx}`}
-                                                                className="w-4 h-4"
-                                                            />
-                                                            <span className="text-gray-300">{choice}</span>
-                                                        </label>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
-
-                        {currentSection?.sectionType === "CODE" && currentSection.code && (
-                            <div className="space-y-6">
-                                {/* This will be rendered differently in the main layout */}
-                            </div>
+                            <ActivityMcqSection section={currentSection} PreviewRenderer={PreviewRenderer} />
                         )}
 
                         {!currentSection?.mcq && !currentSection?.code && (
@@ -489,185 +449,7 @@ export default function CourseContent() {
                         </div>
                     ) : (
                         <>
-                            {currentItem?.type === "ACTIVITY" && 
-                             chapters[selectedItem?.chapterIdx ?? 0]?.items?.[selectedItem?.itemIdx ?? 0]?.sections?.[currentSectionIndex]?.sectionType === "CODE" ? (
-                                // LeetCode-style split layout for CODE sections
-                                <div className="flex flex-1 h-full">
-                                    {/* Left Panel - Problem Description */}
-                                    <div className="w-1/2 border-r border-white/10 flex flex-col h-full">
-                                        <div className="flex-1 overflow-y-auto">
-                                            <div className="p-6">
-                                                {currentItem && (
-                                                    <div className="mb-6">
-                                                        <h1 className="text-2xl font-bold text-white mb-2">{currentItem.name}</h1>
-                                                        {currentItem.description && (
-                                                            <p className="text-sm text-gray-400 mb-4">{currentItem.description}</p>
-                                                        )}
-                                                        <div className="flex items-center gap-2">
-                                                            <span className="px-3 py-1 bg-blue-500/20 border border-blue-500/30 rounded-full text-xs text-blue-400">
-                                                                Section {currentSectionIndex + 1} of {currentItem.sections?.length ?? 0}
-                                                            </span>
-                                                        </div>
-                                                    </div>
-                                                )}
-                                                
-                                                {(() => {
-                                                    const currentSection = chapters[selectedItem?.chapterIdx ?? 0]?.items?.[selectedItem?.itemIdx ?? 0]?.sections?.[currentSectionIndex];
-                                                    return currentSection?.code ? (
-                                                        <div className="space-y-6">
-                                                            <div className="prose prose-invert max-w-none prose-headings:text-white prose-p:text-gray-300 prose-code:text-blue-300">
-                                                                <Suspense fallback={<div className="text-gray-400">Loading...</div>}>
-                                                                    <PreviewRenderer value={currentSection.code.instructions} />
-                                                                </Suspense>
-                                                            </div>
-                                                            
-                                                            {currentSection.code.sources && currentSection.code.sources.length > 0 && (
-                                                                <div>
-                                                                    <h4 className="text-sm font-semibold text-gray-400 mb-2">Sources</h4>
-                                                                    <ul className="list-disc list-inside space-y-1 text-gray-300 text-sm">
-                                                                        {currentSection.code.sources.map((source, idx) => (
-                                                                            <li key={idx}>{source}</li>
-                                                                        ))}
-                                                                    </ul>
-                                                                </div>
-                                                            )}
-                                                        </div>
-                                                    ) : null;
-                                                })()}
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* Right Panel - Code Editor and Test Cases */}
-                                    <div className="w-1/2 flex flex-col h-full">
-                                        {/* Code Editor */}
-                                        <div className="flex-1 flex flex-col border-b border-white/10">
-                                            <div className="px-4 py-2 bg-white/5 border-b border-white/10 flex items-center justify-between">
-                                                <span className="text-sm text-gray-400">Code</span>
-                                                <div className="flex gap-2">
-                                                    <button
-                                                        onClick={handleRunCode}
-                                                        disabled={isRunning}
-                                                        className="px-4 py-1.5 bg-white/10 hover:bg-white/15 border border-white/20 rounded text-sm text-white transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                                                    >
-                                                        <FontAwesomeIcon icon={faPlay} className="text-xs" />
-                                                        Run
-                                                    </button>
-                                                    <button
-                                                        onClick={handleSubmitCode}
-                                                        disabled={isRunning}
-                                                        className="px-4 py-1.5 bg-green-600 hover:bg-green-700 rounded text-sm text-white transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                                                    >
-                                                        <FontAwesomeIcon icon={faPaperPlane} className="text-xs" />
-                                                        Submit
-                                                    </button>
-                                                </div>
-                                            </div>
-                                            <div className="flex-1">
-                                                <Editor
-                                                    height="100%"
-                                                    defaultLanguage="python"
-                                                    value={codeValue}
-                                                    onChange={(value) => setCodeValue(value || "")}
-                                                    theme="vs-dark"
-                                                    options={{
-                                                        minimap: { enabled: false },
-                                                        fontSize: 14,
-                                                        lineNumbers: "on",
-                                                        scrollBeyondLastLine: false,
-                                                        automaticLayout: true,
-                                                        tabSize: 4,
-                                                    }}
-                                                />
-                                            </div>
-                                        </div>
-
-                                        {/* Test Cases Panel */}
-                                        <div className="h-64 flex flex-col bg-black/40">
-                                            <div className="px-4 py-2 bg-white/5 border-b border-white/10">
-                                                <div className="flex gap-2">
-                                                    {(() => {
-                                                        const currentSection = chapters[selectedItem?.chapterIdx ?? 0]?.items?.[selectedItem?.itemIdx ?? 0]?.sections?.[currentSectionIndex];
-                                                        const testCases = currentSection?.code?.testCases || [];
-                                                        return testCases.map((testCase, idx) => (
-                                                            <button
-                                                                key={idx}
-                                                                onClick={() => setSelectedTestCase(idx)}
-                                                                className={`px-3 py-1.5 text-sm rounded transition ${
-                                                                    selectedTestCase === idx
-                                                                        ? "bg-white/20 text-white"
-                                                                        : "bg-white/5 text-gray-400 hover:bg-white/10"
-                                                                }`}
-                                                            >
-                                                                Case {idx + 1}
-                                                            </button>
-                                                        ));
-                                                    })()}
-                                                </div>
-                                            </div>
-                                            <div className="flex-1 overflow-y-auto p-4">
-                                                {testResults ? (
-                                                    <div className="space-y-2">
-                                                        <h4 className="text-sm font-semibold text-green-400">Test Result</h4>
-                                                        <pre className="text-sm text-gray-300 whitespace-pre-wrap">{testResults}</pre>
-                                                    </div>
-                                                ) : (
-                                                    (() => {
-                                                        const currentSection = chapters[selectedItem?.chapterIdx ?? 0]?.items?.[selectedItem?.itemIdx ?? 0]?.sections?.[currentSectionIndex];
-                                                        const testCase = currentSection?.code?.testCases?.[selectedTestCase];
-                                                        return testCase ? (
-                                                            <div className="space-y-3 text-sm">
-                                                                <div>
-                                                                    <span className="text-gray-400">Input:</span>
-                                                                    <div className="mt-1 p-2 bg-white/5 rounded border border-white/10">
-                                                                        <code className="text-gray-300">{testCase.driver}</code>
-                                                                    </div>
-                                                                </div>
-                                                                <div>
-                                                                    <span className="text-gray-400">Expected Output:</span>
-                                                                    <div className="mt-1 p-2 bg-white/5 rounded border border-white/10">
-                                                                        <code className="text-gray-300">{testCase.expected}</code>
-                                                                    </div>
-                                                                </div>
-                                                                <div className="flex items-center gap-2 pt-2">
-                                                                    <span className="px-2 py-1 bg-yellow-500/20 border border-yellow-500/30 rounded text-xs text-yellow-400">
-                                                                        {testCase.points} {testCase.points === 1 ? "point" : "points"}
-                                                                    </span>
-                                                                    {testCase.hidden && (
-                                                                        <span className="px-2 py-1 bg-purple-500/20 border border-purple-500/30 rounded text-xs text-purple-400">
-                                                                            Hidden
-                                                                        </span>
-                                                                    )}
-                                                                </div>
-                                                            </div>
-                                                        ) : null;
-                                                    })()
-                                                )}
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            ) : (
-                                // Standard layout for lessons and MCQ sections
-                                <div className="flex-1 overflow-y-auto">
-                                    <div className="max-w-8xl mx-auto px-12 py-8">
-                                        {currentItem && (
-                                            <div className="mb-8">
-                                                <h1 className="text-3xl font-bold text-white mb-4">{currentItem.name}</h1>
-                                                {currentItem.description && (
-                                                    <p className="text-lg text-gray-300 mb-6">{currentItem.description}</p>
-                                                )}
-                                            </div>
-                                        )}
-                                        
-                                        <div className="text-gray-200">
-                                            {renderContent()}
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
-                            
-                            {currentItem?.type === "LESSON" && (currentItem.pages?.length ?? 0) > 1 && (
+                                                    {currentItem?.type === "LESSON" && (currentItem.pages?.length ?? 0) > 1 && (
                                 <div className="border-t border-white/10 backdrop-blur-sm px-8 py-4">
                                     <div className="max-w-7xl mx-auto flex items-center justify-between">
                                         <button
@@ -692,7 +474,7 @@ export default function CourseContent() {
                                     </div>
                                 </div>
                             )}
-                            {currentItem?.type === "ACTIVITY" && (currentItem.sections?.length ?? 0) > 1 && (
+                            {currentItem?.type === "ACTIVITY" && totalSections > 1 && (
                                 <div className="border-t border-white/10 backdrop-blur-sm px-8 py-4">
                                     <div className="max-w-7xl mx-auto flex items-center justify-between">
                                         <button
@@ -704,16 +486,51 @@ export default function CourseContent() {
                                         </button>
                                         
                                         <div className="text-sm text-gray-400">
-                                            Section {currentSectionIndex + 1} of {currentItem.sections?.length ?? 0}
+                                            Section {currentSectionIndex + 1} of {totalSections}
                                         </div>
                                         
                                         <button
-                                            onClick={() => setCurrentSectionIndex(prev => Math.min((currentItem.sections?.length ?? 1) - 1, prev + 1))}
-                                            disabled={currentSectionIndex === (currentItem.sections?.length ?? 1) - 1}
+                                            onClick={() => setCurrentSectionIndex(prev => Math.min((totalSections ?? 1) - 1, prev + 1))}
+                                            disabled={currentSectionIndex === (totalSections ?? 1) - 1}
                                             className="px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed transition"
                                         >
                                             Next Section →
                                         </button>
+                                    </div>
+                                </div>
+                            )}
+                            {currentItem?.type === "ACTIVITY" && 
+                             currentSection?.sectionType === "CODE" ? (
+                                <ActivityCodeLayout
+                                    item={currentItem}
+                                    section={currentSection}
+                                    sectionIndex={currentSectionIndex}
+                                    codeValue={codeValue}
+                                    onCodeChange={setCodeValue}
+                                    selectedTestCase={selectedTestCase}
+                                    onSelectTestCase={setSelectedTestCase}
+                                    testResults={testResults}
+                                    isRunning={isRunning}
+                                    onRun={handleRunCode}
+                                    onSubmit={handleSubmitCode}
+                                    PreviewRenderer={PreviewRenderer}
+                                />
+                            ) : (
+                                // Standard layout for lessons and MCQ sections
+                                <div className="flex-1 overflow-y-auto">
+                                    <div className="max-w-8xl mx-auto px-12 py-8">
+                                        {currentItem && (
+                                            <div className="mb-8">
+                                                <h1 className="text-3xl font-bold text-white mb-4">{currentItem.name}</h1>
+                                                {currentItem.description && (
+                                                    <p className="text-lg text-gray-300 mb-6">{currentItem.description}</p>
+                                                )}
+                                            </div>
+                                        )}
+                                        
+                                        <div className="text-gray-200">
+                                            {renderContent()}
+                                        </div>
                                     </div>
                                 </div>
                             )}
