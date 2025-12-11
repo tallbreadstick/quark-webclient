@@ -1,5 +1,7 @@
 import { motion } from "framer-motion";
-import { useNavigate, Link } from "react-router-dom";
+import { Link } from "react-router-dom";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faClock, faBook, faPlus, faStore, faChartLine, faGraduationCap } from "@fortawesome/free-solid-svg-icons";
 import Page from "../components/page/Page";
 import { loadSessionState } from "../types/UserSession";
 import { useEffect, useState } from "react";
@@ -10,7 +12,6 @@ import type { DatabaseCourse } from "../types/CourseTypes";
 
 export default function HomePage() {
     const { userSession, setUserSession } = loadSessionState();
-    const navigate = useNavigate();
     const [courses, setCourses] = useState<DatabaseCourse[] | null>(null);
     const [loading, setLoading] = useState(true);
     const [profileUserType, setProfileUserType] = useState<"educator" | "learner" | "student" | undefined>(undefined);
@@ -108,7 +109,6 @@ export default function HomePage() {
     }, [userSession, isLoggedIn]);
 
     const isEducator = profileUserType === 'educator';
-    const isLearner = profileUserType === 'student';
 
     const getWelcomeMessage = () => {
         if (isEducator) {
@@ -165,40 +165,78 @@ export default function HomePage() {
                             {getWelcomeMessage()}
                         </p>
 
-                        <section className="grid grid-cols-3 gap-6 mb-16">
-                            <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-6 h-40 flex flex-col justify-center items-center">
-                                <span className="text-gray-400">[UNDER CONSTRUCTION]</span>
-                                <p className="mt-2 text-sm text-gray-500">Recent Activity</p>
-                            </div>
 
+                        {/* Quick Actions */}
+                        <section className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-12">
                             {isEducator ? (
-                                <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-6 h-40 flex flex-col justify-center items-center">
-                                    <span className="text-gray-400">[UNDER CONSTRUCTION]</span>
-                                    <p className="mt-2 text-sm text-gray-500">Course Analytics</p>
-                                </div>
+                                <>
+                                    <Link
+                                        to="/my-courses/create"
+                                        className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-6 hover:border-blue-500/50 transition-all duration-300 group"
+                                    >
+                                        <div className="flex items-center gap-4">
+                                            <div className="w-12 h-12 bg-blue-500/20 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                                                <FontAwesomeIcon icon={faPlus} className="text-blue-400 text-xl" />
+                                            </div>
+                                            <div>
+                                                <h3 className="text-lg font-semibold text-white mb-1">Create New Course</h3>
+                                                <p className="text-sm text-gray-400">Start building your next course</p>
+                                            </div>
+                                        </div>
+                                    </Link>
+                                    <Link
+                                        to="/my-courses"
+                                        className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-6 hover:border-purple-500/50 transition-all duration-300 group"
+                                    >
+                                        <div className="flex items-center gap-4">
+                                            <div className="w-12 h-12 bg-purple-500/20 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                                                <FontAwesomeIcon icon={faBook} className="text-purple-400 text-xl" />
+                                            </div>
+                                            <div>
+                                                <h3 className="text-lg font-semibold text-white mb-1">Manage Courses</h3>
+                                                <p className="text-sm text-gray-400">View and edit your courses</p>
+                                            </div>
+                                        </div>
+                                    </Link>
+                                </>
                             ) : (
-                                <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-6 h-40 flex flex-col justify-center items-center">
-                                    <span className="text-gray-400">[UNDER CONSTRUCTION]</span>
-                                    <p className="mt-2 text-sm text-gray-500">Learning Progress</p>
-                                </div>
-                            )}
-
-                            {isEducator ? (
-                                <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-6 h-40 flex flex-col justify-center items-center">
-                                    <span className="text-gray-400">[UNDER CONSTRUCTION]</span>
-                                    <p className="mt-2 text-sm text-gray-500">Student Engagement</p>
-                                </div>
-                            ) : (
-                                <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-6 h-40 flex flex-col justify-center items-center">
-                                    <span className="text-gray-400">[UNDER CONSTRUCTION]</span>
-                                    <p className="mt-2 text-sm text-gray-500">View Enrolled Courses</p>
-                                </div>
+                                <>
+                                    <Link
+                                        to="/marketplace"
+                                        className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-6 hover:border-blue-500/50 transition-all duration-300 group"
+                                    >
+                                        <div className="flex items-center gap-4">
+                                            <div className="w-12 h-12 bg-blue-500/20 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                                                <FontAwesomeIcon icon={faStore} className="text-blue-400 text-xl" />
+                                            </div>
+                                            <div>
+                                                <h3 className="text-lg font-semibold text-white mb-1">Browse Marketplace</h3>
+                                                <p className="text-sm text-gray-400">Discover new courses to learn</p>
+                                            </div>
+                                        </div>
+                                    </Link>
+                                    <Link
+                                        to="/my-courses"
+                                        className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-6 hover:border-green-500/50 transition-all duration-300 group"
+                                    >
+                                        <div className="flex items-center gap-4">
+                                            <div className="w-12 h-12 bg-green-500/20 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                                                <FontAwesomeIcon icon={faGraduationCap} className="text-green-400 text-xl" />
+                                            </div>
+                                            <div>
+                                                <h3 className="text-lg font-semibold text-white mb-1">My Courses</h3>
+                                                <p className="text-sm text-gray-400">Continue your enrolled courses</p>
+                                            </div>
+                                        </div>
+                                    </Link>
+                                </>
                             )}
                         </section>
 
                         <div className="mb-6">
                             <div className="flex justify-between items-center mb-6">
-                                <h2 className="text-xl font-semibold text-white">
+                                <h2 className="text-xl font-semibold text-white flex items-center gap-2">
+                                    <FontAwesomeIcon icon={faClock} className="text-blue-400" />
                                     {isEducator ? "Your Recent Courses" : "Your Enrolled Courses"}
                                 </h2>
                                 <Link 
@@ -259,7 +297,9 @@ export default function HomePage() {
                                 </div>
                             ) : (
                                 <div className="bg-white/5 backdrop-blur-lg border border-white/10 rounded-2xl p-8 text-center text-gray-400">
-                                    <div className="text-4xl mb-4">📚</div>
+                                    <div className="w-16 h-16 mx-auto mb-4 bg-gray-700/30 rounded-full flex items-center justify-center">
+                                        <FontAwesomeIcon icon={faBook} className="text-gray-500 text-3xl" />
+                                    </div>
                                     {isEducator ? (
                                         <>
                                             <p className="mb-4 text-lg">You haven't created any courses yet.</p>
