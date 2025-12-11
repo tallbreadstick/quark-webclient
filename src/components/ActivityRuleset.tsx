@@ -194,7 +194,7 @@ export const ActivityRuleset: React.FC<ActivityRulesetProps> = ({
                         return `${y}-${m}-${dd}`;
                     })()}
                     onChange={handleDateChange}
-                    className="w-full bg-slate-800/50 border border-white/10 rounded-lg px-3 py-2 text-white focus:border-blue-500/40 focus:outline-none transition-all"
+                    className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500/50 transition hover:bg-blue-500/10 hover:border-blue-500/30"
                 />
 
                 <label className="text-sm font-medium text-slate-400 mb-2 block mt-3">Close Time</label>
@@ -206,36 +206,60 @@ export const ActivityRuleset: React.FC<ActivityRulesetProps> = ({
                         return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
                     })()}
                     onChange={handleTimeChange}
-                    className="w-full bg-slate-800/50 border border-white/10 rounded-lg px-3 py-2 text-white focus:border-blue-500/40 focus:outline-none transition-all"
+                    className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500/50 transition hover:bg-blue-500/10 hover:border-blue-500/30"
                 />
 
                 <div className="mt-4">
                     <label className="text-sm font-medium text-slate-400 mb-2 block">Time Exceeded Penalty</label>
-                    <select
-                        value={ruleset.timeExceededPenalty ?? 'NO_TIME_LIMIT'}
-                        onChange={(e) => onRulesetFieldUpdate('timeExceededPenalty', e.target.value)}
-                        disabled={!timeLimitEnabled}
-                        className={`w-full bg-slate-800/50 border border-white/10 rounded-lg px-3 py-2 text-white focus:border-blue-500/40 focus:outline-none transition-all ${!timeLimitEnabled ? 'opacity-40 cursor-not-allowed' : ''}`}
-                    >
-                        <option value="NO_TIME_LIMIT" className="bg-black text-white">No time limit</option>
-                        <option value="CLOSE_ACTIVITY" className="bg-black text-white">Close activity</option>
-                        <option value="DEDUCT_SCORE" className="bg-black text-white">Deduct score</option>
-                    </select>
+                    <div className="relative">
+                        <select
+                            value={ruleset.timeExceededPenalty ?? 'NO_TIME_LIMIT'}
+                            onChange={(e) => onRulesetFieldUpdate('timeExceededPenalty', e.target.value)}
+                            disabled={!timeLimitEnabled}
+                            className={`w-full appearance-none bg-white/5 border border-white/10 rounded-lg px-4 py-3 pr-10 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500/50 transition hover:bg-blue-500/10 hover:border-blue-500/30 cursor-pointer [&>option]:bg-slate-900 [&>option]:text-white [&>option:checked]:bg-blue-600 ${!timeLimitEnabled ? 'opacity-40 cursor-not-allowed' : ''}`}
+                        >
+                            <option value="NO_TIME_LIMIT">No time limit</option>
+                            <option value="CLOSE_ACTIVITY">Close activity</option>
+                            <option value="DEDUCT_SCORE">Deduct score</option>
+                        </select>
+                        <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                            <svg
+                                className="h-4 w-4 text-blue-400"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                            >
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                            </svg>
+                        </div>
+                    </div>
                 </div>
 
                 {/* Deduction Strategy & Points Deduction */}
                 <div className="mt-4 grid grid-cols-2 gap-4">
                     <div>
                         <label className="text-sm font-medium text-slate-400 mb-2 block">Deduction Strategy</label>
-                        <select
-                            value={strategy}
-                            onChange={(e) => onRulesetFieldUpdate('deductionStrategy', e.target.value)}
-                            disabled={!timeLimitEnabled}
-                            className={`w-full bg-slate-800/50 border border-white/10 rounded-lg px-3 py-2 text-white focus:border-blue-500/40 focus:outline-none transition-all ${!timeLimitEnabled ? 'opacity-40 cursor-not-allowed' : ''}`}
-                        >
-                            <option value="FLAT" className="bg-black text-white">Flat</option>
-                            <option value="PERCENTAGE" className="bg-black text-white">Percentage</option>
-                        </select>
+                        <div className="relative">
+                            <select
+                                value={strategy}
+                                onChange={(e) => onRulesetFieldUpdate('deductionStrategy', e.target.value)}
+                                disabled={!timeLimitEnabled}
+                                className={`w-full appearance-none bg-white/5 border border-white/10 rounded-lg px-4 py-3 pr-10 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500/50 transition hover:bg-blue-500/10 hover:border-blue-500/30 cursor-pointer [&>option]:bg-slate-900 [&>option]:text-white [&>option:checked]:bg-blue-600 ${!timeLimitEnabled ? 'opacity-40 cursor-not-allowed' : ''}`}
+                            >
+                                <option value="FLAT">Flat</option>
+                                <option value="PERCENTAGE">Percentage</option>
+                            </select>
+                            <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                                <svg
+                                    className="h-4 w-4 text-blue-400"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                >
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                </svg>
+                            </div>
+                        </div>
                     </div>
 
                     <div>
@@ -248,7 +272,7 @@ export const ActivityRuleset: React.FC<ActivityRulesetProps> = ({
                             value={ruleset.pointsDeduction ?? ''}
                             onChange={(e) => handlePointsDeductionChange(e.target.value)}
                             disabled={pointsDeductionDisabled}
-                            className={`w-full bg-slate-800/50 border border-white/10 rounded-lg px-3 py-2 text-white focus:border-blue-500/40 focus:outline-none transition-all ${pointsDeductionDisabled ? 'opacity-40 cursor-not-allowed' : ''}`}
+                            className={`w-full bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500/50 transition hover:bg-blue-500/10 hover:border-blue-500/30 ${pointsDeductionDisabled ? 'opacity-40 cursor-not-allowed' : ''}`}
                         />
                     </div>
                 </div>
