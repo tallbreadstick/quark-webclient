@@ -19,8 +19,11 @@ export const ItemTypeModal: React.FC<ItemTypeModalProps> = ({
     if (!isOpen) return null;
 
     return createPortal(
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-            <div className="bg-slate-900 border border-white/10 rounded-2xl shadow-2xl p-8 max-w-md w-full mx-4 animate-in zoom-in-95 duration-200">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-200 cursor-pointer">
+            <div 
+                className="bg-slate-900 border border-white/10 rounded-2xl shadow-2xl p-8 max-w-md w-full mx-4 animate-in zoom-in-95 duration-200"
+                onClick={(e) => e.stopPropagation()}
+            >
                 <h3 className="text-2xl font-bold text-white mb-2">Choose Item Type</h3>
                 <p className="text-slate-400 mb-6">Select the type of content you want to add to this chapter.</p>
 
@@ -28,7 +31,7 @@ export const ItemTypeModal: React.FC<ItemTypeModalProps> = ({
                     {/* Lesson Button */}
                     <button
                         onClick={onLessonCreate}
-                        className="w-full p-4 bg-gradient-to-r from-blue-600/20 to-blue-500/20 hover:from-blue-600/30 hover:to-blue-500/30 border border-blue-500/30 hover:border-blue-500/50 rounded-xl transition-all group"
+                        className="w-full p-4 bg-gradient-to-r from-blue-600/20 to-blue-500/20 hover:from-blue-600/30 hover:to-blue-500/30 border border-blue-500/30 hover:border-blue-500/50 rounded-xl transition-all group cursor-pointer"
                     >
                         <div className="flex items-center gap-4">
                             <div className="w-12 h-12 rounded-lg bg-blue-500/20 flex items-center justify-center">
@@ -44,7 +47,7 @@ export const ItemTypeModal: React.FC<ItemTypeModalProps> = ({
                     {/* Activity Button */}
                     <button
                         onClick={onActivityCreate}
-                        className="w-full p-4 bg-gradient-to-r from-purple-600/20 to-purple-500/20 hover:from-purple-600/30 hover:to-purple-500/30 border border-purple-500/30 hover:border-purple-500/50 rounded-xl transition-all group"
+                        className="w-full p-4 bg-gradient-to-r from-purple-600/20 to-purple-500/20 hover:from-purple-600/30 hover:to-purple-500/30 border border-purple-500/30 hover:border-purple-500/50 rounded-xl transition-all group cursor-pointer"
                     >
                         <div className="flex items-center gap-4">
                             <div className="w-12 h-12 rounded-lg bg-purple-500/20 flex items-center justify-center">
@@ -61,7 +64,7 @@ export const ItemTypeModal: React.FC<ItemTypeModalProps> = ({
                 {/* Cancel Button */}
                 <button
                     onClick={onCancel}
-                    className="w-full mt-4 py-3 px-4 bg-slate-800 hover:bg-slate-700 border border-white/10 text-slate-300 hover:text-white rounded-lg transition-all"
+                    className="w-full mt-4 py-3 px-4 bg-slate-800 hover:bg-slate-700 border border-white/10 text-slate-300 hover:text-white rounded-lg transition-all cursor-pointer"
                 >
                     Cancel
                 </button>
