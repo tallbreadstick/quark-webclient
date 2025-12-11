@@ -1,5 +1,5 @@
 import type { Chapter, Item, Selection } from "../types/ChapterEditorTypes";
-import { fetchChapterWithItems } from "../endpoints/ChapterHandler";
+import { fetchChapterWithItems, reorderItems } from "../endpoints/ChapterHandler";
 import { addLesson as apiAddLesson, editLesson as apiEditLesson, deleteLesson as apiDeleteLesson, type LessonRequest } from "../endpoints/LessonHandler";
 import { addActivity as apiAddActivity, editActivity as apiEditActivity, deleteActivity as apiDeleteActivity, type ActivityRequest } from "../endpoints/ActivityHandler";
 import { assignUiSerials, parseRuleset } from "./chapterEditorUtils";
@@ -44,7 +44,7 @@ export async function createItemAction(
                     }
                 }
             } else {
-                alert("Failed to add lesson: " + result.err);
+                console.error("Failed to add lesson:", result.err);
             }
         } else {
             const request: ActivityRequest = {
@@ -74,17 +74,17 @@ export async function createItemAction(
                     }
                 }
             } else {
-                alert("Failed to add activity: " + result.err);
+                console.error("Failed to add activity:", result.err);
             }
         }
     } catch (err) {
         console.error("Error adding item:", err);
-        alert("Error adding item");
     }
 }
 
 /**
  * Remove/delete an item from a chapter
+ * Note: Confirmation is handled by ActionModal in the UI
  */
 export async function removeItemAction(
     chapterId: number,
@@ -95,8 +95,6 @@ export async function removeItemAction(
     onChaptersUpdate: (chapters: Chapter[]) => void,
     onSelectionUpdate: (selection: Selection) => void
 ) {
-    if (!confirm("Are you sure you want to delete this item?")) return;
-
     try {
         const chapter = chapters.find(c => c.id === chapterId);
         const item = chapter?.items.find(i => i.id === itemId);
@@ -114,15 +112,17 @@ export async function removeItemAction(
             onChaptersUpdate(chapters.map(c =>
                 c.id === chapterId ? { ...c, items: c.items.filter(i => i.id !== itemId) } : c
             ));
+            
             if (selection?.type === 'item' && selection.chapterId === chapterId && selection.serialId === item.uiSerialId) {
                 onSelectionUpdate({ type: 'chapter', id: chapterId });
             }
         } else {
-            alert("Failed to delete item: " + result.err);
+            console.error("Failed to delete item:", result.err);
+            throw new Error(result.err ?? "Failed to delete item");
         }
     } catch (err) {
         console.error("Error deleting item:", err);
-        alert("Error deleting item");
+        throw err;
     }
 }
 
@@ -188,27 +188,53 @@ export async function updateItemAction(
 /**
  * Reorder items via drag and drop (within same chapter or between chapters)
  */
-export function reorderItemsAction(
+export async function reorderItemsAction(
     fromChapterId: number,
     fromIdx: number,
     toChapterId: number,
     toIdx: number,
     chapters: Chapter[],
+    jwt: string,
     onChaptersUpdate: (chapters: Chapter[]) => void
 ) {
-    onChaptersUpdate(chapters.map(c => ({ ...c, items: [...c.items] })).reduce((copy, chapter) => {
-        if (chapter.id === fromChapterId && chapter.id === toChapterId) {
-            // Reordering within same chapter
-            const [movedItem] = chapter.items.splice(fromIdx, 1);
-            chapter.items.splice(toIdx, 0, movedItem);
-        } else if (chapter.id === fromChapterId) {
-            // Remove from source chapter (will be added to dest below)
-        } else if (chapter.id === toChapterId) {
-            // Add to destination chapter
+    // Create a copy of chapters with items
+    const newChapters = chapters.map(c => ({ ...c, items: [...c.items] }));
+    
+    const sourceChap = newChapters.find(c => c.id === fromChapterId);
+    const destChap = newChapters.find(c => c.id === toChapterId);
+    
+    if (!sourceChap || !destChap) return;
+    
+    // Move item from source to destination
+    const [movedItem] = sourceChap.items.splice(fromIdx, 1);
+    destChap.items.splice(toIdx, 0, movedItem);
+    
+    // Update UI immediately
+    onChaptersUpdate(newChapters);
+    
+    // Call API to persist the reorder for destination chapter
+    try {
+        const itemIds = destChap.items.map(item => item.id);
+        const result = await reorderItems(toChapterId, itemIds, jwt);
+        
+        if (!result.ok) {
+            console.error("Failed to reorder items:", result.err);
+            onChaptersUpdate(chapters);
+            return;
         }
-        copy.push(chapter);
-        return copy;
-    }, [] as Chapter[]));
-
-    // TODO: Call item reorder API when available
+        
+        // If moving between different chapters, also update source chapter
+        if (fromChapterId !== toChapterId) {
+            const sourceItemIds = sourceChap.items.map(item => item.id);
+            const sourceResult = await reorderItems(fromChapterId, sourceItemIds, jwt);
+            
+            if (!sourceResult.ok) {
+                console.error("Failed to update source chapter:", sourceResult.err);
+                onChaptersUpdate(chapters);
+            }
+        }
+    } catch (err) {
+        console.error("Error reordering items:", err);
+        onChaptersUpdate(chapters);
+    }
 }

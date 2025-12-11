@@ -145,7 +145,7 @@ export default function LoginPage() {
                             <input 
                                 type="checkbox" 
                                 name="remember" 
-                                className="w-4 h-4 bg-white/5 border border-white/10 rounded focus:ring-blue-500 focus:ring-2 cursor-pointer" 
+                                className="w-4 h-4 bg-white/5 border border-white/10 rounded cursor-pointer accent-blue-500" 
                             />
                             <p className="text-[#bdcdff]">Remember me</p>
                         </label>
