@@ -125,7 +125,7 @@ const Navbar: FunctionComponent<NavbarProps> = ({ userSession, setUserSession })
                                 setDropdownOpen(false);
                                 navigate('/profile');
                             }}
-                            className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-200 hover:bg-white/5 rounded"
+                            className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-200 hover:bg-white/5 rounded cursor-pointer"
                         >
                             <FontAwesomeIcon icon={faUser} />
                             <span>View Profile</span>
@@ -137,7 +137,7 @@ const Navbar: FunctionComponent<NavbarProps> = ({ userSession, setUserSession })
                                 setUserSession(null);
                                 navigate('/');
                             }}
-                            className="w-full mt-1 flex items-center gap-2 px-3 py-2 text-sm text-gray-200 hover:bg-white/5 rounded"
+                            className="w-full mt-1 flex items-center gap-2 px-3 py-2 text-sm text-gray-200 hover:bg-white/5 rounded cursor-pointer"
                         >
                             <FontAwesomeIcon icon={faArrowRightFromBracket} />
                             <span>Logout</span>
