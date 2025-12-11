@@ -214,26 +214,24 @@ export default function CourseContent() {
             }
 
             return (
-                <div className="flex flex-col h-full">
-                    <div className="flex-1 overflow-y-auto">
-                        {currentPage && (
-                            <div className="bg-black/40 backdrop-blur-sm border border-white/10 rounded-xl p-6">
-                                <div className="prose prose-lg max-w-none prose-invert prose-headings:text-white prose-p:text-gray-200 prose-strong:text-white prose-code:text-blue-300 prose-li:text-gray-200">
-                                    {currentPage.content ? (
-                                        <Suspense fallback={<div className="text-gray-400">Loading content...</div>}>
-                                            <PreviewRenderer value={currentPage.content} />
-                                        </Suspense>
-                                    ) : (
-                                        <p className="text-gray-400">No content available for this page.</p>
-                                    )}
-                                </div>
+                <>
+                    {currentPage && (
+                        <div className="bg-black/40 backdrop-blur-sm border border-white/10 rounded-xl p-6 mb-6">
+                            <div className="prose prose-lg max-w-none prose-invert prose-headings:text-white prose-p:text-gray-200 prose-strong:text-white prose-code:text-blue-300 prose-li:text-gray-200">
+                                {currentPage.content ? (
+                                    <Suspense fallback={<div className="text-gray-400">Loading content...</div>}>
+                                        <PreviewRenderer value={currentPage.content} />
+                                    </Suspense>
+                                ) : (
+                                    <p className="text-gray-400">No content available for this page.</p>
+                                )}
                             </div>
-                        )}
-                    </div>
+                        </div>
+                    )}
 
                     {/* Pagination Controls */}
                     {totalPages > 1 && (
-                        <div className="mt-6 flex items-center justify-between border-t border-white/10 pt-4">
+                        <div className="flex items-center justify-between bg-black/40 backdrop-blur-sm border border-white/10 rounded-xl p-4">
                             <button
                                 onClick={() => setCurrentPageIndex(prev => Math.max(0, prev - 1))}
                                 disabled={currentPageIndex === 0}
@@ -255,7 +253,7 @@ export default function CourseContent() {
                             </button>
                         </div>
                     )}
-                </div>
+                </>
             );
         }
 
@@ -290,9 +288,9 @@ export default function CourseContent() {
 
     return (
         <Page title={`Quark | ${courseTitle}`} userSession={userSession} setUserSession={setUserSession}>
-            <div className="relative z-10 min-h-[calc(100vh-7rem)] flex">
+            <div className="relative z-10 h-[calc(100vh-7rem)] flex">
                 {/* Sidebar */}
-                <aside className="w-80 border-r border-white/10 bg-white/5 overflow-y-auto">
+                <aside className="w-80 border-r border-white/10 bg-white/5 overflow-y-auto h-full flex flex-col">
                     <div className="p-6 border-b border-white/10">
                         <h2 className="text-xl font-bold text-white mb-2">{courseTitle}</h2>
                         {course?.description && (
@@ -318,7 +316,8 @@ export default function CourseContent() {
                         </div>
                     )}
 
-                    {!loading && !error && chapters.map((chapter, chapterIdx) => (
+                    <div className="flex-1 overflow-y-auto">
+                        {!loading && !error && chapters.map((chapter, chapterIdx) => (
                         <div key={chapter.id} className="border-b border-white/10">
                             <div className="px-6 py-4 bg-white/3">
                                 <h3 className="text-sm font-semibold text-white uppercase tracking-wide">
@@ -370,7 +369,8 @@ export default function CourseContent() {
                                 )}
                             </div>
                         </div>
-                    ))}
+                        ))}
+                    </div>
                 </aside>
 
                 {/* Main Content */}
