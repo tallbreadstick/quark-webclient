@@ -9,9 +9,8 @@ import CourseCard from "../components/CourseCard";
 import SearchFilterBar from "../components/SearchFilterBar";
 import Pagination from "../components/Pagination";
 import LoadingSkeleton from "../components/LoadingSkeleton";
-import EmptyState from "../components/EmptyState";
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faLock } from '@fortawesome/free-solid-svg-icons';
+import { faLock, faBook } from '@fortawesome/free-solid-svg-icons';
 import { filterCourses, sortCourses, paginate, getTotalPages } from "../utils/courseUtils";
 import type { DatabaseCourse } from "../types/CourseTypes";
 
@@ -40,13 +39,12 @@ export default function CoursesPage() {
                     return;
                 }
 
-                // Fetch profile info first - FIXED: Find exact matching user
+                // Fetch profile info first
                 const lookupId = userSession.username || userSession.email;
                 const usersRes = await fetchUsers(lookupId);
                 let normalized: "educator" | "learner" | undefined = undefined;
                 
                 if (usersRes.status === "OK" && usersRes.ok && usersRes.ok.length > 0) {
-                    // Find the exact matching user - SAME AS MARKETPLACE
                     const currentUser = usersRes.ok.find((user: any) => 
                         user.username === userSession.username || 
                         user.email === userSession.email
@@ -58,12 +56,10 @@ export default function CoursesPage() {
                     }
                 }
 
-                // Fetch courses - ADD USER TYPE FILTER
+                // Fetch courses
                 const params: Record<string, string | undefined> = { 
                     page: String(currentPage),
-                    // Add user type specific filtering
                     ...(normalized === 'educator' && { my_courses: 'true' }),
-                    // Add forkable filter for educators
                     ...(normalized === 'educator' && showForkableOnly && { forkable: 'true' })
                 };
                 
@@ -73,7 +69,6 @@ export default function CoursesPage() {
                         const enrolledRes = await getEnrolledCourses(userSession.jwt ?? "");
 
                         if (enrolledRes.status === "OK" && enrolledRes.ok && enrolledRes.ok.length > 0) {
-                            // Enrolled items may only contain courseId; fetch course details for each
                             const courseDetails = await Promise.all(
                                 enrolledRes.ok.map(async (p: any) => {
                                     const courseId = p.courseId ?? p.id ?? (p.course && p.course.id);
@@ -89,7 +84,6 @@ export default function CoursesPage() {
                                         } as DatabaseCourse;
                                     }
 
-                                    // Fallback minimal shape
                                     return {
                                         id: courseId,
                                         name: p.courseName ?? p.name ?? "Unnamed Course",
@@ -121,7 +115,6 @@ export default function CoursesPage() {
 
                 if (cancelled) return;
 
-                // Map courses to include owner info and forkable status
                 const coursesWithOwners: DatabaseCourse[] = await Promise.all(
                     data.map(async (c: any) => {
                         const ownerUsername = c.owner || "—";
@@ -133,7 +126,6 @@ export default function CoursesPage() {
                     })
                 );
 
-                // Client-side filtering as backup for forkable
                 let filteredCourses = coursesWithOwners;
                 if (normalized === 'educator' && showForkableOnly) {
                     filteredCourses = coursesWithOwners.filter(course => course.forkable);
@@ -184,6 +176,8 @@ export default function CoursesPage() {
                         <p className="text-gray-400">
                             {profileUserType === 'educator'
                                 ? "Manage and create your courses"
+                                : profileUserType === 'learner'
+                                ? "View and continue your enrolled courses"
                                 : "To view your enrolled or managed courses, sign in first"
                             }
                         </p>
@@ -199,19 +193,20 @@ export default function CoursesPage() {
                     />
 
                     {!userSession ? (
-                        <EmptyState
-                            message="You need to be signed in to view your courses."
-                            icon={<FontAwesomeIcon icon={faLock} />}
-                        >
-                            <div className="flex justify-center gap-3 mt-4">
-                                <Link to="/login" className="px-4 py-2 border border-[#566fb8] rounded-lg hover:bg-blue-500 hover:text-white transition font-semibold cursor-pointer">
+                        <div className="bg-white/5 backdrop-blur-lg border border-white/10 rounded-2xl p-8 text-center text-gray-400">
+                            <div className="w-16 h-16 mx-auto mb-4 bg-gray-700/30 rounded-full flex items-center justify-center">
+                                <FontAwesomeIcon icon={faLock} className="text-gray-500 text-3xl" />
+                            </div>
+                            <p className="mb-4 text-lg">You need to be signed in to view your courses.</p>
+                            <div className="flex justify-center gap-3">
+                                <Link to="/login" className="px-4 py-2 border border-white/20 rounded-lg text-white/80 hover:bg-white/5 transition">
                                     Sign in
                                 </Link>
-                                <Link to="/register" className="px-4 py-2 bg-blue-600 rounded-md text-white hover:bg-blue-700 transition cursor-pointer">
+                                <Link to="/register" className="px-4 py-2 bg-blue-600 rounded-md text-white hover:bg-blue-700 transition">
                                     Register
                                 </Link>
                             </div>
-                        </EmptyState>
+                        </div>
                     ) : (
                         <section>
                             {loading ? (
@@ -219,14 +214,26 @@ export default function CoursesPage() {
                             ) : error ? (
                                 <div className="text-red-400 text-center py-12">Error: {error}</div>
                             ) : courses && courses.length === 0 ? (
-                                <EmptyState
-                                    message={canCreateCourse 
-                                        ? "You don't have any courses yet." 
-                                        : "You haven't enrolled in any courses yet."
-                                    }
-                                    actionText={canCreateCourse ? "Create your first course" : "Browse Courses"}
-                                    actionLink={canCreateCourse ? "/my-courses/create" : "/marketplace"}
-                                />
+                                <div className="bg-white/5 backdrop-blur-lg border border-white/10 rounded-2xl p-8 text-center text-gray-400">
+                                    <div className="w-16 h-16 mx-auto mb-4 bg-gray-700/30 rounded-full flex items-center justify-center">
+                                        <FontAwesomeIcon icon={faBook} className="text-gray-500 text-3xl" />
+                                    </div>
+                                    {canCreateCourse ? (
+                                        <>
+                                            <p className="mb-4 text-lg">You haven't created any courses yet.</p>
+                                            <Link to="/my-courses/create" className="px-4 py-2 bg-blue-600 rounded-md text-white hover:bg-blue-700 transition text-sm">
+                                                Create your first course
+                                            </Link>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <p className="mb-4 text-lg">You haven't enrolled in any courses yet.</p>
+                                            <Link to="/marketplace" className="px-4 py-2 bg-blue-600 rounded-md text-white hover:bg-blue-700 transition text-sm">
+                                                Browse Courses
+                                            </Link>
+                                        </>
+                                    )}
+                                </div>
                             ) : (
                                 <>
                                     <div className="flex justify-between items-center mb-6">
