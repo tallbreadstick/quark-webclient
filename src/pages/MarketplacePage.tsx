@@ -277,19 +277,21 @@ export default function MarketplacePage() {
                                             }
                                             setCurrentPage(1);
                                         }}
-                                        className="px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white cursor-pointer"
+                                        className="appearance-none px-4 py-2 pr-10 bg-white/10 border border-white/20 rounded-lg text-white font-medium cursor-pointer hover:bg-white/15 hover:border-white/30 transition-all focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                                        style={{
+                                            colorScheme: 'dark',
+                                            backgroundColor: '#000',
+                                            color: '#fff'
+                                        }}
                                     >
                                         <option value="newest">Sort by: Newest</option>
                                         <option value="oldest">Sort by: Oldest</option>
                                         <option value="name">Sort by: Name</option>
-                                        {userSession && isEducator && (
-                                            <option value="forkable">Show: Forkable Only</option>
-                                        )}
                                     </select>
 
                                     <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
                                         <svg
-                                            className="h-4 w-4 text-blue-400"
+                                            className="h-5 w-5 text-blue-400"
                                             fill="none"
                                             stroke="currentColor"
                                             viewBox="0 0 24 24"

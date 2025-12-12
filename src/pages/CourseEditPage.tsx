@@ -514,15 +514,6 @@ export default function CourseEditPage() {
                                         <input value={tagsText} onChange={(e) => setTagsText(e.target.value)} placeholder="e.g. 1,2,3"
                                             className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500/50 transition" />
                                         <div className="mt-2 flex items-center gap-4">
-                                            <label className="inline-flex items-center gap-2 text-sm cursor-pointer">
-                                                <input
-                                                    type="checkbox"
-                                                    className="w-4 h-4 accent-blue-500 cursor-pointer"
-                                                    checked={forkable}
-                                                    onChange={(e) => setForkable(e.target.checked)}
-                                                />
-                                                <span className="text-white">Forkable</span>
-                                                </label>
                                             <div className="ml-auto text-sm text-white flex items-center gap-2">
                                                 Visibility:
                                                 <div className="relative">

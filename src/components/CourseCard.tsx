@@ -61,18 +61,6 @@ export default function CourseCard({
                 </button>
             );
         }
-
-        if (isUserEducator && onFork && course.forkable) {
-            return (
-                <button 
-                    onClick={(e) => onFork(course.id, course.name, e)}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition cursor-pointer"
-                >
-                    Fork
-                </button>
-            );
-        }
-
         return null;
     };
 

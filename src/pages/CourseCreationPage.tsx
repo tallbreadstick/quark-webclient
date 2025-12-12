@@ -207,15 +207,6 @@ export default function CourseCreationPage() {
                                     </div>
 
                                     <div className="flex items-center gap-4">
-                                        <label className="inline-flex items-center gap-2 text-sm text-black-300">
-                                            <input
-                                                type="checkbox"
-                                                checked={forkable}
-                                                onChange={(e) => setForkable(e.target.checked)}
-                                            />
-                                            <span className="text-white">Forkable</span>
-                                        </label>
-
                                         <label className="ml-auto inline-flex items-center gap-2 text-sm text-black-300">
                                             <div className="text-sm mr-2 text-white">Visibility:</div>
                                             <select

@@ -1,21 +1,15 @@
 // src/pages/ProfilePage.tsx
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
 import Page from "../components/page/Page";
 import { loadSessionState } from "../types/UserSession";
-import ProfileTab from "../components/ProfileTab";
 import UploadControls from "../components/UploadControls";
 import BioEditor from "../components/BioEditor";
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faTrophy, faCertificate, faChartPie, faChartLine } from '@fortawesome/free-solid-svg-icons';
+import ProfileDashboard from "../components/ProfileDashboard";
 import { useUserProfile } from "../utils/useUserProfile";
 
 const Profile = () => {
   const { userSession, setUserSession } = loadSessionState();
-  const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState("achievements");
   
-  const { profile: userProfile, loading } = useUserProfile(userSession);
+  const { profile: userProfile } = useUserProfile(userSession);
   const isEducator = userProfile?.userType === "educator";
 
   if (!userSession) {
@@ -29,7 +23,6 @@ const Profile = () => {
   }
 
   const username = userSession.username || "User";
-  const tabs: any[] = [];
 
   return (
     <Page title={`Quark | ${username}'s Profile`} userSession={userSession} setUserSession={setUserSession}>
@@ -60,105 +53,9 @@ const Profile = () => {
             </div>
           </div>
 
-          {/* Tabs */}
-          <ProfileTab tabs={tabs} activeTab={activeTab} onTabChange={setActiveTab} />
-
-          {/* Tab Content */}
-          <div className="space-y-6">
-            {/* Achievements */}
-            {activeTab === "achievements" && (
-              <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-6">
-                <div className="flex items-center gap-2 mb-6">
-                  <FontAwesomeIcon icon={faTrophy} className="text-2xl" />
-                  <h2 className="text-xl font-semibold text-white">
-                    {isEducator ? "Teaching Achievements" : "Your Badges"}
-                  </h2>
-                </div>
-                <div className="p-6 rounded-lg bg-white/5 text-center text-gray-400">
-                  <p className="text-sm">No achievements yet.</p>
-                  <p className="text-xs mt-2">
-                    {isEducator 
-                      ? "Create engaging courses to earn teaching achievements."
-                      : "Complete courses to earn achievements and badges."}
-                  </p>
-                </div>
-              </div>
-            )}
-
-            {/* Certificates */}
-            {activeTab === "certificates" && !isEducator && (
-              <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-6 text-center">
-                <FontAwesomeIcon icon={faCertificate} className="text-6xl block mb-4" />
-                <p className="text-gray-400 text-lg mb-4">
-                  Complete courses to earn certificates and showcase your achievements.
-                </p>
-                <button 
-                  onClick={() => navigate("/marketplace")} 
-                  className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-semibold"
-                >
-                  Browse Courses
-                </button>
-              </div>
-            )}
-
-            {/* Activity */}
-            {activeTab === "activity" && (
-              <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-6">
-                <div className="flex items-center gap-2 mb-6">
-                  <FontAwesomeIcon icon={faChartPie} className="text-2xl" />
-                  <h2 className="text-xl font-semibold text-white">
-                    {isEducator ? "Teaching Activity" : "Recent Activity"}
-                  </h2>
-                </div>
-                <div className="p-6 rounded-lg bg-white/5 text-center text-gray-400">
-                  <p className="text-sm">No recent activity.</p>
-                  <p className="text-xs mt-2">
-                    {isEducator
-                      ? "Your teaching activity will appear here once you create and manage courses."
-                      : "Your activity will appear here once you start using Quark."}
-                  </p>
-                </div>
-              </div>
-            )}
-
-            {/* Analytics - Only for educators */}
-            {activeTab === "analytics" && isEducator && (
-              <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-6">
-                <div className="flex items-center gap-2 mb-6">
-                  <FontAwesomeIcon icon={faChartLine} className="text-2xl" />
-                  <h2 className="text-xl font-semibold text-white">Teaching Analytics</h2>
-                </div>
-                <div className="p-6 rounded-lg bg-white/5 text-center text-gray-400">
-                  <p className="text-sm">No analytics available yet.</p>
-                  <p className="text-xs mt-2">
-                    Teaching analytics will show here once you create courses and receive student engagement.
-                  </p>
-                  <button 
-                    onClick={() => navigate("/my-courses/create")} 
-                    className="mt-4 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-semibold"
-                  >
-                    Create Your First Course
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {/* Analytics Tab for Students - Show something different or redirect */}
-            {activeTab === "analytics" && !isEducator && (
-              <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-6 text-center">
-                <FontAwesomeIcon icon={faChartLine} className="text-6xl block mb-4" />
-                <p className="text-gray-400 text-lg mb-4">
-                  Learning analytics will show your progress through courses.
-                </p>
-                <button 
-                  onClick={() => navigate("/marketplace")} 
-                  className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-semibold"
-                >
-                  Browse Courses to Start Learning
-                </button>
-              </div>
-            )}
-          </div>
+          {/* Dashboard */}
+          <ProfileDashboard userSession={userSession} userProfile={userProfile} />
+      
         </div>
       </main>
     </Page>
