@@ -156,10 +156,12 @@ export default function CourseContent() {
     const [selectedTestCase, setSelectedTestCase] = useState(0);
     const [testResults, setTestResults] = useState<string | null>(null);
     const [activeTab, setActiveTab] = useState<'intro' | { chapterIdx: number; itemIdx: number }>('intro');
-
+    const [isRunning, setIsRunning] = useState(false);
     useEffect(() => {
         if (!courseId) return;
         let cancelled = false;
+
+
 
         async function loadAll() {
             setLoading(true);
