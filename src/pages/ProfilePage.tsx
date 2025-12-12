@@ -32,7 +32,7 @@ const Profile = () => {
           <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-6 flex flex-col sm:flex-row items-center gap-6">
             <UploadControls userSession={userSession} setUserSession={setUserSession} />
             <div className="flex-1 text-center sm:text-left">
-              <div className="flex flex-col sm:flex-row items-center justify-center sm:justify-between gap-2">
+              <div className="flex flex-col sm:flex-row items-start justify-center sm:justify-between gap-2">
                 <h1 className="text-3xl font-bold text-white">{username}</h1>
               </div>
 
