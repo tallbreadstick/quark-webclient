@@ -324,7 +324,7 @@ export default function CourseContent() {
                         </div>
 
                         {currentSection?.sectionType === "MCQ" && currentSection.mcq && (
-                            <ActivityMcqSection section={currentSection} PreviewRenderer={PreviewRenderer} />
+                            <ActivityMcqSection item={currentItem} section={currentSection} PreviewRenderer={PreviewRenderer} />
                         )}
 
                         {!currentSection?.mcq && !currentSection?.code && (
