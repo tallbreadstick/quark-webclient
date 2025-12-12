@@ -313,7 +313,7 @@ export default function MarketplacePage() {
                                     <div
                                         key={course.id}
                                         onClick={() =>
-                                            userSession && navigate(`/course/${course.id}`)
+                                            userSession && navigate(`/course/${course.id}/chapters`)
                                         }
                                         className={`h-full ${userSession ? "cursor-pointer" : ""}`}
                                     >
