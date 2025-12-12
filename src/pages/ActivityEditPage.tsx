@@ -2,10 +2,12 @@ import React, { useEffect, useState } from "react";
 import Editor from "@monaco-editor/react";
 import { useParams, useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faEye, faEdit, faTrash, faGripVertical } from '@fortawesome/free-solid-svg-icons';
+import { faEye, faEdit, faTrash, faGripVertical, faPlus } from '@fortawesome/free-solid-svg-icons';
 import Page from "../components/page/Page";
 import LoadingSkeleton from "../components/LoadingSkeleton";
 import PreviewRenderer from "../components/PreviewRenderer";
+import AlertModal from "../components/modals/AlertModal";
+import ActionModal from "../components/modals/ActionModal";
 import {
     addSection,
     editSection,
@@ -36,11 +38,13 @@ const ActivityEditPage: React.FC = () => {
     const [error, setError] = useState<string | null>(null);
     const [sections, setSections] = useState<LocalSection[]>([]);
     const [selectedId, setSelectedId] = useState<number | null>(null);
+    const [draggedIdx, setDraggedIdx] = useState<number | null>(null);
 
-    // On mount: try to load sections list from activity by fetching each section id.
-    // Some backends return section list on activity; here we assume activityId param
-    // contains an activity with sections available via a separate call from the parent.
-    // To be resilient, accept a pipe-separated value: "<activityId>|<id,id,id>"
+    // Modal states
+    const [showDeleteModal, setShowDeleteModal] = useState(false);
+    const [showDeleteSuccessModal, setShowDeleteSuccessModal] = useState(false);
+    const [sectionToDelete, setSectionToDelete] = useState<{ id: number; idx: number; type: string } | null>(null);
+
     useEffect(() => {
         const load = async () => {
             if (!activityId || !userSession?.jwt) {
@@ -61,7 +65,6 @@ const ActivityEditPage: React.FC = () => {
                 }
 
                 if (ids.length === 0) {
-                    // Try fetching activity to discover section ids
                     const aidNum = Number(aid);
                     if (!isNaN(aidNum)) {
                         try {
@@ -120,12 +123,8 @@ const ActivityEditPage: React.FC = () => {
         };
         else req.code = { renderer: "MARKDOWN", instructions: "New code task", testCases: [ { expected: "true", driver: "function test(){return true;}", points: 1, hidden: false } ] };
 
-        setLoading(true);
         const res = await addSection(aid, req, userSession.jwt);
-        setLoading(false);
         if (res.ok) {
-            // The backend often returns a message rather than the new ID. Refresh
-            // the activity's sections list so the UI reflects the new section.
             try {
                 const actRes = await fetchActivity(aid, userSession.jwt!);
                 if (actRes.ok) {
@@ -146,7 +145,6 @@ const ActivityEditPage: React.FC = () => {
                 console.warn("Failed to refresh sections after create", e);
             }
 
-            // fallback: try to parse id from response message
             const maybeId = Number(res.ok);
             if (!isNaN(maybeId) && maybeId > 0) {
                 const fetched = await fetchSection(maybeId, userSession.jwt!);
@@ -161,16 +159,31 @@ const ActivityEditPage: React.FC = () => {
         } else setError(res.err);
     };
 
-    const handleDelete = async (id: number) => {
-        if (!userSession?.jwt) return;
-        if (!confirm("Delete this section?")) return;
-        setLoading(true);
-        const res = await deleteSection(id, userSession.jwt);
-        setLoading(false);
+    const handleDeleteClick = (id: number, idx: number, type: string) => {
+        setSectionToDelete({ id, idx, type });
+        setShowDeleteModal(true);
+    };
+
+    const handleConfirmDelete = async () => {
+        if (!sectionToDelete || !userSession?.jwt) return;
+        
+        const res = await deleteSection(sectionToDelete.id, userSession.jwt);
+        
         if (res.ok) {
-            setSections(prev => prev.filter(s => s.id !== id));
-            if (selectedId === id) setSelectedId(null);
-        } else setError(res.err);
+            setSections(prev => prev.filter(s => s.id !== sectionToDelete.id));
+            if (selectedId === sectionToDelete.id) setSelectedId(null);
+            setShowDeleteModal(false);
+            setShowDeleteSuccessModal(true);
+        } else {
+            setError(res.err);
+            setShowDeleteModal(false);
+        }
+        setSectionToDelete(null);
+    };
+
+    const handleCancelDelete = () => {
+        setShowDeleteModal(false);
+        setSectionToDelete(null);
     };
 
     const handleSaveSection = async (id: number, updated: Partial<LocalSection>) => {
@@ -182,27 +195,59 @@ const ActivityEditPage: React.FC = () => {
         if (orig.sectionType === "MCQ") req.mcq = (updated.mcq ?? orig.mcq) as MCQSection;
         else req.code = (updated.code ?? orig.code) as CodeSection;
 
-        setLoading(true);
         const res = await editSection(id, req, userSession.jwt);
-        setLoading(false);
         if (res.ok) {
             setSections(prev => prev.map(s => s.id === id ? { ...s, ...updated } as LocalSection : s));
         } else setError(res.err);
     };
 
-    const handleReorder = async (fromIdx: number, toIdx: number) => {
-        if (!activityId || !userSession?.jwt) return;
+    const handleDragStart = (idx: number) => {
+        setDraggedIdx(idx);
+    };
+
+    const handleDragOver = (e: React.DragEvent) => {
+        e.preventDefault();
+    };
+
+    const handleDrop = async (targetIdx: number) => {
+        if (draggedIdx === null || !activityId || !userSession?.jwt) return;
+        if (draggedIdx === targetIdx) {
+            setDraggedIdx(null);
+            return;
+        }
+
         const aid = Number(activityId.split("|")[0]);
         const copy = [...sections];
-        const [moved] = copy.splice(fromIdx, 1);
-        copy.splice(toIdx, 0, moved);
+        const [moved] = copy.splice(draggedIdx, 1);
+        copy.splice(targetIdx, 0, moved);
+        
+        // Update UI immediately for smooth UX
         setSections(copy);
+        setDraggedIdx(null);
 
-        setLoading(true);
-        const res = await reorderSections(aid, copy.map(s => s.id), userSession.jwt);
-        setLoading(false);
-        if (!res.ok) {
-            setError(res.err);
+        // Send API request in background without showing loading state
+        try {
+            const res = await reorderSections(aid, copy.map(s => s.id), userSession.jwt);
+            if (!res.ok) {
+                setError(res.err);
+                // Optionally reload sections on error
+                const actRes = await fetchActivity(aid, userSession.jwt!);
+                if (actRes.ok) {
+                    const ids = actRes.ok.sections.map(s => s.id);
+                    const loaded = await Promise.all(
+                        ids.map(async (id) => {
+                            const r = await fetchSection(id, userSession.jwt!);
+                            if (r.ok) return r.ok as LocalSection;
+                            return null;
+                        })
+                    );
+                    const list = loaded.filter(Boolean) as LocalSection[];
+                    setSections(list);
+                }
+            }
+        } catch (error) {
+            console.error("Failed to reorder sections:", error);
+            setError("Failed to save reorder. Please refresh the page.");
         }
     };
 
@@ -219,7 +264,7 @@ const ActivityEditPage: React.FC = () => {
                             <p className="text-gray-400">Create and manage quiz and coding sections</p>
                         </div>
                         <button 
-                            className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition-colors duration-200" 
+                            className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition-colors duration-200 cursor-pointer" 
                             onClick={() => navigate(-1)}
                         >
                             ← Back
@@ -244,16 +289,18 @@ const ActivityEditPage: React.FC = () => {
                             {/* Add Section Buttons */}
                             <div className="mb-4 flex gap-2">
                                 <button 
-                                    className="flex-1 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors duration-200 flex items-center justify-center gap-1 text-sm"
+                                    className="flex-1 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors duration-200 flex items-center justify-center gap-1 text-sm cursor-pointer"
                                     onClick={() => handleAdd("MCQ")}
                                 >
-                                    <span>+</span> MCQ
+                                    <FontAwesomeIcon icon={faPlus} className="w-3 h-3" />
+                                    MCQ
                                 </button>
                                 <button 
-                                    className="flex-1 px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-lg transition-colors duration-200 flex items-center justify-center gap-1 text-sm"
+                                    className="flex-1 px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-medium rounded-lg transition-colors duration-200 flex items-center justify-center gap-1 text-sm cursor-pointer"
                                     onClick={() => handleAdd("CODE")}
                                 >
-                                    <span>+</span> Code
+                                    <FontAwesomeIcon icon={faPlus} className="w-3 h-3" />
+                                    Code
                                 </button>
                             </div>
                             
@@ -267,40 +314,42 @@ const ActivityEditPage: React.FC = () => {
                                     {sections.map((s, idx) => (
                                         <li 
                                             key={s.id} 
-                                            className={`p-3 rounded-lg cursor-pointer transition-all duration-200 border-2 ${
+                                            className={`p-3 rounded-lg cursor-pointer transition-all duration-200 border ${
                                                 selectedId === s.id 
-                                                    ? 'bg-blue-600/30 border-blue-500 ring-2 ring-blue-400/50' 
-                                                    : 'bg-slate-700/40 border-slate-600 hover:bg-slate-700/60 hover:border-slate-500'
+                                                    ? 'bg-indigo-600/20 border-indigo-500/50' 
+                                                    : 'bg-slate-800/50 border-white/10 hover:border-white/20'
                                             }`}
                                             draggable
-                                            onDragStart={(e) => { e.dataTransfer.setData('text/plain', String(idx)); e.dataTransfer.effectAllowed = 'move'; }}
-                                            onDrop={(e) => { e.preventDefault(); const from = Number(e.dataTransfer.getData('text/plain')); handleReorder(from, idx); }}
-                                            onDragOver={(e) => e.preventDefault()}
+                                            onDragStart={() => handleDragStart(idx)}
+                                            onDragOver={handleDragOver}
+                                            onDrop={() => handleDrop(idx)}
                                             onClick={() => setSelectedId(s.id)}
                                         >
-                                            <div className="flex justify-between items-start gap-2 mb-2">
+                                            <div className="flex items-center gap-2">
+                                                <FontAwesomeIcon 
+                                                    icon={faGripVertical} 
+                                                    className="w-3 h-3 text-slate-400 cursor-grab active:cursor-grabbing flex-shrink-0" 
+                                                />
                                                 <div className="flex-1 min-w-0">
                                                     <div className="flex items-center gap-2 mb-1">
-                                                        <span className={`text-xs font-bold px-2 py-1 rounded ${s.sectionType === 'MCQ' ? 'bg-blue-500/40 text-blue-200' : 'bg-emerald-500/40 text-emerald-200'}`}>
+                                                        <span className={`text-xs font-bold px-2 py-0.5 rounded ${s.sectionType === 'MCQ' ? 'bg-blue-500/40 text-blue-200' : 'bg-emerald-500/40 text-emerald-200'}`}>
                                                             {s.sectionType}
                                                         </span>
                                                     </div>
-                                                    <div className="text-xs text-gray-300 line-clamp-2">{s.sectionType === 'MCQ' ? (s.mcq?.instructions || 'No title') : (s.code?.instructions || 'No title')}</div>
+                                                    <div className="text-xs text-gray-300 truncate">
+                                                        {s.sectionType === 'MCQ' ? (s.mcq?.instructions || 'No title') : (s.code?.instructions || 'No title')}
+                                                    </div>
                                                 </div>
-                                                <div className="flex items-center gap-2">
-                                                    {/* Drag handle icon */}
-                                                    <span className="cursor-grab text-gray-400 hover:text-gray-200 transition-colors flex items-center justify-center" title="Drag to reorder">
-                                                        <FontAwesomeIcon icon={faGripVertical} className="w-5 h-5" />
-                                                    </span>
-                                                    {/* Trash icon for delete */}
-                                                    <button 
-                                                        className="text-red-400 hover:text-red-300 transition-colors duration-150 text-xs font-medium flex-shrink-0" 
-                                                        onClick={(e) => { e.stopPropagation(); handleDelete(s.id); }}
-                                                        title="Delete section"
-                                                    >
-                                                        <FontAwesomeIcon icon={faTrash} className="w-4 h-4" />
-                                                    </button>
-                                                </div>
+                                                <button 
+                                                    className="p-1 hover:bg-red-500/20 rounded text-red-400 transition-colors flex-shrink-0" 
+                                                    onClick={(e) => { 
+                                                        e.stopPropagation(); 
+                                                        handleDeleteClick(s.id, idx, s.sectionType); 
+                                                    }}
+                                                    title="Delete section"
+                                                >
+                                                    <FontAwesomeIcon icon={faTrash} className="w-3 h-3 cursor-pointer" />
+                                                </button>
                                             </div>
                                         </li>
                                     ))}
@@ -333,6 +382,28 @@ const ActivityEditPage: React.FC = () => {
                         )}
                     </div>
                 </div>
+
+                {/* Delete Confirmation Modal */}
+                <ActionModal
+                    isOpen={showDeleteModal}
+                    onClose={handleCancelDelete}
+                    onConfirm={handleConfirmDelete}
+                    title="Delete Section"
+                    message={`Are you sure you want to delete this ${sectionToDelete?.type || ''} section? This action cannot be undone.`}
+                    confirmText="Delete"
+                    cancelText="Cancel"
+                    variant="warning"
+                />
+
+                {/* Delete Success Modal */}
+                <AlertModal
+                    isOpen={showDeleteSuccessModal}
+                    onClose={() => setShowDeleteSuccessModal(false)}
+                    title="Section Deleted Successfully"
+                    message="The section has been removed from this activity."
+                    variant="success"
+                    buttonText="Okay"
+                />
             </div>
         </Page>
     );
@@ -406,7 +477,7 @@ function MCQEditor({ section, onSave }: { section: LocalSection, onSave: (s: Par
                 <div className="flex items-center justify-between mb-4">
                     <h3 className="text-lg font-semibold text-white">Questions ({mcq.questions.length})</h3>
                     <button 
-                        className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors duration-200"
+                        className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors duration-200 cursor-pointer"
                         onClick={addQuestion}
                     >
                         + Add Question
@@ -426,7 +497,7 @@ function MCQEditor({ section, onSave }: { section: LocalSection, onSave: (s: Par
                                     </div>
                                 </div>
                                 <button 
-                                    className="px-3 py-1 bg-red-600/20 hover:bg-red-600/30 text-red-400 hover:text-red-300 text-sm font-medium rounded transition-colors duration-200" 
+                                    className="px-3 py-1 bg-red-600/20 hover:bg-red-600/30 text-red-400 hover:text-red-300 text-sm font-medium rounded transition-colors duration-200 cursor-pointer"  
                                     onClick={() => removeQuestion(qi)}
                                 >
                                     Remove
@@ -434,7 +505,6 @@ function MCQEditor({ section, onSave }: { section: LocalSection, onSave: (s: Par
                             </div>
 
                             <div className="space-y-4">
-                                {/* Question Text */}
                                 <div>
                                     <label className="block text-sm font-medium text-gray-300 mb-2">Question Text</label>
                                     <input 
@@ -446,7 +516,6 @@ function MCQEditor({ section, onSave }: { section: LocalSection, onSave: (s: Par
                                     />
                                 </div>
 
-                                {/* Points and Correct Answer */}
                                 <div className="grid grid-cols-2 gap-3">
                                     <div>
                                         <label className="block text-sm font-medium text-gray-300 mb-2">Points</label>
@@ -470,12 +539,11 @@ function MCQEditor({ section, onSave }: { section: LocalSection, onSave: (s: Par
                                     </div>
                                 </div>
 
-                                {/* Choices */}
                                 <div>
                                     <div className="flex items-center justify-between mb-3">
                                         <label className="block text-sm font-medium text-gray-300">Answer Choices</label>
                                         <button 
-                                            className="text-xs px-2 py-1 bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-400 hover:text-emerald-300 rounded font-medium transition-colors duration-200"
+                                            className="text-xs px-2 py-1 bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-400 hover:text-emerald-300 rounded font-medium transition-colors duration-200 cursor-pointer"
                                             onClick={() => addChoice(qi)}
                                         >
                                             + Add Choice
@@ -499,7 +567,7 @@ function MCQEditor({ section, onSave }: { section: LocalSection, onSave: (s: Par
                                                     onClick={() => removeChoice(qi, ci)}
                                                     title="Remove choice"
                                                 >
-                                                    <FontAwesomeIcon icon={faTrash} className="w-4 h-4" />
+                                                    <FontAwesomeIcon icon={faTrash} className="w-4 h-4 cursor-pointer" />
                                                 </button>
                                             </div>
                                         ))}
@@ -511,10 +579,9 @@ function MCQEditor({ section, onSave }: { section: LocalSection, onSave: (s: Par
                 </div>
             </div>
 
-            {/* Save Button */}
             <div className="flex gap-3 pt-4 border-t border-slate-600">
                 <button 
-                    className="flex-1 px-6 py-3 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition-colors duration-200"
+                    className="flex-1 px-6 py-3 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition-colors duration-200 cursor-pointer"
                     onClick={() => onSave({ mcq })}
                 >
                     ✓ Save Changes
@@ -531,7 +598,7 @@ function CodeEditor({ section, onSave }: { section: LocalSection, onSave: (s: Pa
 
     useEffect(()=>{ 
         setCode(section.code ?? { renderer: 'MARKDOWN' as const, instructions: '', defaultCode: '', sources: [], testCases: [ { expected: '', driver: '', points: 1, hidden: false } ] } as CodeSection); 
-        setIsPreviewMode(false); // Reset preview mode when section changes
+        setIsPreviewMode(false);
     }, [section.id]);
 
     const updateTestCase = (idx: number, patch: Partial<TestCase>) => {
@@ -551,13 +618,12 @@ function CodeEditor({ section, onSave }: { section: LocalSection, onSave: (s: Pa
                 <h2 className="text-2xl font-bold text-white mb-2">Coding Challenge</h2>
             </div>
 
-            {/* Instructions (Monaco with Preview Toggle) */}
             <div>
                 <div className="flex items-center justify-between mb-2">
                     <label className="block text-sm font-medium text-white">Instructions (Markdown/KaTeX)</label>
                     <button
                         onClick={() => setIsPreviewMode(!isPreviewMode)}
-                        className="flex items-center gap-2 px-3 py-1.5 bg-indigo-600/20 hover:bg-indigo-600/30 border border-indigo-500/30 text-indigo-300 rounded-lg text-sm font-medium transition-colors"
+                        className="flex items-center gap-2 px-3 py-1.5 bg-indigo-600/20 hover:bg-indigo-600/30 border border-indigo-500/30 text-indigo-300 rounded-lg text-sm font-medium transition-colors cursor-pointer"
                     >
                         <FontAwesomeIcon icon={isPreviewMode ? faEdit : faEye} className="w-4 h-4" />
                         {isPreviewMode ? 'Edit' : 'Preview'}
@@ -565,7 +631,7 @@ function CodeEditor({ section, onSave }: { section: LocalSection, onSave: (s: Pa
                 </div>
                 {isPreviewMode ? (
                     <div className="w-full bg-white border border-gray-200 rounded-lg p-6 text-slate-900 min-h-[240px]">
-                        <div className="prose max-w-none">
+                        <div className="prose max-w-none ">
                             <PreviewRenderer value={code.instructions} />
                         </div>
                     </div>
@@ -611,7 +677,7 @@ function CodeEditor({ section, onSave }: { section: LocalSection, onSave: (s: Pa
                 <div className="flex items-center justify-between mb-4">
                     <h3 className="text-lg font-semibold text-white">Test Cases ({code.testCases.length})</h3>
                     <button 
-                        className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors duration-200"
+                        className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors duration-200 cursor-pointer"
                         onClick={addTestCase}
                     >
                         + Add Test Case
@@ -631,7 +697,7 @@ function CodeEditor({ section, onSave }: { section: LocalSection, onSave: (s: Pa
                                     </div>
                                 </div>
                                 <button 
-                                    className="px-3 py-1 bg-red-600/20 hover:bg-red-600/30 text-red-400 hover:text-red-300 text-sm font-medium rounded transition-colors duration-200"
+                                    className="px-3 py-1 bg-red-600/20 hover:bg-red-600/30 text-red-400 hover:text-red-300 text-sm font-medium rounded transition-colors duration-200 cursor-pointer"
                                     onClick={() => removeTestCase(ti)}
                                 >
                                     Remove
@@ -694,7 +760,7 @@ function CodeEditor({ section, onSave }: { section: LocalSection, onSave: (s: Pa
             {/* Save Button */}
             <div className="flex gap-3 pt-4 border-t border-slate-600">
                 <button 
-                    className="flex-1 px-6 py-3 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition-colors duration-200"
+                    className="flex-1 px-6 py-3 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition-colors duration-200 cursor-pointer"
                     onClick={() => onSave({ code })}
                 >
                     ✓ Save Changes
