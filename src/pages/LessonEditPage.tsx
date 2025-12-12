@@ -11,6 +11,8 @@ import { loadSessionState } from "../types/UserSession";
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faPlus, faTrash, faGripVertical, faArrowLeft } from '@fortawesome/free-solid-svg-icons';
 import PreviewRenderer from "../components/PreviewRenderer";
+import AlertModal from "../components/modals/AlertModal";
+import ActionModal from "../components/modals/ActionModal";
 
 interface PageData {
     id: number;
@@ -35,6 +37,11 @@ const LessonEditPage: React.FC = () => {
     const [pages, setPages] = useState<PageData[]>([]);
     const [selectedPageId, setSelectedPageId] = useState<number | null>(null);
     const [draggedPageIdx, setDraggedPageIdx] = useState<number | null>(null);
+
+    // Modal states
+    const [showDeleteModal, setShowDeleteModal] = useState(false);
+    const [showDeleteSuccessModal, setShowDeleteSuccessModal] = useState(false);
+    const [pageToDelete, setPageToDelete] = useState<{ id: number; idx: number } | null>(null);
 
     const [leftWidth, setLeftWidth] = useState<number>(320);
     const containerRef = useRef<HTMLDivElement | null>(null);
@@ -68,9 +75,7 @@ const LessonEditPage: React.FC = () => {
                     icon: res.ok.icon,
                     finishMessage: res.ok.finishMessage || ""
                 });
-                // Load pages with content
                 loadPages(res.ok.pages);
-                // Auto-select first page
                 if (res.ok.pages.length > 0) {
                     setSelectedPageId(res.ok.pages[0].id);
                 }
@@ -139,7 +144,7 @@ const LessonEditPage: React.FC = () => {
         setLoading(true);
         const res = await editLesson(Number(lessonId), form, userSession.jwt);
         if (res.ok) {
-            navigate(-1); // Go back after save
+            navigate(-1);
         } else {
             setError(res.err);
         }
@@ -156,7 +161,6 @@ const LessonEditPage: React.FC = () => {
         
         const res = await addPage(Number(lessonId), newPageRequest, userSession.jwt);
         if (res.ok) {
-            // Refresh lesson to get updated pages list
             const lessonRes = await fetchLesson(Number(lessonId), userSession.jwt);
             if (lessonRes.ok) {
                 await loadPages(lessonRes.ok.pages);
@@ -166,17 +170,30 @@ const LessonEditPage: React.FC = () => {
         }
     };
 
-    const handleDeletePage = async (pageId: number) => {
-        if (!userSession?.jwt) return;
-        if (!confirm("Are you sure you want to delete this page?")) return;
+    const handleDeletePageClick = (pageId: number, idx: number) => {
+        setPageToDelete({ id: pageId, idx });
+        setShowDeleteModal(true);
+    };
+
+    const handleConfirmDelete = async () => {
+        if (!pageToDelete || !userSession?.jwt) return;
         
-        const res = await deletePage(pageId, userSession.jwt);
+        const res = await deletePage(pageToDelete.id, userSession.jwt);
         if (res.ok) {
-            setPages(prev => prev.filter(p => p.id !== pageId));
-            if (selectedPageId === pageId) setSelectedPageId(null);
+            setPages(prev => prev.filter(p => p.id !== pageToDelete.id));
+            if (selectedPageId === pageToDelete.id) setSelectedPageId(null);
+            setShowDeleteModal(false);
+            setShowDeleteSuccessModal(true);
         } else {
             setError(res.err);
+            setShowDeleteModal(false);
         }
+        setPageToDelete(null);
+    };
+
+    const handleCancelDelete = () => {
+        setShowDeleteModal(false);
+        setPageToDelete(null);
     };
 
     const handleUpdatePageContent = async (pageId: number, content: string) => {
@@ -220,12 +237,10 @@ const LessonEditPage: React.FC = () => {
         setPages(reordered);
         setDraggedPageIdx(null);
         
-        // Send reorder request
         const pageIds = reordered.map(p => p.id);
         const res = await reorderPages(Number(lessonId), pageIds, userSession.jwt);
         if (!res.ok) {
             setError(res.err);
-            // Reload pages on error
             const lessonRes = await fetchLesson(Number(lessonId), userSession.jwt);
             if (lessonRes.ok) {
                 await loadPages(lessonRes.ok.pages);
@@ -255,7 +270,6 @@ const LessonEditPage: React.FC = () => {
                             gap: "1.5rem"
                         }}
                     >
-                        {/* Drag handle */}
                         {isLarge && (
                             <div
                                 onMouseDown={startDrag}
@@ -278,7 +292,7 @@ const LessonEditPage: React.FC = () => {
                         <div className="w-full bg-black/20 backdrop-blur-lg border border-white/10 rounded-2xl p-6 h-full flex flex-col min-h-0">
                             <button
                                 onClick={() => navigate(-1)}
-                                className="flex items-center gap-2 text-indigo-300 hover:text-indigo-200 transition-colors mb-4 text-sm font-medium w-fit"
+                                className="flex items-center gap-2 text-indigo-300 hover:text-indigo-200 transition-colors mb-4 text-sm font-medium w-fit cursor-pointer"
                             >
                                 <FontAwesomeIcon icon={faArrowLeft} className="w-4 h-4" />
                                 Back to Chapter Edit
@@ -294,25 +308,28 @@ const LessonEditPage: React.FC = () => {
                                         onDragOver={handleDragOver}
                                         onDrop={() => handleDrop(idx)}
                                         onClick={() => setSelectedPageId(page.id)}
-                                        className={`p-3 rounded-lg border cursor-pointer transition-all ${
+                                        className={`p-3 rounded-lg border transition-all cursor-pointer ${
                                             selectedPageId === page.id
                                                 ? 'bg-indigo-600/20 border-indigo-500/50'
                                                 : 'bg-slate-800/50 border-white/10 hover:border-white/20'
                                         }`}
                                     >
                                         <div className="flex items-center gap-2">
-                                            <FontAwesomeIcon icon={faGripVertical} className="w-3 h-3 text-slate-500" />
-                                            <span className="text-sm text-white flex-1">
+                                            <FontAwesomeIcon 
+                                                icon={faGripVertical} 
+                                                className="w-3 h-3 text-slate-400 cursor-grab active:cursor-grabbing" 
+                                            />
+                                            <span className="text-sm text-white flex-1 cursor-grabbing">
                                                 Page {idx + 1}
                                             </span>
                                             <button
                                                 onClick={(e) => {
                                                     e.stopPropagation();
-                                                    handleDeletePage(page.id);
+                                                    handleDeletePageClick(page.id, idx);
                                                 }}
                                                 className="p-1 hover:bg-red-500/20 rounded text-red-400 transition-colors"
                                             >
-                                                <FontAwesomeIcon icon={faTrash} className="w-3 h-3" />
+                                                <FontAwesomeIcon icon={faTrash} className="w-3 h-3 cursor-pointer" />
                                             </button>
                                         </div>
                                     </div>
@@ -321,7 +338,7 @@ const LessonEditPage: React.FC = () => {
 
                             <button
                                 onClick={handleAddPage}
-                                className="w-full p-2 rounded-lg bg-indigo-600/20 hover:bg-indigo-600/30 border border-indigo-500/30 text-indigo-300 transition-colors flex items-center justify-center gap-2"
+                                className="w-full p-2 rounded-lg bg-indigo-600/20 hover:bg-indigo-600/30 border border-indigo-500/30 text-indigo-300 transition-colors flex items-center justify-center gap-2 cursor-pointer"
                             >
                                 <FontAwesomeIcon icon={faPlus} className="w-4 h-4" />
                                 Add Page
@@ -383,7 +400,29 @@ const LessonEditPage: React.FC = () => {
                         )}
                     </div>
                     </div>
-                    </div>
+
+                    {/* Delete Confirmation Modal */}
+                    <ActionModal
+                        isOpen={showDeleteModal}
+                        onClose={handleCancelDelete}
+                        onConfirm={handleConfirmDelete}
+                        title="Delete Page"
+                        message={`Are you sure you want to delete Page ${pageToDelete ? pages.findIndex(p => p.id === pageToDelete.id) + 1 : ''}? This action cannot be undone.`}
+                        confirmText="Delete"
+                        cancelText="Cancel"
+                        variant="warning"
+                    />
+
+                    {/* Delete Success Modal */}
+                    <AlertModal
+                        isOpen={showDeleteSuccessModal}
+                        onClose={() => setShowDeleteSuccessModal(false)}
+                        title="Page Deleted Successfully"
+                        message="The page has been removed from this lesson."
+                        variant="success"
+                        buttonText="Okay"
+                    />
+                </div>
             )}
         </Page>
     );
