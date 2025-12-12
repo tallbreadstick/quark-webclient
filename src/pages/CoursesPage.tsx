@@ -255,7 +255,6 @@ export default function CoursesPage() {
                                                 <option value="newest">Sort by: Newest</option>
                                                 <option value="oldest">Sort by: Oldest</option>
                                                 <option value="name">Sort by: Name</option>
-                                                {isEducator && <option value="forkable">Show: Forkable Only</option>}
                                             </select>
                                             <div className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
                                                 <svg

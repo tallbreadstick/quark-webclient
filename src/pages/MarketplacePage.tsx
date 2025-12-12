@@ -202,7 +202,7 @@ export default function MarketplacePage() {
                         <h1 className="text-3xl font-bold text-white mb-2">Course Marketplace</h1>
                         <p className="text-gray-400">
                             {!userSession
-                                ? "Discover courses — sign in to enroll and track your progress"
+                                ? "Discover courses — sign in to enroll or view templates for your curriculum"
                                 : isEducator
                                 ? "Discover courses to use as templates for your curriculum"
                                 : "Find and enroll in courses for your learning journey"}
@@ -277,13 +277,11 @@ export default function MarketplacePage() {
                                             }
                                             setCurrentPage(1);
                                         }}
-                                        className="appearance-none px-4 py-2 pr-10 bg-white/10 border border-white/20 rounded-lg text-white font-medium cursor-pointer hover:bg-white/15 hover:border-white/30 transition-all focus:outline-none focus:ring-2 focus:ring-blue-500/50"
-                                        style={{
-                                            colorScheme: 'dark',
-                                            backgroundColor: '#000',
-                                            color: '#fff'
-                                        }}
-                                    >
+                                        className="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-lg 
+                                            text-white focus:outline-none focus:ring-2 focus:ring-blue-500 
+                                            transition appearance-none cursor-pointer pr-10 
+                                            [&>option]:bg-slate-900 [&>option]:text-white [&>option:checked]:bg-blue-600"
+                                            >
                                         <option value="newest">Sort by: Newest</option>
                                         <option value="oldest">Sort by: Oldest</option>
                                         <option value="name">Sort by: Name</option>
