@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import Editor from "@monaco-editor/react";
 import { useParams, useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faEye, faEdit } from '@fortawesome/free-solid-svg-icons';
+import { faEye, faEdit, faTrash, faGripVertical } from '@fortawesome/free-solid-svg-icons';
 import Page from "../components/page/Page";
 import LoadingSkeleton from "../components/LoadingSkeleton";
 import PreviewRenderer from "../components/PreviewRenderer";
@@ -287,12 +287,20 @@ const ActivityEditPage: React.FC = () => {
                                                     </div>
                                                     <div className="text-xs text-gray-300 line-clamp-2">{s.sectionType === 'MCQ' ? (s.mcq?.instructions || 'No title') : (s.code?.instructions || 'No title')}</div>
                                                 </div>
-                                                <button 
-                                                    className="text-red-400 hover:text-red-300 transition-colors duration-150 text-xs font-medium flex-shrink-0" 
-                                                    onClick={(e) => { e.stopPropagation(); handleDelete(s.id); }}
-                                                >
-                                                    ✕
-                                                </button>
+                                                <div className="flex items-center gap-2">
+                                                    {/* Drag handle icon */}
+                                                    <span className="cursor-grab text-gray-400 hover:text-gray-200 transition-colors flex items-center justify-center" title="Drag to reorder">
+                                                        <FontAwesomeIcon icon={faGripVertical} className="w-5 h-5" />
+                                                    </span>
+                                                    {/* Trash icon for delete */}
+                                                    <button 
+                                                        className="text-red-400 hover:text-red-300 transition-colors duration-150 text-xs font-medium flex-shrink-0" 
+                                                        onClick={(e) => { e.stopPropagation(); handleDelete(s.id); }}
+                                                        title="Delete section"
+                                                    >
+                                                        <FontAwesomeIcon icon={faTrash} className="w-4 h-4" />
+                                                    </button>
+                                                </div>
                                             </div>
                                         </li>
                                     ))}
