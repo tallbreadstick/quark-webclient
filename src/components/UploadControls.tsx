@@ -52,37 +52,40 @@ const UploadControls: FC<UploadControlsProps> = ({ userSession, setUserSession }
     );
   };
 
-  // Resize/compress client-side to avoid 413s while keeping quality reasonable.
-  const compressImage = (file: File, maxSide = 720, quality = 0.82) => new Promise<File>((resolve, reject) => {
-    const img = new Image();
-    const url = URL.createObjectURL(file);
+  const compressImage = (file: File, maxSide = 720, quality = 0.82) =>
+    new Promise<File>((resolve, reject) => {
+      const img = new Image();
+      const url = URL.createObjectURL(file);
 
-    img.onload = () => {
-      URL.revokeObjectURL(url);
-      const canvas = document.createElement("canvas");
-      const ratio = Math.min(1, maxSide / Math.max(img.width, img.height));
-      canvas.width = Math.max(1, Math.round(img.width * ratio));
-      canvas.height = Math.max(1, Math.round(img.height * ratio));
-      const ctx = canvas.getContext("2d");
-      if (!ctx) return reject(new Error("Canvas not supported"));
+      img.onload = () => {
+        URL.revokeObjectURL(url);
+        const canvas = document.createElement("canvas");
+        const ratio = Math.min(1, maxSide / Math.max(img.width, img.height));
+        canvas.width = Math.max(1, Math.round(img.width * ratio));
+        canvas.height = Math.max(1, Math.round(img.height * ratio));
+        const ctx = canvas.getContext("2d");
+        if (!ctx) return reject(new Error("Canvas not supported"));
 
-      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-      canvas.toBlob((blob) => {
-        if (!blob) return reject(new Error("Failed to compress image"));
-        const compressed = new File([blob], "profile.jpg", { type: "image/jpeg" });
-        resolve(compressed);
-      }, "image/jpeg", quality);
-    };
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        canvas.toBlob(
+          (blob) => {
+            if (!blob) return reject(new Error("Failed to compress image"));
+            const compressed = new File([blob], "profile.jpg", { type: "image/jpeg" });
+            resolve(compressed);
+          },
+          "image/jpeg",
+          quality
+        );
+      };
 
-    img.onerror = () => {
-      URL.revokeObjectURL(url);
-      reject(new Error("Unable to read image"));
-    };
+      img.onerror = () => {
+        URL.revokeObjectURL(url);
+        reject(new Error("Unable to read image"));
+      };
 
-    img.src = url;
-  });
+      img.src = url;
+    });
 
-  // Upload selected image and refresh session profile picture.
   const doUpload = async (fileParam?: File | null) => {
     setError(null);
     const fileToUpload = fileParam ?? selected;
@@ -103,20 +106,23 @@ const UploadControls: FC<UploadControlsProps> = ({ userSession, setUserSession }
       const usersRes = await fetchUsers(lookupId);
       if (usersRes.status === "OK" && usersRes.ok && usersRes.ok.length > 0) {
         const currentUser = findCurrentUser(usersRes.ok);
-        
+
         if (currentUser) {
           const picRes = await fetchProfilePicture(currentUser.id);
           if (picRes.status === "OK" && picRes.ok) {
             const dataUrl = picRes.ok.startsWith("data:")
               ? picRes.ok
               : `data:image/png;base64,${picRes.ok}`;
-            setUserSession((prev: any) => (prev ? { ...prev, profilePictureUrl: dataUrl } : prev));
+            setUserSession((prev: any) =>
+              prev ? { ...prev, profilePictureUrl: dataUrl } : prev
+            );
             setSelected(null);
             setMenuOpen(false);
             return;
           }
         }
       }
+
       setSelected(null);
       setMenuOpen(false);
       setError("Uploaded but failed to retrieve updated profile picture");
@@ -127,7 +133,6 @@ const UploadControls: FC<UploadControlsProps> = ({ userSession, setUserSession }
     }
   };
 
-  // Remove profile picture on the server and locally.
   const doClear = async () => {
     if (!userSession?.jwt) return setError("Not authenticated");
     setUploading(true);
@@ -136,7 +141,9 @@ const UploadControls: FC<UploadControlsProps> = ({ userSession, setUserSession }
       const res = await clearProfilePicture(userSession.jwt);
       if (res.status === "OK") {
         if (selected) setSelected(null);
-        setUserSession((prev: any) => (prev ? { ...prev, profilePictureUrl: null } : prev));
+        setUserSession((prev: any) =>
+          prev ? { ...prev, profilePictureUrl: null } : prev
+        );
         setMenuOpen(false);
       } else {
         setError(res.err ?? "Failed to clear profile picture");
@@ -148,15 +155,20 @@ const UploadControls: FC<UploadControlsProps> = ({ userSession, setUserSession }
     }
   };
 
-  const initials = (userSession.username || userSession.email || "U").charAt(0).toUpperCase();
+  const initials =
+    (userSession.username || userSession.email || "U")
+      .charAt(0)
+      .toUpperCase();
 
   return (
     <div className="flex flex-col items-center gap-3 relative">
+
+      {/* BIGGER INITIAL HERE */}
       <div
         role="button"
         tabIndex={0}
         onClick={() => setMenuOpen(true)}
-        className="w-28 h-28 rounded-full overflow-hidden border-2 border-cyan-400 shadow-md flex items-center justify-center bg-gradient-to-br from-slate-900 to-slate-700 cursor-pointer relative"
+        className="w-32 h-32 rounded-full overflow-hidden border-2 border-cyan-400 shadow-lg flex items-center justify-center bg-gradient-to-br from-slate-900 to-slate-700 cursor-pointer"
       >
         {(preview ?? userSession.profilePictureUrl) ? (
           <img
@@ -165,51 +177,66 @@ const UploadControls: FC<UploadControlsProps> = ({ userSession, setUserSession }
             className="w-full h-full object-cover"
           />
         ) : (
-          <span className="text-white font-semibold">{initials}</span>
+          <span className="text-white font-extrabold text-4xl tracking-wide">
+            {initials}
+          </span>
         )}
       </div>
 
-      {menuOpen && createPortal(
-        <div className="fixed inset-0 bg-black/10 backdrop-blur-sm z-[9999] flex items-center justify-center" role="dialog" aria-modal="true">
-          <div ref={modalRef} className="bg-[#1a1f2e] border border-white/10 rounded-xl p-6 max-w-sm w-[90%] flex flex-col items-center gap-4 shadow-2xl relative">
-            <div className="absolute inset-0 bg-blue-500/5 blur-xl rounded-xl -z-10" />
+      {/* MODAL */}
+      {menuOpen &&
+        createPortal(
+          <div className="fixed inset-0 bg-black/20 backdrop-blur-sm z-[9999] flex items-center justify-center">
+            <div
+              ref={modalRef}
+              className="bg-[#1a1f2e] border border-white/10 rounded-xl p-6 max-w-sm w-[90%] flex flex-col items-center gap-4 shadow-2xl relative"
+            >
+              <div className="absolute inset-0 bg-blue-500/5 blur-xl rounded-xl -z-10" />
 
-            <h3 className="text-white text-lg font-medium">Update Photo</h3>
-            
-            <div className="w-36 h-36 rounded-full overflow-hidden border-2 border-cyan-400 shadow-md bg-gradient-to-br from-slate-900 to-slate-700">
-              {(preview ?? userSession.profilePictureUrl) ? (
-                <img src={(preview ?? userSession.profilePictureUrl) as string} alt="Profile preview" className="w-full h-full object-cover" />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center text-white font-semibold">{initials}</div>
-              )}
-            </div>
+              <h3 className="text-white text-lg font-medium">Update Photo</h3>
 
-            <div className="w-full flex flex-col sm:flex-row gap-3 mt-2">
-              <button 
-                onClick={() => fileInputRef.current?.click()} 
-                disabled={uploading}
-                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition shadow-lg shadow-green-900/20"
+              {/* BIGGER INITIAL HERE TOO */}
+              <div className="w-40 h-40 rounded-full overflow-hidden border-2 border-cyan-400 shadow-md bg-gradient-to-br from-slate-900 to-slate-700">
+                {(preview ?? userSession.profilePictureUrl) ? (
+                  <img
+                    src={(preview ?? userSession.profilePictureUrl) as string}
+                    alt="Profile preview"
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-white font-extrabold text-5xl tracking-wide">
+                    {initials}
+                  </div>
+                )}
+              </div>
+
+              <div className="w-full flex flex-col sm:flex-row gap-3 mt-2">
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploading}
+                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition shadow-lg"
+                >
+                  {uploading ? "Uploading..." : "Upload New"}
+                </button>
+                <button
+                  onClick={doClear}
+                  disabled={uploading}
+                  className="flex-1 px-4 py-2 bg-red-700 text-white rounded-md hover:bg-red-800 transition shadow-lg"
+                >
+                  Remove
+                </button>
+              </div>
+
+              <button
+                onClick={() => setMenuOpen(false)}
+                className="text-sm text-gray-400 hover:text-white transition"
               >
-                {uploading ? "Uploading..." : "Upload New"}
-              </button>
-              <button 
-                onClick={doClear} 
-                disabled={uploading}
-                className="flex-1 px-4 py-2 bg-red-700 text-white rounded-md hover:bg-red-800 transition shadow-lg shadow-red-900/20"
-              >
-                Remove
-              </button>
-            </div>
-
-            <div className="w-full text-right">
-              <button onClick={() => setMenuOpen(false)} className="text-sm text-gray-400 hover:text-white transition">
                 Cancel
               </button>
             </div>
-          </div>
-        </div>,
-        document.body
-      )}
+          </div>,
+          document.body
+        )}
 
       <input
         ref={fileInputRef}
