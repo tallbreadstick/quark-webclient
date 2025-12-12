@@ -5,7 +5,7 @@ import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
 import "katex/dist/katex.min.css";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faBook, faPencil, faCheckCircle } from "@fortawesome/free-solid-svg-icons";
+import { faBook, faPencil, faCheckCircle, faGraduationCap } from "@fortawesome/free-solid-svg-icons";
 import Page from "../components/page/Page";
 import { loadSessionState } from "../types/UserSession";
 import type { Chapter, Course, Item, PageContent, ItemSection } from "../types/CourseContentTypes";
@@ -155,7 +155,7 @@ export default function CourseContent() {
     const [codeValue, setCodeValue] = useState("");
     const [selectedTestCase, setSelectedTestCase] = useState(0);
     const [testResults, setTestResults] = useState<string | null>(null);
-    const [isRunning, setIsRunning] = useState(false);
+    const [activeTab, setActiveTab] = useState<'intro' | { chapterIdx: number; itemIdx: number }>('intro');
 
     useEffect(() => {
         if (!courseId) return;
@@ -197,7 +197,7 @@ export default function CourseContent() {
     }, [courseId]);
 
     const courseTitle = course?.name ?? `Course ${courseId ?? ""}`;
-    const currentItem = selectedItem ? chapters[selectedItem.chapterIdx]?.items?.[selectedItem.itemIdx] : null;
+    const currentItem = activeTab !== 'intro' && activeTab ? chapters[activeTab.chapterIdx]?.items?.[activeTab.itemIdx] : null;
     const currentSection = currentItem?.sections?.[currentSectionIndex] ?? null;
     const totalSections = currentItem?.sections?.length ?? 0;
 
@@ -208,11 +208,11 @@ export default function CourseContent() {
         setCodeValue("");
         setTestResults(null);
         setSelectedTestCase(0);
-    }, [selectedItem]);
+    }, [activeTab]);
 
     // Update code editor when section changes
     useEffect(() => {
-        const currentSection = selectedItem ? chapters[selectedItem.chapterIdx]?.items?.[selectedItem.itemIdx]?.sections?.[currentSectionIndex] : null;
+        const currentSection = activeTab !== 'intro' && activeTab ? chapters[activeTab.chapterIdx]?.items?.[activeTab.itemIdx]?.sections?.[currentSectionIndex] : null;
         if (currentSection?.sectionType === "CODE" && currentSection.code?.defaultCode) {
             setCodeValue(currentSection.code.defaultCode);
         } else {
@@ -220,7 +220,7 @@ export default function CourseContent() {
         }
         setTestResults(null);
         setSelectedTestCase(0);
-    }, [currentSectionIndex, selectedItem, chapters]);
+    }, [currentSectionIndex, activeTab, chapters]);
 
 
     /**
@@ -246,7 +246,42 @@ export default function CourseContent() {
         }, 1500);
     };
 
+    // Helper to parse introduction JSON and get markdown content
+    function getIntroMarkdown(course: Course | null): string | null {
+        if (!course) return null;
+        if (course.introduction) {
+            try {
+                const parsed = JSON.parse(course.introduction);
+                if (typeof parsed === 'object' && parsed && typeof parsed.content === 'string') {
+                    return parsed.content;
+                }
+                return String(course.introduction);
+            } catch {
+                return String(course.introduction);
+            }
+        }
+        return course.description ?? null;
+    }
+
     const renderContent = () => {
+        if (activeTab === 'intro') {
+            const introMarkdown = getIntroMarkdown(course);
+            return (
+                <div className="space-y-6">
+                    <div className="bg-black/40 backdrop-blur-sm border border-white/10 rounded-xl p-6">
+                        <div className="prose prose-lg max-w-none prose-invert prose-headings:text-white prose-p:text-gray-200 prose-strong:text-white prose-code:text-blue-300 prose-li:text-gray-200">
+                            {introMarkdown ? (
+                                <Suspense fallback={<div className="text-gray-400">Loading introduction...</div>}>
+                                    <PreviewRenderer value={introMarkdown} />
+                                </Suspense>
+                            ) : (
+                                <p className="text-gray-400">No introduction available for this course.</p>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            );
+        }
         if (!currentItem) {
             return (
                 <div className="flex items-center justify-center h-full text-gray-400">
@@ -359,10 +394,31 @@ export default function CourseContent() {
                 <aside className="w-80 border-r border-white/10 bg-white/5 overflow-y-auto flex flex-col" style={{ height: 'calc(100vh - 7rem)' }}>
                     <div className="p-6 border-b border-white/10">
                         <h2 className="text-xl font-bold text-white mb-2">{courseTitle}</h2>
-                        {course?.description && (
-                            <p className="text-sm text-gray-400">{course.description}</p>
-                        )}
                     </div>
+
+                    {/* Pseudo-tab for course introduction */}
+                    <button
+                        className={`w-full text-left px-6 py-3 hover:bg-white/10 transition ${activeTab === 'intro' ? 'bg-white/10 border-l-4 border-green-500' : 'border-l-4 border-transparent'}`}
+                        onClick={() => setActiveTab('intro')}
+                    >
+                        <div className="flex items-start gap-3">
+                            <div className="w-8 h-8 flex items-center justify-center rounded-lg bg-green-500/20">
+                                <FontAwesomeIcon icon={faGraduationCap} className="text-green-400" />
+                            </div>
+                            <div className="flex-1">
+                                <div className="text-sm font-medium text-white">Course Introduction</div>
+                                {/* Show a short preview of the intro markdown (first 120 chars, no markdown) */}
+                                {(() => {
+                                    const introMarkdown = getIntroMarkdown(course);
+                                    if (introMarkdown) {
+                                        const plain = introMarkdown.replace(/[#*_`>\[\]\(\)!\-]/g, "").replace(/\n+/g, " ").trim();
+                                        return <div className="text-xs text-gray-400 mt-1 line-clamp-2">{plain.slice(0, 120)}{plain.length > 120 ? "..." : ""}</div>;
+                                    }
+                                    return null;
+                                })()}
+                            </div>
+                        </div>
+                    </button>
 
                     {loading && (
                         <div className="p-6 text-center text-gray-400">
@@ -389,7 +445,6 @@ export default function CourseContent() {
                                 <h3 className="text-sm font-semibold text-white uppercase tracking-wide">
                                     {chapter.name}
                                 </h3>
-                                
                                 {chapter.description && (
                                     <p className="text-xs text-gray-400 mt-1">{chapter.description}</p>
                                 )}
@@ -399,11 +454,11 @@ export default function CourseContent() {
                                     chapter.items.map((item, itemIdx) => (
                                         <button
                                             key={item.id}
-                                            onClick={() => setSelectedItem({ chapterIdx, itemIdx })}
+                                            onClick={() => setActiveTab({ chapterIdx, itemIdx })}
                                             className={`w-full text-left px-6 py-3 hover:bg-white/10 transition ${
-                                                selectedItem?.chapterIdx === chapterIdx && selectedItem?.itemIdx === itemIdx
-                                                    ? "bg-white/10 border-l-4 border-blue-500"
-                                                    : "border-l-4 border-transparent"
+                                                activeTab !== 'intro' && activeTab.chapterIdx === chapterIdx && activeTab.itemIdx === itemIdx
+                                                    ? 'bg-white/10 border-l-4 border-blue-500'
+                                                    : 'border-l-4 border-transparent'
                                             }`}
                                         >
                                             <div className="flex items-start gap-3">
