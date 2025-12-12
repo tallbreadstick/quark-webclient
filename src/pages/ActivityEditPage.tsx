@@ -497,8 +497,9 @@ function MCQEditor({ section, onSave }: { section: LocalSection, onSave: (s: Par
                                                 <button 
                                                     className="px-3 py-2 bg-red-600/20 hover:bg-red-600/30 text-red-400 hover:text-red-300 rounded transition-colors duration-200 text-sm font-medium"
                                                     onClick={() => removeChoice(qi, ci)}
+                                                    title="Remove choice"
                                                 >
-                                                    ✕
+                                                    <FontAwesomeIcon icon={faTrash} className="w-4 h-4" />
                                                 </button>
                                             </div>
                                         ))}
