@@ -1,8 +1,9 @@
 // src/components/ProfileDashboard.tsx
 import { useEffect, useState } from "react";
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faBook, faGraduationCap } from '@fortawesome/free-solid-svg-icons';
+import { faBook, faGraduationCap, faStore } from '@fortawesome/free-solid-svg-icons';
 import { fetchCourses } from "../endpoints/CourseHandler";
+import { getEnrolledCourses } from "../endpoints/ProgressHandler";
 import { type UserSession } from "../types/UserSession";
 
 interface DashboardStats {
@@ -20,24 +21,50 @@ export const ProfileDashboard = ({ userSession, userProfile }: { userSession: Us
     loading: true,
   });
 
+  const isEducator = userProfile?.userType === "educator";
+  const isLearner = userProfile?.userType === "learner";
+
   useEffect(() => {
     const fetchUserStats = async () => {
       try {
-        // Fetch courses by username (owned courses)
-        const coursesResponse = await fetchCourses(
-          { owner: userSession.username },
-          userSession.jwt
-        );
+        // Fetch total courses in database
+        const allCoursesResponse = await fetchCourses({}, userSession.jwt);
+        const totalCourses = allCoursesResponse.status === "OK" && allCoursesResponse.ok 
+          ? allCoursesResponse.ok.length 
+          : 0;
 
-        if (coursesResponse.status === "OK" && coursesResponse.ok) {
+        if (isEducator) {
+          // Fetch courses owned by educator
+          const ownedCoursesResponse = await fetchCourses(
+            { owner: userSession.username },
+            userSession.jwt
+          );
+
+          if (ownedCoursesResponse.status === "OK" && ownedCoursesResponse.ok) {
+            setStats({
+              totalCourses,
+              ownedCourses: ownedCoursesResponse.ok.length,
+              enrolledCourses: 0,
+              loading: false,
+            });
+          } else {
+            setStats((prev) => ({ ...prev, totalCourses, loading: false }));
+          }
+        } else if (isLearner) {
+          // Fetch enrolled courses for learner
+          const enrolledResponse = await getEnrolledCourses(userSession.jwt ?? "");
+          const enrolledCount = enrolledResponse.status === "OK" && enrolledResponse.ok
+            ? enrolledResponse.ok.length
+            : 0;
+
           setStats({
-            totalCourses: coursesResponse.ok.length,
-            ownedCourses: coursesResponse.ok.length,
-            enrolledCourses: 0, // Can be extended later with enrollment data
+            totalCourses,
+            ownedCourses: 0,
+            enrolledCourses: enrolledCount,
             loading: false,
           });
         } else {
-          setStats((prev) => ({ ...prev, loading: false }));
+          setStats((prev) => ({ ...prev, totalCourses, loading: false }));
         }
       } catch (error) {
         console.error("Failed to fetch dashboard stats:", error);
@@ -48,9 +75,10 @@ export const ProfileDashboard = ({ userSession, userProfile }: { userSession: Us
     if (userSession?.jwt) {
       fetchUserStats();
     }
-  }, [userSession]);
+  }, [userSession, isEducator, isLearner]);
 
-  if (stats.loading) {
+  // Wait for both stats and userProfile to load to prevent color flash
+  if (stats.loading || !userProfile?.userType) {
     return (
       <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-6">
         <h2 className="text-2xl font-bold text-white mb-6">Dashboard</h2>
@@ -66,22 +94,39 @@ export const ProfileDashboard = ({ userSession, userProfile }: { userSession: Us
     );
   }
 
-  const dashboardCards = [
-    {
-      icon: faBook,
-      label: "Total Courses",
-      value: stats.totalCourses,
-      color: "from-blue-500 to-blue-600",
-      bgColor: "bg-blue-500/10",
-    },
-    {
-      icon: faGraduationCap,
-      label: "Owned Courses",
-      value: stats.ownedCourses,
-      color: "from-purple-500 to-purple-600",
-      bgColor: "bg-purple-500/10",
-    },
-  ];
+  const dashboardCards = isEducator
+    ? [
+        {
+          icon: faStore,
+          label: "Total Courses",
+          value: stats.totalCourses,
+          color: "from-blue-500 to-blue-600",
+          bgColor: "bg-blue-500/10",
+        },
+        {
+          icon: faBook,
+          label: "Owned Courses",
+          value: stats.ownedCourses,
+          color: "from-purple-500 to-purple-600",
+          bgColor: "bg-purple-500/10",
+        },
+      ]
+    : [
+        {
+          icon: faStore,
+          label: "Total Courses",
+          value: stats.totalCourses,
+          color: "from-blue-500 to-blue-600",
+          bgColor: "bg-blue-500/10",
+        },
+        {
+          icon: faGraduationCap,
+          label: "Enrolled Courses",
+          value: stats.enrolledCourses,
+          color: "from-green-500 to-green-600",
+          bgColor: "bg-green-500/10",
+        },
+      ];
 
   return (
     <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-6">

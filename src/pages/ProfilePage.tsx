@@ -40,7 +40,7 @@ const Profile = () => {
                 {userProfile?.userType && (
                   <span
                     className={`px-2 py-1 text-xs rounded-full font-medium ${
-                      isEducator ? "bg-blue-500/20 text-blue-300" : "bg-green-500/20 text-green-300"
+                      isEducator ? "bg-purple-500/20 text-purple-300" : "bg-green-500/20 text-green-300"
                     }`}
                   >
                     {userProfile.userType.charAt(0).toUpperCase() + userProfile.userType.slice(1)}

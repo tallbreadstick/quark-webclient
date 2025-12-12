@@ -1,3 +1,4 @@
+// src/components/page/Navbar.tsx
 import type { Dispatch, FunctionComponent, SetStateAction } from "react";
 import type { UserSession } from "../../types/UserSession";
 import { useEffect, useRef, useState } from "react";
@@ -19,21 +20,19 @@ const Navbar: FunctionComponent<NavbarProps> = ({ userSession, setUserSession })
     const [dropdownOpen, setDropdownOpen] = useState(false);
     const dropdownRef = useRef<HTMLDivElement | null>(null);
 
-    // toggle from clicks inside page (ProfilePage avatar/username)
+    // Global toggle events
     useEffect(() => {
         const onToggle = () => setDropdownOpen((s) => !s);
         const onOpen = () => setDropdownOpen(true);
-
         window.addEventListener('profile-menu-toggle', onToggle as EventListener);
         window.addEventListener('profile-menu-open', onOpen as EventListener);
-
         return () => {
             window.removeEventListener('profile-menu-toggle', onToggle as EventListener);
             window.removeEventListener('profile-menu-open', onOpen as EventListener);
         };
     }, []);
 
-    // close on outside click / Escape
+    // Close on outside click or ESC
     useEffect(() => {
         if (!dropdownOpen) return;
 
@@ -58,7 +57,8 @@ const Navbar: FunctionComponent<NavbarProps> = ({ userSession, setUserSession })
 
     return (
         <nav className="fixed top-0 left-0 w-full flex items-center justify-between px-8 py-4 bg-black/30 backdrop-blur-md text-white shadow-lg z-50">
-            {/* --- Left side: quick links --- */}
+
+            {/* LEFT SIDE */}
             <div className="flex items-center gap-8 font-medium text-lg">
                 <img src={Logo} alt="Quark Logo" className="w-10 h-10"/>
                 <a href="/" className="hover:text-[#bccdff] transition-colors">Home</a>
@@ -66,7 +66,7 @@ const Navbar: FunctionComponent<NavbarProps> = ({ userSession, setUserSession })
                 <a href="/my-courses" className="hover:text-[#bccdff] transition-colors">My Courses</a>
             </div>
 
-            {/* --- Right side: session dependent --- */}
+            {/* RIGHT SIDE */}
             <div className="flex items-center gap-4">
                 {userSession ? (
                     <div className="flex items-center gap-4">
@@ -74,14 +74,24 @@ const Navbar: FunctionComponent<NavbarProps> = ({ userSession, setUserSession })
                             onClick={() => setDropdownOpen((s) => !s)}
                             className="flex items-center gap-3 cursor-pointer hover:opacity-90 transition group"
                         >
+
+                            {/* --- PROFILE WITH IMAGE --- */}
                             {userSession.profilePictureUrl ? (
                                 <img
                                     src={userSession.profilePictureUrl}
                                     alt={userSession.username || 'Profile'}
                                     className="w-10 h-10 rounded-full object-cover border border-cyan-400 group-hover:border-cyan-300 transition-colors"
                                 />
+
                             ) : (
-                                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center border border-cyan-400 group-hover:border-cyan-300 transition-colors">
+                                /* --- FALLBACK INITIAL (your preferred style) --- */
+                                <div className="w-10 h-10 rounded-full 
+                                    bg-gradient-to-br from-slate-800 to-slate-600 
+                                    flex items-center justify-center 
+                                    border border-cyan-400 
+                                    group-hover:border-cyan-300 
+                                    transition-colors shadow-md"
+                                >
                                     <span className="text-white font-semibold text-sm">
                                         {userSession.username?.charAt(0).toUpperCase() || 'U'}
                                     </span>
@@ -111,6 +121,7 @@ const Navbar: FunctionComponent<NavbarProps> = ({ userSession, setUserSession })
                 )}
             </div>
 
+            {/* DROPDOWN MENU */}
             {dropdownOpen && portalEl && createPortal(
                 <div
                     ref={dropdownRef}
