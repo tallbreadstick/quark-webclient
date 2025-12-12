@@ -398,12 +398,12 @@ export default function CourseContent() {
 
                     {/* Pseudo-tab for course introduction */}
                     <button
-                        className={`w-full text-left px-6 py-3 hover:bg-white/10 transition ${activeTab === 'intro' ? 'bg-white/10 border-l-4 border-green-500' : 'border-l-4 border-transparent'}`}
+                        className={`w-full text-left px-6 py-3 hover:bg-white/10 transition ${activeTab === 'intro' ? 'bg-white/10 border-l-4 border-purple-500' : 'border-l-4 border-transparent'}`}
                         onClick={() => setActiveTab('intro')}
                     >
                         <div className="flex items-start gap-3">
-                            <div className="w-8 h-8 flex items-center justify-center rounded-lg bg-green-500/20">
-                                <FontAwesomeIcon icon={faGraduationCap} className="text-green-400" />
+                            <div className="w-8 h-8 flex items-center justify-center rounded-lg bg-purple-500/20">
+                                <FontAwesomeIcon icon={faGraduationCap} className="text-purple-400" style={{ fontSize: 22, width: 22, height: 22 }} />
                             </div>
                             <div className="flex-1">
                                 <div className="text-sm font-medium text-white">Course Introduction</div>
