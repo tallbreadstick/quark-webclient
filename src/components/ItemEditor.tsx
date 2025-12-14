@@ -50,6 +50,7 @@ export const ItemEditor: React.FC<ItemEditorProps> = ({
                     if (res.ok) {
                         const ids = res.ok.sections.map(s => s.id).join(",");
                         navigate(`/activity/${item.id}|${ids}/edit`);
+                        
                         return;
                     }
                 } catch (e) {
@@ -58,6 +59,7 @@ export const ItemEditor: React.FC<ItemEditorProps> = ({
 
                 // fallback: navigate to activity edit route without section ids
                 navigate(`/activity/${item.id}/edit`);
+                
             })();
         }
     };
