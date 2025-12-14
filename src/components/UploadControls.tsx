@@ -177,7 +177,7 @@ const UploadControls: FC<UploadControlsProps> = ({ userSession, setUserSession }
             className="w-full h-full object-cover"
           />
         ) : (
-          <span className="text-white font-extrabold text-4xl tracking-wide">
+          <span className="text-white font-extrabold text-5xl tracking-wide">
             {initials}
           </span>
         )}

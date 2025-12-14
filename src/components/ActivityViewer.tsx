@@ -119,7 +119,6 @@ export function ActivityViewer({
             {/* Activity Content Placeholder */}
             <div className="bg-white/5 border border-white/10 rounded-2xl p-6">
                 <div className="text-center py-12">
-                    <div className="text-4xl mb-4">📝</div>
                     <h3 className="text-lg font-semibold text-white mb-2">Activity Content</h3>
                     <p className="text-gray-400 mb-6">
                         Activity scoring, time deduction, and interactive features will be implemented here.

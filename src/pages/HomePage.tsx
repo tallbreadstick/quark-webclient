@@ -44,9 +44,9 @@ export default function HomePage() {
                     }
                 }
 
-                // Fetch courses for educators
+                // Fetch courses based on user type
                 if (userType === 'educator') {
-                    // Use the same params as /my-courses page
+                    // Use the same params as /my-courses page for educators
                     const params = { my_courses: 'true' };
                     const res = await fetchCourses(params, userSession?.jwt ?? "");
                     const data = res.status === "OK" && res.ok ? res.ok : [];
@@ -54,7 +54,7 @@ export default function HomePage() {
                     if (cancelled) return;
 
                     if (data && data.length > 0) {
-                        // Map data to DatabaseCourse format - SIMPLIFIED like /my-courses
+                        // Map data to DatabaseCourse format
                         const mappedCourses: DatabaseCourse[] = await Promise.all(
                             data.map(async (c: any) => {
                                 const rawTags = (c as any).tags ?? [];
@@ -68,7 +68,7 @@ export default function HomePage() {
                                     description: c.description ?? "",
                                     tags,
                                     forkable: Boolean((c as any).forkable),
-                                    owner: { username: c.owner || "—" }, // Use c.owner directly
+                                    owner: { username: c.owner || "—" },
                                     ownerId: c.ownerId,
                                     version: c.version,
                                     createdAt: c.createdAt,
@@ -79,19 +79,62 @@ export default function HomePage() {
                         // Show only 2 most recent courses
                         const recentCourses = mappedCourses
                             .sort((a, b) => {
-                                // Sort by created date if available, otherwise by ID
                                 const dateA = a.createdAt ? new Date(a.createdAt).getTime() : a.id;
                                 const dateB = b.createdAt ? new Date(b.createdAt).getTime() : b.id;
-                                return dateB - dateA; // Most recent first
+                                return dateB - dateA;
                             })
-                            .slice(0, 2); // Limit to 2 courses
+                            .slice(0, 2);
+
+                        setCourses(recentCourses);
+                    } else {
+                        setCourses([]);
+                    }
+                } else if (userType === 'learner') {
+                    // Fetch enrolled courses for learners/students
+                    const params = { enrolled: 'true' };
+                    const res = await fetchCourses(params, userSession?.jwt ?? "");
+                    const data = res.status === "OK" && res.ok ? res.ok : [];
+
+                    if (cancelled) return;
+
+                    if (data && data.length > 0) {
+                        // Map data to DatabaseCourse format
+                        const mappedCourses: DatabaseCourse[] = await Promise.all(
+                            data.map(async (c: any) => {
+                                const rawTags = (c as any).tags ?? [];
+                                const tags = Array.isArray(rawTags)
+                                    ? rawTags.map((t: any) => typeof t === "string" ? t : (t?.name ?? String(t?.id ?? "")))
+                                    : [];
+
+                                return {
+                                    id: c.id,
+                                    name: c.name,
+                                    description: c.description ?? "",
+                                    tags,
+                                    forkable: Boolean((c as any).forkable),
+                                    owner: { username: c.owner || "—" },
+                                    ownerId: c.ownerId,
+                                    version: c.version,
+                                    createdAt: c.createdAt,
+                                };
+                            })
+                        );
+
+                        // Show only 2 most recent courses
+                        const recentCourses = mappedCourses
+                            .sort((a, b) => {
+                                const dateA = a.createdAt ? new Date(a.createdAt).getTime() : a.id;
+                                const dateB = b.createdAt ? new Date(b.createdAt).getTime() : b.id;
+                                return dateB - dateA;
+                            })
+                            .slice(0, 2);
 
                         setCourses(recentCourses);
                     } else {
                         setCourses([]);
                     }
                 } else {
-                    // For learners/students: show empty (no enroll endpoint yet)
+                    // Fallback: no courses
                     setCourses([]);
                 }
             } catch (err: any) {
@@ -243,7 +286,7 @@ export default function HomePage() {
                                     to="/my-courses"
                                     className="text-blue-400 hover:text-blue-300 transition-colors text-sm"
                                 >
-                                    {isEducator ? "View all courses →" : "Enrolled Courses →"}
+                                    {isEducator ? "View all courses →" : "View all enrolled →"}
                                 </Link>
                             </div>
 
@@ -287,7 +330,7 @@ export default function HomePage() {
                                                             to={`/course/${course.id}/chapters`} 
                                                             className="px-4 py-2 bg-blue-600 rounded-lg text-white hover:bg-blue-700 transition"
                                                         >
-                                                            Open
+                                                            Continue
                                                         </Link>
                                                     )}
                                                 </div>
@@ -323,4 +366,4 @@ export default function HomePage() {
             </div>
         </Page>
     );
-}	
+}

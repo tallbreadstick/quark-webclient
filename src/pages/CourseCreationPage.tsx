@@ -194,30 +194,29 @@ export default function CourseCreationPage() {
                                             className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500/50 transition cursor-text h-24 resize-y"
                                         />
                                     </div>
-
-                                    <div>
-                                        <label className="block mb-2 text-sm font-medium text-[#bdcdff]">
-                                            Tag IDs (comma separated)
-                                        </label>
-                                        <input
-                                            name="tags"
-                                            placeholder="e.g. 1,2,3"
-                                            className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500/50 transition cursor-text"
-                                        />
-                                    </div>
-
                                     <div className="flex items-center gap-4">
-                                        <label className="ml-auto inline-flex items-center gap-2 text-sm text-black-300">
+                                        <label className="relative ml-auto inline-flex items-center gap-2 text-sm text-black-300">
                                             <div className="text-sm mr-2 text-white">Visibility:</div>
                                             <select
                                                 value={visibility}
                                                 onChange={(e) => setVisibility(e.target.value as any)}
-                                                className="px-2 py-1 bg-black text-white rounded-md border border-white/10"
-                                            >
-                                                <option value="PUBLIC">Public</option>
+                                                className="w-full px-3 py-2 bg-white/5 border border-white/10 rounded-lg 
+                                                    text-white focus:outline-none focus:ring-2 focus:ring-blue-500 
+                                                    transition appearance-none cursor-pointer pr-8
+                                                    [&>option]:bg-slate-900 [&>option]:text-white [&>option:checked]:bg-blue-600">
                                                 <option value="PRIVATE">Private</option>
                                                 <option value="UNLISTED">Unlisted</option>
                                             </select>
+                                            <div className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
+                                                <svg
+                                                    className="h-4 w-4 text-blue-400"
+                                                    fill="none"
+                                                    stroke="currentColor"
+                                                    viewBox="0 0 24 24"
+                                                >
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                                </svg>
+                                            </div>
                                         </label>
                                     </div>
                                 </form>
@@ -238,7 +237,7 @@ export default function CourseCreationPage() {
                                                     new Event("submit", { cancelable: true, bubbles: true })
                                                 )
                                         }
-                                        className="flex-1 px-4 py-2 bg-indigo-600 rounded-md text-white text-sm font-medium hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                                        className="flex-1 px-4 py-2 bg-indigo-600 rounded-md text-white text-sm font-medium hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                                     >
                                         {submitting ? "Creating..." : "Create Course"}
                                     </button>

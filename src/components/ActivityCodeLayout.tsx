@@ -108,15 +108,18 @@ export default function ActivityCodeLayout({
                 <div className="flex-1 overflow-y-auto">
                     <div className="p-6">
                         <div className="mb-6">
-                            <h1 className="text-2xl font-bold text-white mb-2">{item.name}</h1>
+                            <h1 className="text-3xl font-bold text-white mb-4">{item.name}</h1>
                             {item.description && (
-                                <p className="text-sm text-gray-400 mb-4">{item.description}</p>
+                                <p className="text-lg text-gray-300 mb-6">{item.description}</p>
                             )}
-                            <div className="flex items-center gap-2">
-                                <span className="px-3 py-1 bg-blue-500/20 border border-blue-500/30 rounded-full text-xs text-blue-400">
-                                    Section {sectionIndex + 1} of {item.sections?.length ?? 0}
-                                </span>
-                            </div>
+                            <div className="flex items-center justify-between mb-6">
+                            <h3 className="text-xl font-semibold text-white">
+                               Section {sectionIndex + 1} of {item.sections?.length ?? 0}
+                            </h3>
+                            <span className="px-3 py-1 bg-green-500/20 border border-green-500/30 rounded-full text-sm text-green-400">
+                                Code
+                            </span>
+                        </div>
                         </div>
 
                         {section.code && (
@@ -153,7 +156,7 @@ export default function ActivityCodeLayout({
                             <button
                                 onClick={performRun}
                                 disabled={effectiveIsRunning}
-                                className="px-4 py-1.5 bg-white/10 hover:bg-white/15 border border-white/20 rounded text-sm text-white transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                                className="px-4 py-1.5 bg-white/10 hover:bg-white/15 border border-white/20 rounded text-sm text-white transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 cursor-pointer"
                             >
                                 <FontAwesomeIcon icon={faPlay} className="text-xs" />
                                 {effectiveIsRunning ? "Running..." : "Run"}
@@ -161,7 +164,7 @@ export default function ActivityCodeLayout({
                             <button
                                 onClick={performSubmit}
                                 disabled={effectiveIsRunning}
-                                className="px-4 py-1.5 bg-green-600 hover:bg-green-700 rounded text-sm text-white transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                                className="px-4 py-1.5 bg-green-600 hover:bg-green-700 rounded text-sm text-white transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 cursor-pointer"
                             >
                                 <FontAwesomeIcon icon={faPaperPlane} className="text-xs" />
                                 {effectiveIsRunning ? "Submitting..." : "Submit"}
@@ -295,7 +298,7 @@ export default function ActivityCodeLayout({
                                     return testCase ? (
                                         <div className="space-y-3 text-sm">
                                             <div className="flex items-center gap-2">
-                                                <span className="px-2 py-1 bg-yellow-500/20 border border-yellow-500/30 rounded text-xs text-yellow-400">
+                                                <span className="px-2 py-1 bg-purple-500/20 border border-purple-500/30 rounded text-xs text-purple-400">
                                                     {testCase.points} {testCase.points === 1 ? "point" : "points"}
                                                 </span>
                                                 {testCase.hidden && (

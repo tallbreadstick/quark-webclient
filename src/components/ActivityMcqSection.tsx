@@ -195,7 +195,7 @@ export default function ActivityMcqSection({ item, section, PreviewRenderer }: P
                     <div key={qIdx} className="bg-white/5 border border-white/10 rounded-lg p-6">
                         <div className="flex items-start justify-between mb-4">
                             <h4 className="text-lg font-medium text-white">Question {qIdx + 1}</h4>
-                            <span className="px-2 py-1 bg-yellow-500/20 border border-yellow-500/30 rounded text-sm text-yellow-400">
+                            <span className="px-2 py-1 bg-violet-500/20 border border-violet-500/30 rounded text-sm text-violet-400">
                                 {q.points} {q.points === 1 ? "point" : "points"}
                             </span>
                         </div>
@@ -232,7 +232,7 @@ export default function ActivityMcqSection({ item, section, PreviewRenderer }: P
             <div className="flex gap-3 mt-8">
                 <button
                     onClick={handleSubmit}
-                    className="flex items-center gap-2 px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition font-medium"
+                    className="flex items-center gap-2 px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition font-medium cursor-pointer"
                 >
                     <FontAwesomeIcon icon={faPaperPlane} />
                     Submit Answers

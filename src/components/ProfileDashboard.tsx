@@ -1,9 +1,8 @@
 // src/components/ProfileDashboard.tsx
 import { useEffect, useState } from "react";
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faBook, faGraduationCap, faStore, faUser } from '@fortawesome/free-solid-svg-icons';
+import { faBook, faGraduationCap, faUser } from '@fortawesome/free-solid-svg-icons';
 import { fetchCourses } from "../endpoints/CourseHandler";
-import { getEnrolledCourses } from "../endpoints/ProgressHandler";
 import { type UserSession } from "../types/UserSession";
 
 interface DashboardStats {
@@ -40,22 +39,29 @@ export const ProfileDashboard = ({ userSession, userProfile }: { userSession: Us
             userSession.jwt
           );
 
-          if (ownedCoursesResponse.status === "OK" && ownedCoursesResponse.ok) {
-            setStats({
-              totalCourses,
-              ownedCourses: ownedCoursesResponse.ok.length,
-              enrolledCourses: 0,
-              loading: false,
-            });
-          } else {
-            setStats((prev) => ({ ...prev, totalCourses, loading: false }));
-          }
+          const ownedCount = ownedCoursesResponse.status === "OK" && ownedCoursesResponse.ok
+            ? ownedCoursesResponse.ok.length
+            : 0;
+
+          setStats({
+            totalCourses,
+            ownedCourses: ownedCount,
+            enrolledCourses: 0,
+            loading: false,
+          });
         } else if (isLearner) {
-          // Fetch enrolled courses for learner
-          const enrolledResponse = await getEnrolledCourses(userSession.jwt ?? "");
+          // Fetch enrolled courses for learner using the same method as CoursesPage
+          const enrolledResponse = await fetchCourses(
+            { enrolled: 'true' },
+            userSession.jwt ?? ""
+          );
+          
+          // Count the total number of enrolled courses
           const enrolledCount = enrolledResponse.status === "OK" && enrolledResponse.ok
             ? enrolledResponse.ok.length
             : 0;
+
+          console.log(`Student enrolled in ${enrolledCount} courses`);
 
           setStats({
             totalCourses,
@@ -64,7 +70,13 @@ export const ProfileDashboard = ({ userSession, userProfile }: { userSession: Us
             loading: false,
           });
         } else {
-          setStats((prev) => ({ ...prev, totalCourses, loading: false }));
+          // Default case for other user types
+          setStats({
+            totalCourses,
+            ownedCourses: 0,
+            enrolledCourses: 0,
+            loading: false,
+          });
         }
       } catch (error) {
         console.error("Failed to fetch dashboard stats:", error);
@@ -160,7 +172,7 @@ export const ProfileDashboard = ({ userSession, userProfile }: { userSession: Us
                 <FontAwesomeIcon icon={card.icon} className="text-white" />
               </div>
             </div>
-            <p className="text-3xl font-bold text-white">{card.value}</p>
+            <p className="text-6xl font-bold text-white">{card.value}</p>
           </div>
         ))}
       </div>

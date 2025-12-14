@@ -1,431 +1,517 @@
-import React, { useEffect, useState, useRef } from "react";
-import { useParams, useNavigate } from "react-router-dom";
-import Editor from "@monaco-editor/react";
-import { fetchLesson, editLesson } from "../endpoints/LessonHandler";
-import type { LessonContentResponse, LessonRequest } from "../endpoints/LessonHandler";
-import { addPage, editPage, deletePage, reorderPages, fetchPage } from "../endpoints/PageHandler";
-import type { PageRequest } from "../endpoints/PageHandler";
-import LoadingSkeleton from "../components/LoadingSkeleton";
-import Page from "../components/page/Page";
+import React, { useEffect, useState } from "react";
+import { useParams, useLocation } from "react-router-dom";
 import { loadSessionState } from "../types/UserSession";
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faPlus, faTrash, faGripVertical, faArrowLeft } from '@fortawesome/free-solid-svg-icons';
-import PreviewRenderer from "../components/PreviewRenderer";
+import Page from "../components/page/Page";
+import { fetchCourseWithChapters } from "../endpoints/CourseHandler";
+import { fetchChapterWithItems } from "../endpoints/ChapterHandler";
+
+// Type imports
+import type { Chapter, Item, Selection } from "../types/ChapterEditorTypes";
+
+// Utility imports
+import { assignUiSerials } from "../utils/chapterEditorUtils";
+
+// Action imports
+import { 
+    addChapterAction, 
+    removeChapterAction, 
+    updateChapterAction, 
+    reorderChaptersAction, 
+} from "../utils/chapterActions";
+import { 
+    createItemAction, 
+    removeItemAction, 
+    updateItemAction,
+    reorderItemsAction
+} from "../utils/itemActions";
+
+// Component imports
+import { ChapterSidebar } from "../components/ChapterSidebar";
+import { ChapterEditor } from "../components/ChapterEditor";
+import { ItemEditor } from "../components/ItemEditor";
+import { ItemTypeModal } from "../components/ItemTypeModal";
+import { LoadingState, ErrorState, EmptySelectionState } from "../components/ChapterEditorStates";
 import AlertModal from "../components/modals/AlertModal";
 import ActionModal from "../components/modals/ActionModal";
 
-interface PageData {
-    id: number;
-    idx: number;
-    renderer: "MARKDOWN" | "LATEX";
-    content: string;
-}
-
-const LessonEditPage: React.FC = () => {
-    const { lessonId } = useParams<{ lessonId: string }>();
-    const navigate = useNavigate();
+// Main Application Component
+export default function ChapterEditPage(): React.ReactElement {
+    const { courseId } = useParams<{ courseId: string }>();
+    const location = useLocation();
     const { userSession, setUserSession } = loadSessionState();
-    const [lesson, setLesson] = useState<LessonContentResponse | null>(null);
+
+    const [chapters, setChapters] = useState<Chapter[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const [form, setForm] = useState<LessonRequest>({
-        name: "",
-        description: "",
-        icon: "",
-        finishMessage: ""
-    });
-    const [pages, setPages] = useState<PageData[]>([]);
-    const [selectedPageId, setSelectedPageId] = useState<number | null>(null);
-    const [draggedPageIdx, setDraggedPageIdx] = useState<number | null>(null);
+    const [courseName, setCourseName] = useState<string>("");
 
-    // Modal states
-    const [showDeleteModal, setShowDeleteModal] = useState(false);
+    // Track detailed selection
+    const [selection, setSelection] = useState<Selection>(null);
+
+    // Item type selection modal
+    const [showItemTypeModal, setShowItemTypeModal] = useState(false);
+    const [pendingChapterId, setPendingChapterId] = useState<number | null>(null);
+
+    // Finish message editor preview mode
+    const [isPreviewMode, setIsPreviewMode] = useState(false);
+    // UI state: track whether time limit input is enabled per item uiSerialId
+    const [timeLimitEnabledMap, setTimeLimitEnabledMap] = useState<Record<string, boolean>>({});
+
+    // Delete modal states
+    const [showDeleteConfirmModal, setShowDeleteConfirmModal] = useState(false);
     const [showDeleteSuccessModal, setShowDeleteSuccessModal] = useState(false);
-    const [pageToDelete, setPageToDelete] = useState<{ id: number; idx: number } | null>(null);
+    const [deleteTarget, setDeleteTarget] = useState<{
+        type: 'chapter' | 'item';
+        chapterId: number;
+        itemId?: number;
+    } | null>(null);
+    const [isDeleting, setIsDeleting] = useState(false);
+    const [deleteSuccessMessage, setDeleteSuccessMessage] = useState("");
 
-    const [leftWidth, setLeftWidth] = useState<number>(320);
-    const containerRef = useRef<HTMLDivElement | null>(null);
-    const draggingRef = useRef(false);
-    const startXRef = useRef(0);
-    const startWidthRef = useRef(0);
-    const [isLarge, setIsLarge] = useState(() =>
-        typeof window !== "undefined" ? window.innerWidth >= 1024 : true
-    );
+    // Refresh trigger for forcing data updates
+    const [refreshTrigger, setRefreshTrigger] = useState(0);
 
-    const MIN_LEFT = 200;
-    const MIN_CENTER = 360;
-    const MIN_PREVIEW = 360;
-    const MIN_REMAIN = MIN_CENTER + MIN_PREVIEW;
-
+    // Fetch course and chapters on mount and when refreshTrigger changes
     useEffect(() => {
-        const onResize = () => setIsLarge(window.innerWidth >= 1024);
-        window.addEventListener("resize", onResize);
-        return () => window.removeEventListener("resize", onResize);
+        const loadCourseData = async () => {
+            if (!courseId) {
+                setError("No course ID provided");
+                setLoading(false);
+                return;
+            }
+
+            try {
+                setLoading(true);
+                const jwt = userSession?.jwt ?? "";
+                const result = await fetchCourseWithChapters(Number(courseId), jwt);
+
+                if (result.ok) {
+                    setCourseName(result.ok.name);
+                    const chaptersWithItems: Chapter[] = result.ok.chapters.map((ch: any) => ({
+                        ...ch,
+                        items: [] // Items will be loaded when chapter is selected
+                    }));
+                    setChapters(chaptersWithItems);
+                    setError(null);
+                    
+                    // Clear selection to force re-selection
+                    setSelection(null);
+                } else {
+                    setError(result.err ?? "Unknown error");
+                }
+            } catch (err) {
+                setError("Failed to load course data");
+                console.error(err);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        loadCourseData();
+    }, [courseId, userSession?.jwt, refreshTrigger]);
+
+    // Refresh data when page becomes visible again (e.g., after navigating back)
+    useEffect(() => {
+        const handleVisibilityChange = () => {
+            if (document.visibilityState === 'visible') {
+                // Small delay to ensure any previous operations are complete
+                setTimeout(() => {
+                    setRefreshTrigger(prev => prev + 1);
+                }, 100);
+            }
+        };
+
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+        
+        return () => {
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
+        };
     }, []);
 
+    // Also check for location state that might indicate we need to refresh
     useEffect(() => {
-        if (!lessonId || !userSession?.jwt) return;
-        setLoading(true);
-        fetchLesson(Number(lessonId), userSession.jwt).then(res => {
-            if (res.ok) {
-                setLesson(res.ok);
-                setForm({
-                    name: res.ok.name,
-                    description: res.ok.description,
-                    icon: res.ok.icon,
-                    finishMessage: res.ok.finishMessage || ""
-                });
-                loadPages(res.ok.pages);
-                if (res.ok.pages.length > 0) {
-                    setSelectedPageId(res.ok.pages[0].id);
-                }
-            } else {
-                setError(res.err);
-            }
-            setLoading(false);
-        });
-    }, [lessonId, userSession?.jwt]);
-
-    const startDrag = (e: React.MouseEvent) => {
-        if (!containerRef.current) return;
-        draggingRef.current = true;
-        startXRef.current = e.clientX;
-        startWidthRef.current = leftWidth;
-        document.body.style.cursor = "col-resize";
-
-        const onMouseMove = (ev: MouseEvent) => {
-            if (!draggingRef.current || !containerRef.current) return;
-            const dx = ev.clientX - startXRef.current;
-            const containerRect = containerRef.current.getBoundingClientRect();
-            const maxLeft = containerRect.width / 4;
-            const max = Math.min(maxLeft, containerRect.width - MIN_REMAIN);
-            let newWidth = Math.max(MIN_LEFT, Math.min(startWidthRef.current + dx, max));
-            setLeftWidth(newWidth);
-        };
-
-        const onMouseUp = () => {
-            draggingRef.current = false;
-            document.body.style.cursor = "";
-            window.removeEventListener("mousemove", onMouseMove);
-            window.removeEventListener("mouseup", onMouseUp);
-        };
-
-        window.addEventListener("mousemove", onMouseMove);
-        window.addEventListener("mouseup", onMouseUp);
-    };
-
-    const loadPages = async (pagesList: { id: number; idx: number }[]) => {
-        if (!userSession?.jwt) return;
-        
-        const loadedPages = await Promise.all(
-            pagesList.map(async (p) => {
-                const res = await fetchPage(p.id, userSession.jwt!);
-                if (res.ok) {
-                    return {
-                        id: p.id,
-                        idx: p.idx,
-                        renderer: res.ok.renderer as "MARKDOWN" | "LATEX",
-                        content: res.ok.content
-                    };
-                }
-                return null;
-            })
-        );
-        
-        setPages(loadedPages.filter(p => p !== null) as PageData[]);
-    };
-
-    const handleChange = (field: keyof LessonRequest, value: string) => {
-        setForm(prev => ({ ...prev, [field]: value }));
-    };
-
-    const handleSave = async () => {
-        if (!lessonId || !userSession?.jwt) return;
-        setLoading(true);
-        const res = await editLesson(Number(lessonId), form, userSession.jwt);
-        if (res.ok) {
-            navigate(-1);
-        } else {
-            setError(res.err);
+        if (location.state?.refresh) {
+            setRefreshTrigger(prev => prev + 1);
+            // Clear the state to prevent infinite refreshes
+            window.history.replaceState({}, document.title);
         }
-        setLoading(false);
-    };
+    }, [location.state]);
 
-    const handleAddPage = async () => {
-        if (!lessonId || !userSession?.jwt) return;
-        
-        const newPageRequest: PageRequest = {
-            renderer: "MARKDOWN",
-            content: "# New Page\n\nStart writing your content here..."
+    // Ensure something is selected on load
+    useEffect(() => {
+        if (!selection && chapters.length > 0) {
+            setSelection({ type: 'chapter', id: chapters[0].id });
+        }
+    }, [chapters, selection]);
+
+    // Load chapter items when a chapter is selected
+    useEffect(() => {
+        const loadChapterItems = async () => {
+            if (selection?.type === 'chapter') {
+                const chapter = chapters.find(c => c.id === selection.id);
+                if (chapter && chapter.items.length === 0) {
+                    try {
+                        const jwt = userSession?.jwt ?? "";
+                        const result = await fetchChapterWithItems(selection.id, jwt);
+
+                        if (result.ok) {
+                            const withSerials = assignUiSerials(result.ok!.items as Item[]);
+                            setChapters(prev => prev.map(c =>
+                                c.id === selection.id ? { ...c, items: withSerials } : c
+                            ));
+                        }
+                    } catch (err) {
+                        console.error("Failed to load chapter items:", err);
+                    }
+                }
+            }
         };
-        
-        const res = await addPage(Number(lessonId), newPageRequest, userSession.jwt);
-        if (res.ok) {
-            const lessonRes = await fetchLesson(Number(lessonId), userSession.jwt);
-            if (lessonRes.ok) {
-                await loadPages(lessonRes.ok.pages);
+
+        loadChapterItems();
+    }, [selection, chapters, userSession?.jwt]);
+
+    // Handle delete button click (show confirmation modal)
+    const handleDeleteClick = (chapterId: number, itemId?: number) => {
+        if (itemId !== undefined) {
+            // Deleting an item
+            const chapter = chapters.find(c => c.id === chapterId);
+            const item = chapter?.items.find(i => i.id === itemId);
+            if (chapter && item) {
+                setDeleteTarget({ type: 'item', chapterId, itemId });
+                setShowDeleteConfirmModal(true);
             }
         } else {
-            setError(res.err);
+            // Deleting a chapter
+            const chapter = chapters.find(c => c.id === chapterId);
+            if (chapter) {
+                setDeleteTarget({ type: 'chapter', chapterId });
+                setShowDeleteConfirmModal(true);
+            }
         }
     };
 
-    const handleDeletePageClick = (pageId: number, idx: number) => {
-        setPageToDelete({ id: pageId, idx });
-        setShowDeleteModal(true);
-    };
-
+    // Handle confirmed delete
     const handleConfirmDelete = async () => {
-        if (!pageToDelete || !userSession?.jwt) return;
-        
-        const res = await deletePage(pageToDelete.id, userSession.jwt);
-        if (res.ok) {
-            setPages(prev => prev.filter(p => p.id !== pageToDelete.id));
-            if (selectedPageId === pageToDelete.id) setSelectedPageId(null);
-            setShowDeleteModal(false);
-            setShowDeleteSuccessModal(true);
-        } else {
-            setError(res.err);
-            setShowDeleteModal(false);
-        }
-        setPageToDelete(null);
-    };
+        if (!deleteTarget || !userSession?.jwt) return;
 
-    const handleCancelDelete = () => {
-        setShowDeleteModal(false);
-        setPageToDelete(null);
-    };
-
-    const handleUpdatePageContent = async (pageId: number, content: string) => {
-        if (!userSession?.jwt) return;
-        
-        const page = pages.find(p => p.id === pageId);
-        if (!page) return;
-        
-        const pageRequest: PageRequest = {
-            renderer: page.renderer,
-            content
-        };
-        
-        const res = await editPage(pageId, pageRequest, userSession.jwt);
-        if (res.ok) {
-            setPages(prev => prev.map(p => p.id === pageId ? { ...p, content } : p));
-        } else {
-            setError(res.err);
-        }
-    };
-
-    const handleDragStart = (idx: number) => {
-        setDraggedPageIdx(idx);
-    };
-
-    const handleDragOver = (e: React.DragEvent) => {
-        e.preventDefault();
-    };
-
-    const handleDrop = async (targetIdx: number) => {
-        if (draggedPageIdx === null || !lessonId || !userSession?.jwt) return;
-        if (draggedPageIdx === targetIdx) {
-            setDraggedPageIdx(null);
-            return;
-        }
-        
-        const reordered = [...pages];
-        const [movedPage] = reordered.splice(draggedPageIdx, 1);
-        reordered.splice(targetIdx, 0, movedPage);
-        
-        setPages(reordered);
-        setDraggedPageIdx(null);
-        
-        const pageIds = reordered.map(p => p.id);
-        const res = await reorderPages(Number(lessonId), pageIds, userSession.jwt);
-        if (!res.ok) {
-            setError(res.err);
-            const lessonRes = await fetchLesson(Number(lessonId), userSession.jwt);
-            if (lessonRes.ok) {
-                await loadPages(lessonRes.ok.pages);
+        setIsDeleting(true);
+        try {
+            if (deleteTarget.type === 'chapter') {
+                // Find chapter name before deleting
+                const chapter = chapters.find(c => c.id === deleteTarget.chapterId);
+                const chapterName = chapter?.name || "Chapter";
+                
+                // Delete chapter
+                await removeChapterAction(
+                    deleteTarget.chapterId,
+                    userSession.jwt,
+                    chapters,
+                    selection,
+                    setChapters,
+                    setSelection
+                );
+                
+                setDeleteSuccessMessage(`Chapter "${chapterName}" has been deleted successfully.`);
+            } else {
+                // Deleting an item
+                const chapter = chapters.find(c => c.id === deleteTarget.chapterId);
+                const item = chapter?.items.find(i => i.id === deleteTarget.itemId);
+                const itemName = item?.name || "Item";
+                
+                if (deleteTarget.itemId) {
+                    await removeItemAction(
+                        deleteTarget.chapterId,
+                        deleteTarget.itemId,
+                        chapters,
+                        selection,
+                        userSession.jwt,
+                        setChapters,
+                        setSelection
+                    );
+                    
+                    setDeleteSuccessMessage(`Item "${itemName}" has been deleted successfully.`);
+                }
             }
+            
+            // Show success modal
+            setShowDeleteConfirmModal(false);
+            setShowDeleteSuccessModal(true);
+            
+            // Force a refresh after successful delete
+            setTimeout(() => {
+                setRefreshTrigger(prev => prev + 1);
+            }, 500);
+        } catch (error) {
+            console.error("Failed to delete:", error);
+            setError("Failed to delete. Please try again.");
+        } finally {
+            setIsDeleting(false);
         }
     };
 
-    const selectedPage = pages.find(p => p.id === selectedPageId);
+    // Handle delete cancellation
+    const handleCancelDelete = () => {
+        setShowDeleteConfirmModal(false);
+        setDeleteTarget(null);
+    };
+
+    // Handle success modal close
+    const handleSuccessModalClose = () => {
+        setShowDeleteSuccessModal(false);
+        setDeleteTarget(null);
+    };
+
+    // Manual refresh function
+    const handleManualRefresh = () => {
+        setRefreshTrigger(prev => prev + 1);
+    };
+
+    // --- Drag & Drop Handlers ---
+
+    function onDragStart(e: React.DragEvent, type: 'chapter' | 'item', data: any) {
+        e.dataTransfer.setData('application/json', JSON.stringify({ type, ...data }));
+        e.dataTransfer.effectAllowed = 'move';
+    }
+
+    async function onDrop(e: React.DragEvent, targetChapterId: number, targetIndex?: number) {
+        e.preventDefault();
+        const dataStr = e.dataTransfer.getData('application/json');
+        if (!dataStr || !courseId) return;
+
+        try {
+            const data = JSON.parse(dataStr);
+
+            // Reorder Chapters
+            if (data.type === 'chapter' && typeof targetIndex === 'number') {
+                await reorderChaptersAction(
+                    Number(courseId), 
+                    data.index, 
+                    targetIndex, 
+                    chapters, 
+                    userSession?.jwt ?? "", 
+                    setChapters
+                );
+                // Refresh after reorder
+                setTimeout(() => {
+                    setRefreshTrigger(prev => prev + 1);
+                }, 300);
+            }
+
+            // Reorder Items - now with API call
+            if (data.type === 'item') {
+                const { chapterId: fromChapId, index: fromIdx } = data;
+                const toIdx = targetIndex ?? 0;
+                
+                await reorderItemsAction(
+                    fromChapId,
+                    fromIdx,
+                    targetChapterId,
+                    toIdx,
+                    chapters,
+                    userSession?.jwt ?? "",
+                    setChapters
+                );
+                // Refresh after reorder
+                setTimeout(() => {
+                    setRefreshTrigger(prev => prev + 1);
+                }, 300);
+            }
+        } catch (e) {
+            console.error("Error during drop:", e);
+        }
+    }
+
+    // --- Selection Data Helper ---
+
+    const getSelectionData = () => {
+        if (!selection) return null;
+        const chap = chapters.find(c => c.id === (selection.type === 'chapter' ? selection.id : selection.chapterId));
+        if (!chap) return null;
+
+        if (selection.type === 'chapter') return { type: 'chapter', data: chap };
+
+        const item = chap.items.find(i => i.uiSerialId === selection.serialId);
+        if (!item) return null;
+
+        return { type: 'item', data: item, chapter: chap };
+    };
+
+    const activeData = getSelectionData();
+
+    // Show loading state
+    if (loading) {
+        return <LoadingState userSession={userSession} setUserSession={setUserSession} />;
+    }
+
+    // Show error state
+    if (error) {
+        return <ErrorState error={error} userSession={userSession} setUserSession={setUserSession} />;
+    }
 
     return (
-        <Page title={`Quark | Lesson Editor`} userSession={userSession} setUserSession={setUserSession}>
-            {loading ? (
-                <LoadingSkeleton />
-            ) : error ? (
-                <div className="text-red-500 p-8">{error}</div>
-            ) : !lesson ? (
-                <div className="p-8">Lesson not found.</div>
-            ) : (
-                <div className="relative z-10 px-3 py-4 text-gray-200 flex flex-col h-[calc(100vh-4rem)] min-h-0">
-                    <div className="relative z-10 flex-1 h-[calc(100vh-7rem)] px-3 py-4 text-gray-200 min-h-0 overflow-hidden">
-                    <div
-                        ref={containerRef}
-                        className="w-full mx-auto gap-6 items-start h-full relative min-h-0"
-                        style={{
-                            display: "grid",
-                            gridTemplateColumns: isLarge ? `${leftWidth}px 1fr 1fr` : "1fr",
-                            gap: "1.5rem"
-                        }}
-                    >
-                        {isLarge && (
-                            <div
-                                onMouseDown={startDrag}
-                                style={{
-                                    position: "absolute",
-                                    top: 0,
-                                    left: `calc(${leftWidth}px + 0.75rem - 4px)`,
-                                    height: "100%",
-                                    width: "8px",
-                                    cursor: "col-resize",
-                                    zIndex: 40
-                                }}
-                                className="hidden lg:block"
-                            >
-                                <div className="h-full w-full bg-transparent hover:bg-white/10 transition-colors" />
-                            </div>
-                        )}
+        <Page title={`Quark | ${courseName} - Chapter Editor`} userSession={userSession} setUserSession={setUserSession}>
+            <div className="flex h-[calc(100vh-4rem)] overflow-hidden relative chapter-editor">
+                <style>{`
+                    .chapter-editor input[type="date"]::-webkit-calendar-picker-indicator,
+                    .chapter-editor input[type="time"]::-webkit-calendar-picker-indicator {
+                        cursor: pointer;
+                        filter: invert(32%) sepia(10%) saturate(1348%) hue-rotate(179deg) brightness(93%) contrast(87%);
+                    }
+                    
+                    /* Add pointer cursor to all clickable elements */
+                    .chapter-editor button,
+                    .chapter-editor [role="button"],
+                    .chapter-editor a,
+                    .chapter-editor select,
+                    .chapter-editor input[type="checkbox"],
+                    .chapter-editor input[type="radio"] {
+                        cursor: pointer !important;
+                    }
+                    
+                    /* Style for draggable elements */
+                    .chapter-editor [draggable="true"] {
+                        cursor: grab !important;
+                    }
+                    
+                    .chapter-editor [draggable="true"]:active {
+                        cursor: grabbing !important;
+                    }
+                `}</style>
 
-                        {/* LEFT: Pages List */}
-                        <div className="w-full bg-black/20 backdrop-blur-lg border border-white/10 rounded-2xl p-6 h-full flex flex-col min-h-0">
-                            <button
-                                onClick={() => navigate(-1)}
-                                className="flex items-center gap-2 text-indigo-300 hover:text-indigo-200 transition-colors mb-4 text-sm font-medium w-fit cursor-pointer"
-                            >
-                                <FontAwesomeIcon icon={faArrowLeft} className="w-4 h-4" />
-                                Back to Chapter Edit
-                            </button>
-                            <h1 className="text-2xl font-semibold text-white mb-4">Pages</h1>
-                            
-                            <div className="flex-1 overflow-y-auto space-y-2 mb-4">
-                                {pages.map((page, idx) => (
-                                    <div
-                                        key={page.id}
-                                        draggable
-                                        onDragStart={() => handleDragStart(idx)}
-                                        onDragOver={handleDragOver}
-                                        onDrop={() => handleDrop(idx)}
-                                        onClick={() => setSelectedPageId(page.id)}
-                                        className={`p-3 rounded-lg border transition-all cursor-pointer ${
-                                            selectedPageId === page.id
-                                                ? 'bg-indigo-600/20 border-indigo-500/50'
-                                                : 'bg-slate-800/50 border-white/10 hover:border-white/20'
-                                        }`}
-                                    >
-                                        <div className="flex items-center gap-2">
-                                            <FontAwesomeIcon 
-                                                icon={faGripVertical} 
-                                                className="w-3 h-3 text-slate-400 cursor-grab active:cursor-grabbing" 
-                                            />
-                                            <span className="text-sm text-white flex-1 cursor-grabbing">
-                                                Page {idx + 1}
-                                            </span>
-                                            <button
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    handleDeletePageClick(page.id, idx);
-                                                }}
-                                                className="p-1 hover:bg-red-500/20 rounded text-red-400 transition-colors"
-                                            >
-                                                <FontAwesomeIcon icon={faTrash} className="w-3 h-3 cursor-pointer" />
-                                            </button>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
+                {/* Background ambient effect */}
+                <div className="absolute top-0 left-0 right-0 h-64 bg-indigo-900/20 blur-[100px] pointer-events-none" />
 
-                            <button
-                                onClick={handleAddPage}
-                                className="w-full p-2 rounded-lg bg-indigo-600/20 hover:bg-indigo-600/30 border border-indigo-500/30 text-indigo-300 transition-colors flex items-center justify-center gap-2 cursor-pointer"
-                            >
-                                <FontAwesomeIcon icon={faPlus} className="w-4 h-4" />
-                                Add Page
-                            </button>
+                {/* Sidebar */}
+                <ChapterSidebar
+                    courseId={courseId}
+                    chapters={chapters}
+                    selection={selection}
+                    onSelectionChange={setSelection}
+                    onAddChapter={() => addChapterAction(Number(courseId), chapters, userSession?.jwt ?? "", setChapters, setSelection)}
+                    onRemoveChapter={(chapterId) => handleDeleteClick(chapterId)}
+                    onOpenItemTypeModal={(chapterId) => {
+                        setPendingChapterId(chapterId);
+                        setShowItemTypeModal(true);
+                    }}
+                    onRemoveItem={(chapterId, itemId) => handleDeleteClick(chapterId, itemId)}
+                    onDragStart={onDragStart}
+                    onDragOver={(e) => e.preventDefault()}
+                    onDrop={onDrop}
+                />
+
+                {/* Main Content Area */}
+                <main className="flex-1 bg-slate-950/30 backdrop-blur-sm p-8 overflow-y-auto relative custom-scrollbar">
+                    {/* Header with refresh button */}
+                    <div className="flex items-center justify-between mb-6">
+                        <h1 className="text-3xl font-bold text-white">{courseName} - Chapter Editor</h1>
+                        <button
+                            onClick={handleManualRefresh}
+                            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg flex items-center gap-2 transition-colors cursor-pointer"
+                            title="Refresh data"
+                        >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                            </svg>
+                            Refresh
+                        </button>
+                    </div>
+
+                    {!activeData ? (
+                        <EmptySelectionState />
+                    ) : (
+                        <div className="max-w-4xl mx-auto space-y-8 animate-in zoom-in-95 duration-300">
+                            {activeData.type === 'chapter' ? (
+                                <ChapterEditor
+                                    chapter={activeData.data as Chapter}
+                                    onNameChange={(name) => updateChapterAction((activeData.data as Chapter).id, { name }, chapters, userSession?.jwt ?? "", setChapters)}
+                                    onDescriptionChange={(description) => updateChapterAction((activeData.data as Chapter).id, { description }, chapters, userSession?.jwt ?? "", setChapters)}
+                                />
+                            ) : (
+                                <ItemEditor
+                                    item={activeData.data as Item}
+                                    chapter={activeData.chapter as Chapter}
+                                    isPreviewMode={isPreviewMode}
+                                    timeLimitEnabledMap={timeLimitEnabledMap}
+                                    onNameChange={(name) => updateItemAction((activeData.chapter as Chapter).id, (activeData.data as Item).id, { name }, chapters, userSession?.jwt ?? "", setChapters)}
+                                    onDescriptionChange={(description) => updateItemAction((activeData.chapter as Chapter).id, (activeData.data as Item).id, { description }, chapters, userSession?.jwt ?? "", setChapters)}
+                                    onFinishMessageChange={(finishMessage) => updateItemAction((activeData.chapter as Chapter).id, (activeData.data as Item).id, { finishMessage }, chapters, userSession?.jwt ?? "", setChapters)}
+                                    onTimeLimitEnabledChange={(serialKey, enabled) => setTimeLimitEnabledMap(prev => ({ ...prev, [serialKey]: enabled }))}
+                                    onRulesetFieldUpdate={(field, value) => {
+                                        const item = activeData.data as Item;
+                                        let ruleset: any = { enabled: true };
+                                        try {
+                                            ruleset = item.ruleset ? (typeof item.ruleset === 'string' ? JSON.parse(item.ruleset) : item.ruleset) : { enabled: true };
+                                        } catch {
+                                            ruleset = { enabled: true };
+                                        }
+                                        const newRuleset = { ...ruleset, [field]: value };
+                                        updateItemAction((activeData.chapter as Chapter).id, item.id, { ruleset: JSON.stringify(newRuleset) }, chapters, userSession?.jwt ?? "", setChapters);
+                                    }}
+                                    onPreviewModeToggle={() => setIsPreviewMode(!isPreviewMode)}
+                                />
+                            )}
                         </div>
+                    )}
+                </main>
+            </div>
 
-                        {/* CENTER: Editor */}
-                        {selectedPage ? (
-                            <div className="w-full bg-black/20 backdrop-blur-lg border border-white/10 rounded-2xl p-4 h-full flex flex-col">
-                                <div className="flex-1 bg-transparent border border-white/5 rounded-md overflow-hidden min-h-0">
-                                    <Editor
-                                        height="100%"
-                                        theme="vs-dark"
-                                        language="markdown"
-                                        value={selectedPage.content}
-                                        onChange={(val) => handleUpdatePageContent(selectedPage.id, val ?? "")}
-                                        options={{
-                                            minimap: { enabled: false },
-                                            lineNumbers: "on",
-                                            scrollBeyondLastLine: false,
-                                            wordWrap: "on",
-                                            fontSize: 14,
-                                            automaticLayout: true
-                                        }}
-                                    />
-                                </div>
-                            </div>
-                        ) : (
-                            <div className="w-full bg-black/20 backdrop-blur-lg border border-white/10 rounded-2xl p-6 h-full flex items-center justify-center">
-                                <div className="text-center text-slate-400">
-                                    <p className="mb-4">No pages yet</p>
-                                    <button
-                                        onClick={handleAddPage}
-                                        className="px-6 py-3 rounded-full bg-indigo-600/20 hover:bg-indigo-600/30 border border-indigo-500/30 text-indigo-300 text-sm font-medium transition-colors"
-                                    >
-                                        <FontAwesomeIcon icon={faPlus} className="mr-2" />
-                                        Add Your First Page
-                                    </button>
-                                </div>
-                            </div>
-                        )}
+            {/* Item Type Selection Modal */}
+            <ItemTypeModal
+                isOpen={showItemTypeModal}
+                onLessonCreate={() => {
+                    if (pendingChapterId) {
+                        createItemAction("LESSON", pendingChapterId, chapters, userSession?.jwt ?? "", setChapters, setSelection);
+                        setShowItemTypeModal(false);
+                        setPendingChapterId(null);
+                        // Refresh after a short delay to ensure data is consistent
+                        setTimeout(() => {
+                            setRefreshTrigger(prev => prev + 1);
+                        }, 500);
+                    }
+                }}
+                onActivityCreate={() => {
+                    if (pendingChapterId) {
+                        createItemAction("ACTIVITY", pendingChapterId, chapters, userSession?.jwt ?? "", setChapters, setSelection);
+                        setShowItemTypeModal(false);
+                        setPendingChapterId(null);
+                        // Refresh after a short delay to ensure data is consistent
+                        setTimeout(() => {
+                            setRefreshTrigger(prev => prev + 1);
+                        }, 500);
+                    }
+                }}
+                onCancel={() => {
+                    setShowItemTypeModal(false);
+                    setPendingChapterId(null);
+                }}
+            />
 
-                        {/* RIGHT: Preview */}
-                        {selectedPage ? (
-                            <div className="w-full bg-black/20 backdrop-blur-lg border border-white/10 rounded-2xl p-6 h-full flex flex-col overflow-y-auto">
-                                <h1 className="text-2xl font-semibold text-white mb-4 text-center">Preview</h1>
-                                <div className="w-full flex-1 px-6 py-6 rounded-md bg-white border border-gray-200 text-gray-900 overflow-auto min-h-0">
-                                    <div className="prose max-w-none">
-                                        <PreviewRenderer value={selectedPage.content} />
-                                    </div>
-                                </div>
-                            </div>
-                        ) : (
-                            <div className="w-full bg-black/20 backdrop-blur-lg border border-white/10 rounded-2xl p-6 h-full flex items-center justify-center">
-                                <div className="text-center text-slate-400">
-                                    <p>Select a page to preview</p>
-                                </div>
-                            </div>
-                        )}
-                    </div>
-                    </div>
+            {/* Delete Confirmation Modal */}
+            <ActionModal
+                isOpen={showDeleteConfirmModal}
+                onClose={handleCancelDelete}
+                onConfirm={handleConfirmDelete}
+                title={deleteTarget?.type === 'chapter' ? "Delete Chapter" : "Delete Item"}
+                message={
+                    deleteTarget?.type === 'chapter' 
+                        ? "Are you sure you want to delete this chapter? This will also delete all items within it."
+                        : "Are you sure you want to delete this item?"
+                }
+                confirmText="Delete"
+                cancelText="Cancel"
+                variant="danger"
+                isLoading={isDeleting}
+            />
 
-                    {/* Delete Confirmation Modal */}
-                    <ActionModal
-                        isOpen={showDeleteModal}
-                        onClose={handleCancelDelete}
-                        onConfirm={handleConfirmDelete}
-                        title="Delete Page"
-                        message={`Are you sure you want to delete Page ${pageToDelete ? pages.findIndex(p => p.id === pageToDelete.id) + 1 : ''}? This action cannot be undone.`}
-                        confirmText="Delete"
-                        cancelText="Cancel"
-                        variant="warning"
-                    />
-
-                    {/* Delete Success Modal */}
-                    <AlertModal
-                        isOpen={showDeleteSuccessModal}
-                        onClose={() => setShowDeleteSuccessModal(false)}
-                        title="Page Deleted Successfully"
-                        message="The page has been removed from this lesson."
-                        variant="success"
-                        buttonText="Okay"
-                    />
-                </div>
-            )}
+            {/* Delete Success Modal */}
+            <AlertModal
+                isOpen={showDeleteSuccessModal}
+                onClose={handleSuccessModalClose}
+                title="Deleted Successfully"
+                message={deleteSuccessMessage}
+                variant="success"
+                buttonText="Okay"
+            />
         </Page>
     );
-};
-
-export default LessonEditPage;
+}
