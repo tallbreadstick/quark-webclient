@@ -1,7 +1,7 @@
 // src/components/ProfileDashboard.tsx
 import { useEffect, useState } from "react";
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faBook, faGraduationCap, faStore } from '@fortawesome/free-solid-svg-icons';
+import { faBook, faGraduationCap, faStore, faUser } from '@fortawesome/free-solid-svg-icons';
 import { fetchCourses } from "../endpoints/CourseHandler";
 import { getEnrolledCourses } from "../endpoints/ProgressHandler";
 import { type UserSession } from "../types/UserSession";
@@ -81,7 +81,7 @@ export const ProfileDashboard = ({ userSession, userProfile }: { userSession: Us
   if (stats.loading || !userProfile?.userType) {
     return (
       <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-6">
-        <h2 className="text-2xl font-bold text-white mb-6">Dashboard</h2>
+        <h2 className="text-2xl font-bold text-white mb-6">Insights</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {[1, 2].map((i) => (
             <div key={i} className="bg-white/5 rounded-lg p-4 animate-pulse">
@@ -94,31 +94,23 @@ export const ProfileDashboard = ({ userSession, userProfile }: { userSession: Us
     );
   }
 
+  const accountDetails = {
+    username: userSession.username,
+    email: userSession.email,
+    userType: userProfile?.userType || "Unknown",
+  };
+
   const dashboardCards = isEducator
     ? [
-        {
-          icon: faStore,
-          label: "Total Courses",
-          value: stats.totalCourses,
-          color: "from-blue-500 to-blue-600",
-          bgColor: "bg-blue-500/10",
-        },
         {
           icon: faBook,
           label: "Owned Courses",
           value: stats.ownedCourses,
           color: "from-purple-500 to-purple-600",
           bgColor: "bg-purple-500/10",
-        },
+        },  
       ]
     : [
-        {
-          icon: faStore,
-          label: "Total Courses",
-          value: stats.totalCourses,
-          color: "from-blue-500 to-blue-600",
-          bgColor: "bg-blue-500/10",
-        },
         {
           icon: faGraduationCap,
           label: "Enrolled Courses",
@@ -130,8 +122,33 @@ export const ProfileDashboard = ({ userSession, userProfile }: { userSession: Us
 
   return (
     <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl p-6">
-      <h2 className="text-2xl font-bold text-white mb-6">Dashboard</h2>
+      <h2 className="text-2xl font-bold text-white mb-6">Insights</h2>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Account Details Card */}
+        <div className="bg-blue-500/10 border border-white/10 rounded-xl p-4 hover:border-white/20 transition-colors">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-medium text-gray-300">Account Details</h3>
+            <div className="bg-gradient-to-br from-blue-500 to-blue-600 p-2 rounded-lg">
+              <FontAwesomeIcon icon={faUser} className="text-white" />
+            </div>
+          </div>
+          <div className="space-y-2">
+            <div className="flex justify-between items-center">
+              <span className="text-xs text-gray-400">Username:</span>
+              <span className="text-sm font-medium text-white">{accountDetails.username}</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-xs text-gray-400">Email:</span>
+              <span className="text-sm font-medium text-white truncate ml-2">{accountDetails.email}</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-xs text-gray-400">User Type:</span>
+              <span className="text-sm font-medium text-white capitalize">{accountDetails.userType}</span>
+            </div>
+          </div>
+        </div>
+        
+        {/* Course Stats Cards */}
         {dashboardCards.map((card, index) => (
           <div
             key={index}
