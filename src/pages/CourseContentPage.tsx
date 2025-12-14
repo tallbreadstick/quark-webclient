@@ -193,11 +193,10 @@ export default function CourseContent() {
     const [testResults, setTestResults] = useState<string | null>(null);
     const [activeTab, setActiveTab] = useState<'intro' | { chapterIdx: number; itemIdx: number }>('intro');
     const [isRunning, setIsRunning] = useState(false);
+    
     useEffect(() => {
         if (!courseId) return;
         let cancelled = false;
-
-
 
         async function loadAll() {
             setLoading(true);
@@ -263,7 +262,6 @@ export default function CourseContent() {
         setSelectedTestCase(0);
     }, [currentSectionIndex, activeTab, chapters]);
 
-
     /**
      *  HANDLES RUN, STILL SIMULATED FOR NOW
      */
@@ -275,6 +273,7 @@ export default function CourseContent() {
             setIsRunning(false);
         }, 1000);
     };
+    
     /**
      *  HANDLES SUBMIT, STILL SIMULATED FOR NOW
      */
@@ -323,6 +322,7 @@ export default function CourseContent() {
                 </div>
             );
         }
+        
         if (!currentItem) {
             return (
                 <div className="flex items-center justify-center h-full text-gray-400">
@@ -365,7 +365,7 @@ export default function CourseContent() {
                                     </div>
                                     <div>
                                         <h3 className="text-lg font-semibold text-green-400 mb-2">Lesson Complete!</h3>
-                                        <p className="text-gray-300">{finishMessage}</p>
+                                        <p className="text-gray-300">Great job! You’ve completed this lesson.</p>
                                     </div>
                                 </div>
                             </div>
@@ -439,21 +439,27 @@ export default function CourseContent() {
 
                     {/* Pseudo-tab for course introduction */}
                     <button
-                        className={`w-full text-left px-6 py-3 hover:bg-white/10 transition ${activeTab === 'intro' ? 'bg-white/10 border-l-4 border-purple-500' : 'border-l-4 border-transparent'}`}
+                        className={`w-full text-left px-6 py-3 hover:bg-white/10 transition cursor-pointer ${activeTab === 'intro' ? 'bg-white/10 border-l-4 border-purple-500' : 'border-l-4 border-transparent'}`}
                         onClick={() => setActiveTab('intro')}
                     >
                         <div className="flex items-start gap-3">
                             <div className="w-8 h-8 flex items-center justify-center rounded-lg bg-purple-500/20">
                                 <FontAwesomeIcon icon={faGraduationCap} className="text-purple-400" style={{ fontSize: 22, width: 22, height: 22 }} />
                             </div>
-                            <div className="flex-1">
+                            <div className="flex-1 min-w-0">
                                 <div className="text-sm font-medium text-white">Course Introduction</div>
                                 {/* Show a short preview of the intro markdown (first 120 chars, no markdown) */}
                                 {(() => {
                                     const introMarkdown = getIntroMarkdown(course);
                                     if (introMarkdown) {
-                                        const plain = introMarkdown.replace(/[#*_`>\[\]\(\)!\-]/g, "").replace(/\n+/g, " ").trim();
-                                        return <div className="text-xs text-gray-400 mt-1 line-clamp-2">{plain.slice(0, 120)}{plain.length > 120 ? "..." : ""}</div>;
+                                        const plain = introMarkdown.replace(/[#*_>\[\]\(\)!\-]/g, "").replace(/\n+/g, " ").trim();
+                                        return (
+                                            <div 
+                                                className="text-xs text-gray-400 mt-1 truncate"
+                                            >
+                                                {plain}
+                                            </div>
+                                        );
                                     }
                                     return null;
                                 })()}
@@ -487,7 +493,9 @@ export default function CourseContent() {
                                     {chapter.name}
                                 </h3>
                                 {chapter.description && (
-                                    <p className="text-xs text-gray-400 mt-1">{chapter.description}</p>
+                                    <p className="text-xs text-gray-400 mt-1 truncate">
+                                        {chapter.description}
+                                    </p>
                                 )}
                             </div>
                             <div className="py-2">
@@ -502,17 +510,19 @@ export default function CourseContent() {
                                                     : 'border-l-4 border-transparent'
                                             }`}
                                         >
-                                            <div className="flex items-start gap-3">
+                                            <div className="flex items-start gap-3 cursor-pointer">
                                                 <div className="w-8 h-8 flex items-center justify-center rounded-lg" style={{ backgroundColor: item.type === "LESSON" ? "rgba(59, 130, 246, 0.2)" : "rgba(34, 197, 94, 0.2)" }}>
                                                     <FontAwesomeIcon 
                                                         icon={item.type === "LESSON" ? faBook : faPencil} 
                                                         className={item.type === "LESSON" ? "text-blue-400" : "text-green-400"}
                                                     />
                                                 </div>
-                                                <div className="flex-1">
-                                                    <div className="text-sm font-medium text-white">{item.name}</div>
+                                                <div className="flex-1 min-w-0">
+                                                    <div className="text-sm font-medium text-white truncate">{item.name}</div>
                                                     {item.description && (
-                                                        <div className="text-xs text-gray-400 mt-1">{item.description}</div>
+                                                        <div className="text-xs text-gray-400 mt-1 truncate">
+                                                            {item.description}
+                                                        </div>
                                                     )}
                                                     <div className="flex items-center gap-2 mt-2 text-xs text-gray-500">
                                                         {item.type === "LESSON" && (
@@ -548,51 +558,55 @@ export default function CourseContent() {
                     ) : (
                         <>
                         {currentItem?.type === "LESSON" && (currentItem.pages?.length ?? 0) > 1 && (
-                                <div className="border-t border-white/10 backdrop-blur-sm px-8 py-2">
-                                    <div className="max-w-7xl mx-auto flex items-center justify-between">
-                                        <button
-                                            onClick={() => setCurrentPageIndex(prev => Math.max(0, prev - 1))}
-                                            disabled={currentPageIndex === 0}
-                                            className="px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed transition"
-                                        >
-                                            ← Previous
-                                        </button>
-                                        
-                                        <div className="text-sm text-gray-400">
-                                            Page {currentPageIndex + 1} of {currentItem.pages?.length ?? 0}
-                                        </div>
-                                        
-                                        <button
-                                            onClick={() => setCurrentPageIndex(prev => Math.min((currentItem.pages?.length ?? 1) - 1, prev + 1))}
-                                            disabled={currentPageIndex === (currentItem.pages?.length ?? 1) - 1}
-                                            className="px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed transition"
-                                        >
-                                            Next →
-                                        </button>
-                                    </div>
+                            <div className="border-t border-white/10 backdrop-blur-sm px-8 py-4">
+                                <div className="max-w-7xl mx-auto flex items-center justify-between">
+                                <button
+                                    onClick={() => setCurrentPageIndex(prev => Math.max(0, prev - 1))}
+                                    disabled={currentPageIndex === 0}
+                                    className="px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed transition cursor-pointer"
+                                >
+                                    ← Previous
+                                </button>
+
+                                <div className="text-lm text-gray-400">
+                                    Page {currentPageIndex + 1} of {currentItem.pages?.length ?? 0}
                                 </div>
-                            )}
+
+                                <button
+                                    onClick={() =>
+                                    setCurrentPageIndex(prev =>
+                                        Math.min((currentItem.pages?.length ?? 1) - 1, prev + 1)
+                                    )
+                                    }
+                                    disabled={currentPageIndex === (currentItem.pages?.length ?? 1) - 1}
+                                    className="px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed transition cursor-pointer"
+                                >
+                                    Next →
+                                </button>
+                                </div>
+                            </div>
+                        )}
                             {currentItem?.type === "ACTIVITY" && totalSections > 1 && (
                                 <div className="border-t border-white/10 backdrop-blur-sm px-8 py-4">
                                     <div className="max-w-7xl mx-auto flex items-center justify-between">
                                         <button
                                             onClick={() => setCurrentSectionIndex(prev => Math.max(0, prev - 1))}
                                             disabled={currentSectionIndex === 0}
-                                            className="px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                                            className="px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed transition cursor-pointer"
                                         >
-                                            ← Previous Section
+                                            ← Previous
                                         </button>
                                         
-                                        <div className="text-sm text-gray-400">
+                                        <div className="text-lm text-gray-400">
                                             Section {currentSectionIndex + 1} of {totalSections}
                                         </div>
                                         
                                         <button
                                             onClick={() => setCurrentSectionIndex(prev => Math.min((totalSections ?? 1) - 1, prev + 1))}
                                             disabled={currentSectionIndex === (totalSections ?? 1) - 1}
-                                            className="px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                                            className="px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed transition cursor-pointer"
                                         >
-                                            Next Section →
+                                            Next →
                                         </button>
                                     </div>
                                 </div>

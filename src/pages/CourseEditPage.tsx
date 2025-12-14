@@ -67,6 +67,11 @@ export default function CourseEditPage() {
     const [pendingNavigation, setPendingNavigation] = useState<string | null>(null);
     const [isNavigating, setIsNavigating] = useState(false);
 
+    // Track if we're in the middle of handling back navigation
+    const handlingBackRef = useRef(false);
+    // Store Monaco Editor instance
+    const editorRef = useRef<any>(null);
+
     const MIN_LEFT = 200;
     const MIN_CENTER = 360;
     const MIN_PREVIEW = 360;
@@ -283,51 +288,95 @@ export default function CourseEditPage() {
         return () => document.removeEventListener('click', handleClick, true);
     }, [name, description, introContent, forkable, visibility, tagsText, initialData, isNavigating]);
 
-    // Handle browser back button
+    // FIXED: Handle browser back button - CLEANER APPROACH
     useEffect(() => {
         const handlePopState = (e: PopStateEvent) => {
-            if (hasUnsavedChanges() && !isNavigating) {
+            console.log("popstate triggered", { 
+                hasUnsavedChanges: hasUnsavedChanges(), 
+                isNavigating, 
+                handlingBack: handlingBackRef.current 
+            });
+            
+            // If we're already handling back navigation or in the middle of navigation, ignore
+            if (handlingBackRef.current || isNavigating) {
+                return;
+            }
+            
+            if (hasUnsavedChanges()) {
+                // Prevent the default back action
                 e.preventDefault();
-                window.history.pushState(null, "", location.pathname);
+                
+                // Show confirmation modal
                 setPendingNavigation("back");
                 setShowUnsavedModal(true);
+                
+                // Push state back to stay on current page
+                setTimeout(() => {
+                    window.history.pushState(null, "", window.location.pathname);
+                }, 0);
+            } else {
+                // If no unsaved changes, let the browser navigate back normally
+                console.log("No unsaved changes, allowing back navigation");
             }
         };
 
-        window.history.pushState(null, "", location.pathname);
         window.addEventListener("popstate", handlePopState);
+        
+        // Add an initial state to track back navigation
+        window.history.pushState({ fromCourseEdit: true }, "");
 
         return () => {
             window.removeEventListener("popstate", handlePopState);
         };
-    }, [name, description, introContent, forkable, visibility, tagsText, initialData, location.pathname, isNavigating]);
+    }, [name, description, introContent, forkable, visibility, tagsText, initialData, isNavigating]);
 
-    // Handle unsaved changes confirmation
+    // FIXED: Handle unsaved changes confirmation
     const handleConfirmLeave = () => {
+        console.log("handleConfirmLeave called", { pendingNavigation });
+        
         setIsNavigating(true);
+        handlingBackRef.current = true;
         
         // Clear sessionStorage when leaving to non-edit pages
-        if (courseId) {
+        if (courseId && pendingNavigation !== "back") {
             const storageKey = `course_edit_${courseId}`;
             sessionStorage.removeItem(storageKey);
         }
         
-        if (pendingNavigation === "back") {
-            window.history.back();
-        } else if (pendingNavigation) {
-            navigate(pendingNavigation);
+        // Close modal first
+        setShowUnsavedModal(false);
+        
+        // Clean up Monaco Editor before navigation
+        if (editorRef.current) {
+            try {
+                editorRef.current.dispose();
+            } catch (err) {
+                console.log("Monaco Editor cleanup error:", err);
+            }
         }
         
-        setShowUnsavedModal(false);
-        setPendingNavigation(null);
-        
-        // Reset after navigation
-        setTimeout(() => setIsNavigating(false), 100);
+        // Navigate after a longer delay to allow Monaco Editor to clean up
+        setTimeout(() => {
+            if (pendingNavigation === "back") {
+                console.log("Navigating back via window.history.go(-2)");
+                // Go back two steps: one for our initial state, one for the popstate
+                window.history.go(-2);
+            } else if (pendingNavigation) {
+                console.log("Navigating to:", pendingNavigation);
+                navigate(pendingNavigation);
+            }
+            
+            setPendingNavigation(null);
+            setIsNavigating(false);
+            handlingBackRef.current = false;
+        }, 200); // Increased delay to allow Monaco Editor to clean up
     };
 
     const handleCancelLeave = () => {
+        console.log("handleCancelLeave called");
         setShowUnsavedModal(false);
         setPendingNavigation(null);
+        // No need to reset handlingBackRef here since we didn't start handling back
     };
 
     // Responsive
@@ -498,7 +547,19 @@ export default function CourseEditPage() {
                             {!userSession ? (
                                 <div className="text-center text-gray-300">
                                     <p className="mb-4">You must be signed in to edit a course.</p>
-                                    <a href="/login" className="px-4 py-2 bg-[#566fb8] rounded-md text-white cursor-pointer">Sign in</a>
+                                    <a 
+                                        href="/login" 
+                                        onClick={(e) => {
+                                            if (hasUnsavedChanges()) {
+                                                e.preventDefault();
+                                                setPendingNavigation("/login");
+                                                setShowUnsavedModal(true);
+                                            }
+                                        }}
+                                        className="px-4 py-2 bg-[#566fb8] rounded-md text-white cursor-pointer"
+                                    >
+                                        Sign in
+                                    </a>
                                 </div>
                             ) : (
                                 <form id="course-edit-form" onSubmit={handleSubmit} className="flex flex-col gap-4">
@@ -580,6 +641,13 @@ export default function CourseEditPage() {
                                     wordWrap: 'on',
                                     fontSize: 14,
                                     automaticLayout: true
+                                }}
+                                onMount={(editor) => {
+                                    // Store editor instance for cleanup
+                                    editorRef.current = editor;
+                                }}
+                                beforeMount={(monaco) => {
+                                    // Monaco is being loaded
                                 }}
                             />
                         </div>

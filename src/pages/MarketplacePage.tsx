@@ -35,6 +35,8 @@ export default function MarketplacePage() {
 
     const [showEnrollmentModal, setShowEnrollmentModal] = useState(false);
     const [enrolledCourseName, setEnrolledCourseName] = useState("");
+    const [enrollmentModalVariant, setEnrollmentModalVariant] = useState<"success" | "info">("success");
+    const [enrollmentModalMessage, setEnrollmentModalMessage] = useState<React.ReactNode>(null);
 
     const coursesPerPage = 9;
 
@@ -86,7 +88,7 @@ export default function MarketplacePage() {
                                 name: c.name,
                                 description: c.description ?? "",
                                 tags,
-                                enrolled: false,
+                                enrolled: Boolean(c.enrolled),
                                 forkable: Boolean(c.forkable),
                                 owner: { username: c.owner ?? "—" },
                             };
@@ -165,20 +167,100 @@ export default function MarketplacePage() {
         e.stopPropagation();
         if (!userSession) return;
 
+        // Check if already enrolled (frontend check)
+        const course = courses.find((c) => c.id === courseId);
+        if (course?.enrolled) {
+            setEnrolledCourseName(name);
+            setEnrollmentModalVariant("info");
+            setEnrollmentModalMessage(
+                <div className="text-center">
+                    <p className="text-lg mb-2">You're already enrolled in <span className="font-semibold">"{name}"</span></p>
+                    <p className="text-sm text-gray-400">
+                        You can access this course from your <Link to="/my-courses" className="text-blue-400 hover:text-blue-300 underline">My Courses</Link> page.
+                    </p>
+                </div>
+            );
+            setShowEnrollmentModal(true);
+            return;
+        }
+
         try {
             const result = await enrollInCourse(courseId, userSession.jwt ?? "");
 
             if (result.status === "OK") {
+                // Update local state to show enrolled
                 setCourses((prev) =>
                     prev.map((c) =>
                         c.id === courseId ? { ...c, enrolled: true } : c
                     )
                 );
+                
                 setEnrolledCourseName(name);
+                setEnrollmentModalVariant("success");
+                setEnrollmentModalMessage(
+                    <div className="text-center">
+                        <p className="text-lg mb-2">Successfully enrolled in <span className="font-semibold">"{name}"</span></p>
+                        <p className="text-sm text-gray-400">
+                            Start learning now from your My Courses page.
+                        </p>
+                    </div>
+                );
+                setShowEnrollmentModal(true);
+            } else {
+                // Handle error response
+                setEnrolledCourseName(name);
+                setEnrollmentModalVariant("info");
+                setEnrollmentModalMessage(
+                    <div className="text-center">
+                        <p className="text-lg mb-2">Failed to enroll in "{name}"</p>
+                        <p className="text-sm text-gray-400">
+                            {result.status === "ERR" ? result.err : "You continue learning from your My Courses page."}
+                        </p>
+                    </div>
+                );
                 setShowEnrollmentModal(true);
             }
-        } catch (e) {
-            alert("Failed to enroll.");
+        } catch (e: any) {
+            console.error("Enrollment error:", e);
+            
+            // Check if it's an "already enrolled" error from backend
+            const errorMessage = e?.response?.data || e?.message || "";
+            const isAlreadyEnrolled = 
+                errorMessage.toLowerCase().includes("already enrolled") || 
+                (e?.response?.status === 400 && errorMessage.toLowerCase().includes("enrolled"));
+
+            if (isAlreadyEnrolled) {
+                // Update local state to reflect enrollment
+                setCourses((prev) =>
+                    prev.map((c) =>
+                        c.id === courseId ? { ...c, enrolled: true } : c
+                    )
+                );
+                
+                setEnrolledCourseName(name);
+                setEnrollmentModalVariant("info");
+                setEnrollmentModalMessage(
+                    <div className="text-center">
+                        <p className="text-lg mb-2">You're already enrolled in <span className="font-semibold">"{name}"</span></p>
+                        <p className="text-sm text-gray-400">
+                            You can access this course from your My Courses page.
+                        </p>
+                    </div>
+                );
+            } else {
+                // Other errors
+                setEnrolledCourseName(name);
+                setEnrollmentModalVariant("info");
+                setEnrollmentModalMessage(
+                    <div className="text-center">
+                        <p className="text-lg mb-2">Failed to enroll in "{name}"</p>
+                        <p className="text-sm text-gray-400">
+                            {errorMessage || "Something went wrong. Please try again."}
+                        </p>
+                    </div>
+                );
+            }
+            setShowEnrollmentModal(true);
         }
     };
 
@@ -349,20 +431,13 @@ export default function MarketplacePage() {
                 </div>
             </div>
 
-            {/* ENROLL SUCCESS MODAL */}
+            {/* ENROLLMENT MODAL */}
             <AlertModal
                 isOpen={showEnrollmentModal}
                 onClose={() => setShowEnrollmentModal(false)}
-                title="Enrollment Successful!"
-                message={
-                    <>
-                        <p>You've successfully enrolled in "{enrolledCourseName}".</p>
-                        <p className="text-sm text-gray-400 mt-2">
-                            You can now access this course from your My Courses page.
-                        </p>
-                    </>
-                }
-                variant="success"
+                title={enrollmentModalVariant === "success" ? "Enrollment Successful!" : "Already Enrolled"}
+                message={enrollmentModalMessage}
+                variant={enrollmentModalVariant}
                 buttonText="Got it!"
             />
         </Page>

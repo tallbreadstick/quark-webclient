@@ -43,6 +43,7 @@ const ActivityEditPage: React.FC = () => {
     // Modal states
     const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [showDeleteSuccessModal, setShowDeleteSuccessModal] = useState(false);
+    const [showSaveSuccessModal, setShowSaveSuccessModal] = useState(false); // NEW: Save success modal state
     const [sectionToDelete, setSectionToDelete] = useState<{ id: number; idx: number; type: string } | null>(null);
 
     useEffect(() => {
@@ -151,6 +152,8 @@ const ActivityEditPage: React.FC = () => {
                 if (fetched.ok) {
                     setSections(prev => [...prev, fetched.ok as LocalSection]);
                     setSelectedId(maybeId);
+                    // NEW: Show success modal after adding section
+                    setShowSaveSuccessModal(true);
                     return;
                 }
             }
@@ -198,6 +201,8 @@ const ActivityEditPage: React.FC = () => {
         const res = await editSection(id, req, userSession.jwt);
         if (res.ok) {
             setSections(prev => prev.map(s => s.id === id ? { ...s, ...updated } as LocalSection : s));
+            // NEW: Show success modal after saving section
+            setShowSaveSuccessModal(true);
         } else setError(res.err);
     };
 
@@ -228,7 +233,10 @@ const ActivityEditPage: React.FC = () => {
         // Send API request in background without showing loading state
         try {
             const res = await reorderSections(aid, copy.map(s => s.id), userSession.jwt);
-            if (!res.ok) {
+            if (res.ok) {
+                // NEW: Show success modal after reordering sections
+                setShowSaveSuccessModal(true);
+            } else {
                 setError(res.err);
                 // Optionally reload sections on error
                 const actRes = await fetchActivity(aid, userSession.jwt!);
@@ -330,7 +338,7 @@ const ActivityEditPage: React.FC = () => {
                                                     icon={faGripVertical} 
                                                     className="w-3 h-3 text-slate-400 cursor-grab active:cursor-grabbing flex-shrink-0" 
                                                 />
-                                                <div className="flex-1 min-w-0">
+                                                <div className="flex-1 min-w-0 cursor-grab">
                                                     <div className="flex items-center gap-2 mb-1">
                                                         <span className={`text-xs font-bold px-2 py-0.5 rounded ${s.sectionType === 'MCQ' ? 'bg-blue-500/40 text-blue-200' : 'bg-emerald-500/40 text-emerald-200'}`}>
                                                             {s.sectionType}
@@ -375,7 +383,6 @@ const ActivityEditPage: React.FC = () => {
                             })()
                         ) : (
                             <div className="flex flex-col items-center justify-center h-full text-center">
-                                <div className="mb-4 text-6xl">📋</div>
                                 <h3 className="text-xl font-semibold text-gray-300 mb-2">No Section Selected</h3>
                                 <p className="text-gray-400 max-w-sm">Select a section from the list on the left or create a new one to start editing</p>
                             </div>
@@ -401,6 +408,16 @@ const ActivityEditPage: React.FC = () => {
                     onClose={() => setShowDeleteSuccessModal(false)}
                     title="Section Deleted Successfully"
                     message="The section has been removed from this activity."
+                    variant="success"
+                    buttonText="Okay"
+                />
+
+                {/* NEW: Save Success Modal */}
+                <AlertModal
+                    isOpen={showSaveSuccessModal}
+                    onClose={() => setShowSaveSuccessModal(false)}
+                    title="Changes Saved Successfully!"
+                    message="Your changes have been saved successfully."
                     variant="success"
                     buttonText="Okay"
                 />
