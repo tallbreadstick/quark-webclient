@@ -15,6 +15,7 @@ import LessonEditPage from "./pages/LessonEditPage";
 import ActivityEditPage from "./pages/ActivityEditPage";
 
 import ProtectedRoutes from "./components/ProtectedRoutes";
+import AuthRoutes from "./components/AuthRoutes";
 
 export default function App() {
     return (
@@ -22,13 +23,22 @@ export default function App() {
             <BrowserRouter>
                 <Routes>
                     <Route path="/" element={<HomePage />} />
-                    <Route path="/login" element={<LoginPage />} />
-                    <Route path="/register" element={<RegisterPage />} />
+                    
+                    {/**
+                     * AUTH ROUTES - Only accessible when NOT logged in
+                     */}
+                    <Route element={<AuthRoutes />}>
+                        <Route path="/login" element={<LoginPage />} />
+                        <Route path="/register" element={<RegisterPage />} />
+                    </Route>
                     <Route path="/my-courses" element={<CoursesPage />} />
                     <Route path="/marketplace" element={<MarketplacePage />} />
-
+                    <Route path="/my-courses/create" element={<CourseCreationPage />} />
+                    
+                    {/**
+                     * PROTECTED ROUTES
+                     */}
                     <Route element={<ProtectedRoutes />}>                      
-                        <Route path="/my-courses/create" element={<CourseCreationPage />} />
                         <Route path="/course/:courseId/chapters" element={<CourseContentPage />} />
                         <Route path="/course/:courseId/chapters/edit" element={<ChapterEditPage />} />
                         <Route path="/course/:courseId/edit" element={<CourseEditPage />} />
