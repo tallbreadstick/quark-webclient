@@ -9,7 +9,12 @@ import { faBook, faPencil, faCheckCircle, faGraduationCap } from "@fortawesome/f
 import Page from "../components/page/Page";
 import { loadSessionState } from "../types/UserSession";
 import type { Chapter, Course, Item, PageContent, ItemSection } from "../types/CourseContentTypes";
-import api from "../scripts/api";
+import { fetchCourseWithChapters } from "../endpoints/CourseHandler";
+import { fetchChapterWithItems } from "../endpoints/ChapterHandler";
+import { fetchLesson } from "../endpoints/LessonHandler";
+import { fetchPage } from "../endpoints/PageHandler";
+import { fetchActivity } from "../endpoints/ActivityHandler";
+import { fetchSection } from "../endpoints/SectionHandler";
 import ActivityCodeLayout from "../components/ActivityCodeLayout";
 import ActivityMcqSection from "../components/ActivityMcqSection";
 
@@ -22,123 +27,154 @@ const PreviewRenderer = React.lazy(async () => ({
     ),
 }));
 
-// Fetch course, chapters, lessons (pages), and activities (sections) using the available API shapes.
-async function fetchCourseOutline(courseId: number): Promise<{ course: Course | null; chapters: Chapter[] }> {
-    const courseRes = await api.get(`/courses/${courseId}`);
-    const courseData = courseRes?.data ?? null;
-    const chaptersMeta = Array.isArray(courseRes?.data?.chapters) ? courseRes.data.chapters : [];
+// Fetch course, chapters, lessons (pages), and activities (sections) using the API handlers
+async function fetchCourseOutline(courseId: number, jwt: string): Promise<{ course: Course | null; chapters: Chapter[] }> {
+    try {
+        // Fetch course with chapters metadata
+        const courseRes = await fetchCourseWithChapters(courseId, jwt);
+        if (!courseRes.ok) {
+            throw new Error(courseRes.err ?? "Failed to fetch course");
+        }
 
-    const chapters: Chapter[] = await Promise.all(
-        chaptersMeta.map(async (chapter: any, metaIndex: number) => {
-            try {
-                const chRes = await api.get(`/chapter/${chapter.id}`);
-                const chData = chRes?.data;
-                const itemsRaw = Array.isArray(chData?.items) ? chData.items : [];
+        const courseData = courseRes.ok;
+        const chaptersMeta = courseData.chapters || [];
 
-                const items: Item[] = await Promise.all(
-                    itemsRaw.map(async (it: any, itemIdx: number) => {
-                        const base: Item = {
-                            id: it.id,
-                            name: it.name,
-                            description: it.description ?? null,
-                            icon: it.icon ?? null,
-                            number: it.idx ?? itemIdx + 1,
-                            type: it.itemType === "ACTIVITY" ? "ACTIVITY" : "LESSON",
-                            finishMessage: it.finishMessage ?? null,
-                            ruleset: it.ruleset ?? null,
-                            pages: [],
-                            sections: [],
-                        };
+        const chapters: Chapter[] = await Promise.all(
+            chaptersMeta.map(async (chapter: any, metaIndex: number) => {
+                try {
+                    // Fetch chapter with items
+                    const chRes = await fetchChapterWithItems(chapter.id, jwt);
+                    if (!chRes.ok) {
+                        throw new Error(chRes.err ?? "Failed to fetch chapter");
+                    }
 
-                        if (base.type === "LESSON") {
+                    const chData = chRes.ok;
+                    const itemsRaw = chData.items || [];
+
+                    const items: Item[] = await Promise.all(
+                        itemsRaw.map(async (it: any, itemIdx: number) => {
+                            const base: Item = {
+                                id: it.id,
+                                name: it.name,
+                                description: it.description ?? null,
+                                icon: it.icon ?? null,
+                                number: it.idx ?? itemIdx + 1,
+                                type: it.itemType === "ACTIVITY" ? "ACTIVITY" : "LESSON",
+                                finishMessage: it.finishMessage ?? null,
+                                ruleset: it.ruleset ?? null,
+                                pages: [],
+                                sections: [],
+                            };
+
+                            if (base.type === "LESSON") {
+                                try {
+                                    // Fetch lesson details
+                                    const lessonRes = await fetchLesson(it.id, jwt);
+                                    if (!lessonRes.ok) {
+                                        throw new Error(lessonRes.err ?? "Failed to fetch lesson");
+                                    }
+
+                                    const lessonData = lessonRes.ok;
+                                    const lessonPages = lessonData.pages || [];
+
+                                    const pages: PageContent[] = await Promise.all(
+                                        lessonPages.map(async (p: any) => {
+                                            try {
+                                                const pageRes = await fetchPage(p.id, jwt);
+                                                if (!pageRes.ok) {
+                                                    return { id: p.id, number: p.idx, content: null, renderer: null };
+                                                }
+                                                const pageData = pageRes.ok;
+                                                return {
+                                                    id: p.id,
+                                                    number: p.idx,
+                                                    content: pageData.content ?? null,
+                                                    renderer: pageData.renderer ?? null,
+                                                };
+                                            } catch {
+                                                return { id: p.id, number: p.idx, content: null, renderer: null };
+                                            }
+                                        })
+                                    );
+
+                                    return { ...base, pages, finishMessage: lessonData.finishMessage ?? base.finishMessage };
+                                } catch (e) {
+                                    console.warn("Failed to fetch lesson", it.id, e);
+                                    return base;
+                                }
+                            }
+
                             try {
-                                const lessonRes = await api.get(`/lesson/${it.id}`);
-                                const lessonData = lessonRes?.data;
-                                const lessonPages = Array.isArray(lessonData?.pages) ? lessonData.pages : [];
+                                // Fetch activity details
+                                const actRes = await fetchActivity(it.id, jwt);
+                                if (!actRes.ok) {
+                                    throw new Error(actRes.err ?? "Failed to fetch activity");
+                                }
 
-                                const pages: PageContent[] = await Promise.all(
-                                    lessonPages.map(async (p: any) => {
+                                const actData = actRes.ok;
+                                const sectionsRaw = actData.sections || [];
+
+                                const sections: ItemSection[] = await Promise.all(
+                                    sectionsRaw.map(async (s: any) => {
                                         try {
-                                            const pageRes = await api.get(`/page/${p.id}`);
-                                            const pageData = pageRes?.data ?? {};
+                                            const sectionRes = await fetchSection(s.id, jwt);
+                                            if (!sectionRes.ok) {
+                                                return { id: s.id, idx: s.idx, sectionType: "MCQ" as const };
+                                            }
+                                            const sectionData = sectionRes.ok;
                                             return {
-                                                id: p.id,
-                                                number: p.idx ?? p.number,
-                                                content: pageData.content ?? null,
-                                                renderer: pageData.renderer ?? null,
+                                                id: s.id,
+                                                idx: s.idx,
+                                                sectionType: sectionData.sectionType,
+                                                mcq: sectionData.mcq,
+                                                code: sectionData.code,
                                             };
                                         } catch {
-                                            return { id: p.id, number: p.idx ?? p.number, content: null, renderer: null };
+                                            return { id: s.id, idx: s.idx, sectionType: "MCQ" as const };
                                         }
                                     })
                                 );
 
-                                return { ...base, pages, finishMessage: lessonData?.finishMessage ?? base.finishMessage };
+                                return {
+                                    ...base,
+                                    sections,
+                                    ruleset: actData.ruleset ? JSON.stringify(actData.ruleset) : base.ruleset,
+                                    finishMessage: actData.finishMessage ?? base.finishMessage,
+                                };
                             } catch (e) {
-                                console.warn("Failed to fetch lesson", it.id, e);
+                                console.warn("Failed to fetch activity", it.id, e);
                                 return base;
                             }
-                        }
+                        })
+                    );
 
-                        try {
-                            const actRes = await api.get(`/activity/${it.id}`);
-                            const actData = actRes?.data;
-                            const sectionsRaw = Array.isArray(actData?.sections) ? actData.sections : [];
+                    return {
+                        id: chapter.id,
+                        name: chapter.name,
+                        description: chapter.description ?? chData.description ?? null,
+                        icon: chapter.icon ?? chData.icon ?? null,
+                        number: chapter.idx ?? metaIndex + 1,
+                        items,
+                    };
+                } catch (e) {
+                    console.warn("Failed to fetch chapter", chapter.id, e);
+                    return {
+                        id: chapter.id,
+                        name: chapter.name,
+                        description: chapter.description ?? null,
+                        icon: chapter.icon ?? null,
+                        number: chapter.idx ?? metaIndex + 1,
+                        items: [],
+                    };
+                }
+            })
+        );
 
-                            const sections: ItemSection[] = await Promise.all(
-                                sectionsRaw.map(async (s: any) => {
-                                    try {
-                                        const sectionRes = await api.get(`/section/${s.id}`);
-                                        const sectionData = sectionRes?.data ?? {};
-                                        return {
-                                            id: s.id,
-                                            idx: s.idx ?? sectionData.idx,
-                                            sectionType: sectionData.sectionType ?? sectionData.type ?? s.sectionType,
-                                            mcq: sectionData.mcq,
-                                            code: sectionData.code,
-                                        };
-                                    } catch {
-                                        return { id: s.id, idx: s.idx, sectionType: s.sectionType };
-                                    }
-                                })
-                            );
-
-                            return {
-                                ...base,
-                                sections,
-                                ruleset: actData?.ruleset ? JSON.stringify(actData.ruleset) : base.ruleset,
-                                finishMessage: actData?.finishMessage ?? base.finishMessage,
-                            };
-                        } catch (e) {
-                            console.warn("Failed to fetch activity", it.id, e);
-                            return base;
-                        }
-                    })
-                );
-
-                return {
-                    id: chapter.id,
-                    name: chapter.name,
-                    description: chapter.description ?? chData?.description ?? null,
-                    icon: chapter.icon ?? chData?.icon ?? null,
-                    number: chapter.idx ?? metaIndex + 1,
-                    items,
-                };
-            } catch (e) {
-                console.warn("Failed to fetch chapter", chapter.id, e);
-                return {
-                    id: chapter.id,
-                    name: chapter.name,
-                    description: chapter.description ?? null,
-                    icon: chapter.icon ?? null,
-                    number: chapter.idx ?? metaIndex + 1,
-                    items: [],
-                };
-            }
-        })
-    );
-
-    return { course: courseData, chapters };
+        return { course: courseData, chapters };
+    } catch (e) {
+        console.error("Failed to fetch course outline:", e);
+        return { course: null, chapters: [] };
+    }
 }
 
 export default function CourseContent() {
@@ -167,7 +203,10 @@ export default function CourseContent() {
             setLoading(true);
             setError(null);
             try {
-                const { course: courseData, chapters: chaptersData } = await fetchCourseOutline(Number(courseId));
+                const { course: courseData, chapters: chaptersData } = await fetchCourseOutline(
+                    Number(courseId),
+                    userSession?.jwt ?? ""
+                );
                 
                 if (cancelled) return;
 
@@ -196,7 +235,7 @@ export default function CourseContent() {
         return () => {
             cancelled = true;
         };
-    }, [courseId]);
+    }, [courseId, userSession?.jwt]);
 
     const courseTitle = course?.name ?? `Course ${courseId ?? ""}`;
     const currentItem = activeTab !== 'intro' && activeTab ? chapters[activeTab.chapterIdx]?.items?.[activeTab.itemIdx] : null;
@@ -455,7 +494,7 @@ export default function CourseContent() {
                                 {chapter.items && chapter.items.length > 0 ? (
                                     chapter.items.map((item, itemIdx) => (
                                         <button
-                                            key={item.id}
+                                            key={`${chapter.id}-${item.type}-${item.id}-${itemIdx}`}
                                             onClick={() => setActiveTab({ chapterIdx, itemIdx })}
                                             className={`w-full text-left px-6 py-3 hover:bg-white/10 transition ${
                                                 activeTab !== 'intro' && activeTab.chapterIdx === chapterIdx && activeTab.itemIdx === itemIdx

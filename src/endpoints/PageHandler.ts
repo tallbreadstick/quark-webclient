@@ -3,13 +3,16 @@ import { baseUrl, Ok, Err, type Response } from "./Config";
 
 // ---------------------- REQUEST/RESPONSE TYPES ----------------------
 
+// Renderer matches backend enum Page.Renderer
+export type PageRenderer = "MARKDOWN" | "LATEX";
+
 export interface PageRequest {
-    renderer: string; // matches Page.Renderer
+    renderer: PageRenderer;
     content: string;
 }
 
 export interface PageContentResponse {
-    renderer: string; // matches Page.Renderer
+    renderer: PageRenderer;
     content: string;
 }
 

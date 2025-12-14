@@ -2,9 +2,8 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import Page from "../components/page/Page";
 import { loadSessionState } from "../types/UserSession";
-import { fetchCourses, fetchCourseWithChapters } from "../endpoints/CourseHandler";
+import { fetchCourses } from "../endpoints/CourseHandler";
 import { fetchUsers } from "../endpoints/UserHandler";
-import { getEnrolledCourses } from "../endpoints/ProgressHandler";
 import CourseCard from "../components/CourseCard";
 import SearchFilterBar from "../components/SearchFilterBar";
 import Pagination from "../components/Pagination";
@@ -56,59 +55,13 @@ export default function CoursesPage() {
                     }
                 }
 
-                // Fetch courses
+                // Fetch courses with appropriate parameters based on user type
                 const params: Record<string, string | undefined> = { 
                     page: String(currentPage),
                     ...(normalized === 'educator' && { my_courses: 'true' }),
+                    ...(normalized === 'learner' && { enrolled: 'true' }),
                     ...(normalized === 'educator' && showForkableOnly && { forkable: 'true' })
                 };
-                
-                // For learners: fetch enrolled courses via progress API
-                if (normalized === 'learner') {
-                    try {
-                        const enrolledRes = await getEnrolledCourses(userSession.jwt ?? "");
-
-                        if (enrolledRes.status === "OK" && enrolledRes.ok && enrolledRes.ok.length > 0) {
-                            const courseDetails = await Promise.all(
-                                enrolledRes.ok.map(async (p: any) => {
-                                    const courseId = p.courseId ?? p.id ?? (p.course && p.course.id);
-                                    if (!courseId) return null;
-
-                                    const courseRes = await fetchCourseWithChapters(courseId, userSession.jwt ?? "");
-                                    if (courseRes.status === "OK" && courseRes.ok) {
-                                        const c: any = courseRes.ok;
-                                        return {
-                                            ...c,
-                                            owner: { username: c.owner ?? "—" },
-                                            forkable: Boolean(c.forkable)
-                                        } as DatabaseCourse;
-                                    }
-
-                                    return {
-                                        id: courseId,
-                                        name: p.courseName ?? p.name ?? "Unnamed Course",
-                                        description: p.description ?? "",
-                                        owner: { username: p.owner ?? "—" },
-                                        forkable: Boolean(p.forkable)
-                                    } as DatabaseCourse;
-                                })
-                            );
-
-                            const filtered = courseDetails.filter(Boolean) as DatabaseCourse[];
-                            setCourses(filtered);
-                        } else {
-                            setCourses([]);
-                        }
-
-                        setLoading(false);
-                        return;
-                    } catch (errLearner: any) {
-                        if (!cancelled) setError(errLearner?.message || "Failed to load enrolled courses");
-                        if (!cancelled) setCourses([]);
-                        if (!cancelled) setLoading(false);
-                        return;
-                    }
-                }
                 
                 const res = await fetchCourses(params, userSession.jwt ?? "");
                 const data = res.status === "OK" && res.ok ? res.ok : [];
