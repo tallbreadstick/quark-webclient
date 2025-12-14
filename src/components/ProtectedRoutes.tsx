@@ -5,6 +5,11 @@ const ProtectedRoutes = () => {
     const user = null
     const {userSession} = loadSessionState();
 
+        // Not logged in - redirect to login
+        if (!userSession) {
+            return <Navigate to="/login" />;
+        }
+
     return userSession ? <Outlet /> : <Navigate to="/login"/>;
 }
 
