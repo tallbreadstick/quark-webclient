@@ -49,7 +49,6 @@ export default function App() {
                      */}
                     <Route element={<EducatorOnlyRoutes />}>
                         <Route path="/course/:courseId/chapters/edit" element={<ChapterEditPage />} />
-                        <Route path="/course/:courseId/fork" element={<CourseForkPage />} />
                         <Route path="/course/:courseId/edit" element={<CourseEditPage />} />
                         <Route path="/lesson/:lessonId/edit" element={<LessonEditPage />} />
                         <Route path="/activity/:activityId/edit" element={<ActivityEditPage />} />
