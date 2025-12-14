@@ -16,6 +16,7 @@ import ActivityEditPage from "./pages/ActivityEditPage";
 
 import ProtectedRoutes from "./components/ProtectedRoutes";
 import AuthRoutes from "./components/AuthRoutes";
+import EducatorOnlyRoutes from "./components/EducatorOnlyRoutes";
 
 export default function App() {
     return (
@@ -40,10 +41,16 @@ export default function App() {
                      */}
                     <Route element={<ProtectedRoutes />}>                      
                         <Route path="/course/:courseId/chapters" element={<CourseContentPage />} />
-                        <Route path="/course/:courseId/chapters/edit" element={<ChapterEditPage />} />
-                        <Route path="/course/:courseId/edit" element={<CourseEditPage />} />
-                        <Route path="/course/:courseId/fork" element={<CourseForkPage />} />
                         <Route path="/profile" element={<Profile />} />
+                    </Route>
+
+                    {/**
+                     * EDUCATOR ONLY ROUTES
+                     */}
+                    <Route element={<EducatorOnlyRoutes />}>
+                        <Route path="/course/:courseId/chapters/edit" element={<ChapterEditPage />} />
+                        <Route path="/course/:courseId/fork" element={<CourseForkPage />} />
+                        <Route path="/course/:courseId/edit" element={<CourseEditPage />} />
                         <Route path="/lesson/:lessonId/edit" element={<LessonEditPage />} />
                         <Route path="/activity/:activityId/edit" element={<ActivityEditPage />} />
                     </Route>
