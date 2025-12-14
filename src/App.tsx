@@ -14,6 +14,8 @@ import ChapterEditPage from "./pages/ChapterEditPage";
 import LessonEditPage from "./pages/LessonEditPage";
 import ActivityEditPage from "./pages/ActivityEditPage";
 
+import ProtectedRoutes from "./components/ProtectedRoutes";
+
 export default function App() {
     return (
         <div className="w-full h-full">
@@ -23,15 +25,18 @@ export default function App() {
                     <Route path="/login" element={<LoginPage />} />
                     <Route path="/register" element={<RegisterPage />} />
                     <Route path="/my-courses" element={<CoursesPage />} />
-                    <Route path="/my-courses/create" element={<CourseCreationPage />} />
                     <Route path="/marketplace" element={<MarketplacePage />} />
-                    <Route path="/course/:courseId/chapters" element={<CourseContentPage />} />
-                    <Route path="/course/:courseId/chapters/edit" element={<ChapterEditPage />} />
-                    <Route path="/course/:courseId/edit" element={<CourseEditPage />} />
-                    <Route path="/course/:courseId/fork" element={<CourseForkPage />} />
-                    <Route path="/profile" element={<Profile />} />
-                    <Route path="/lesson/:lessonId/edit" element={<LessonEditPage />} />
-                    <Route path="/activity/:activityId/edit" element={<ActivityEditPage />} />
+
+                    <Route element={<ProtectedRoutes />}>                      
+                        <Route path="/my-courses/create" element={<CourseCreationPage />} />
+                        <Route path="/course/:courseId/chapters" element={<CourseContentPage />} />
+                        <Route path="/course/:courseId/chapters/edit" element={<ChapterEditPage />} />
+                        <Route path="/course/:courseId/edit" element={<CourseEditPage />} />
+                        <Route path="/course/:courseId/fork" element={<CourseForkPage />} />
+                        <Route path="/profile" element={<Profile />} />
+                        <Route path="/lesson/:lessonId/edit" element={<LessonEditPage />} />
+                        <Route path="/activity/:activityId/edit" element={<ActivityEditPage />} />
+                    </Route>
                 </Routes>
             </BrowserRouter>
         </div>
