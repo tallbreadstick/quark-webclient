@@ -31,6 +31,13 @@ export interface TestCaseResult {
 }
 
 // ---------------------- SUBMIT CODE ----------------------
+/**
+ * Submit code for grading (saves submission and runs all test cases)
+ * 
+ * @param request Code submission with activity, section, code, and language
+ * @param jwt JWT authentication token
+ * @returns Response with execution results including test outcomes
+ */
 export async function submitCode(
     request: CodeSubmissionRequest,
     jwt: string
@@ -45,7 +52,10 @@ export async function submitCode(
             config
         );
 
-        return Ok(response.data);
+        if (response.status === 200 && response.data) {
+            return Ok(response.data);
+        }
+        return Err("Invalid response from server");
     } catch (e: any) {
         console.error(e);
         if (e.response) {
@@ -57,6 +67,13 @@ export async function submitCode(
 }
 
 // ---------------------- RUN CODE (no save) ----------------------
+/**
+ * Run code against test cases (does not save submission)
+ * 
+ * @param request Code submission with activity, section, code, and language
+ * @param jwt JWT authentication token
+ * @returns Response with execution results including test outcomes
+ */
 export async function runCode(
     request: CodeSubmissionRequest,
     jwt: string
@@ -71,7 +88,10 @@ export async function runCode(
             config
         );
 
-        return Ok(response.data);
+        if (response.status === 200 && response.data) {
+            return Ok(response.data);
+        }
+        return Err("Invalid response from server");
     } catch (e: any) {
         console.error(e);
         if (e.response) {

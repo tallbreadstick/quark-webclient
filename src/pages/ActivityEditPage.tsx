@@ -708,12 +708,20 @@ function CodeEditor({ section, onSave }: { section: LocalSection, onSave: (s: Pa
                                 {/* Driver Code */}
                                 <div>
                                     <label className="block text-sm font-medium text-gray-300 mb-2">Driver / Test Code</label>
-                                    <textarea 
-                                        className="w-full px-3 py-2 bg-slate-900/50 border border-slate-600 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 font-mono text-sm resize-vertical min-h-20" 
-                                        placeholder="Enter the test code that will run..." 
-                                        value={t.driver} 
-                                        onChange={(e) => updateTestCase(ti, { driver: e.target.value })} 
-                                    />
+                                    <div className="border border-slate-700 rounded-lg overflow-hidden">
+                                        <Editor
+                                            height="220px"
+                                            defaultLanguage="python"
+                                            theme="vs-dark"
+                                            value={t.driver ?? ''}
+                                            onChange={(value) => updateTestCase(ti, { driver: value ?? '' })}
+                                            options={{
+                                                minimap: { enabled: false },
+                                                fontSize: 14,
+                                                wordWrap: "on",
+                                            }}
+                                        />
+                                    </div>
                                 </div>
 
                                 {/* Expected Output */}
