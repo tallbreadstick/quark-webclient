@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import Editor from "@monaco-editor/react";
 import { useParams, useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faEye, faEdit, faTrash, faGripVertical, faPlus } from '@fortawesome/free-solid-svg-icons';
+import { faEye, faEdit, faTrash, faGripVertical, faPlus, faQuestion } from '@fortawesome/free-solid-svg-icons';
 import Page from "../components/page/Page";
 import LoadingSkeleton from "../components/LoadingSkeleton";
 import PreviewRenderer from "../components/PreviewRenderer";
@@ -638,13 +638,24 @@ function CodeEditor({ section, onSave }: { section: LocalSection, onSave: (s: Pa
             <div>
                 <div className="flex items-center justify-between mb-2">
                     <label className="block text-sm font-medium text-white">Instructions (Markdown/KaTeX)</label>
-                    <button
-                        onClick={() => setIsPreviewMode(!isPreviewMode)}
-                        className="flex items-center gap-2 px-3 py-1.5 bg-indigo-600/20 hover:bg-indigo-600/30 border border-indigo-500/30 text-indigo-300 rounded-lg text-sm font-medium transition-colors cursor-pointer"
-                    >
-                        <FontAwesomeIcon icon={isPreviewMode ? faEdit : faEye} className="w-4 h-4" />
-                        {isPreviewMode ? 'Edit' : 'Preview'}
-                    </button>
+                    <div className="flex items-center gap-2">
+                        <a
+                            href="https://ashki23.github.io/markdown-latex.html"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center justify-center w-8 h-8 bg-slate-700/50 hover:bg-slate-600/50 border border-slate-600 text-slate-300 hover:text-white rounded-lg transition-colors"
+                            title="Markdown & LaTeX Guide"
+                        >
+                            <FontAwesomeIcon icon={faQuestion} className="w-4 h-4" />
+                        </a>
+                        <button
+                            onClick={() => setIsPreviewMode(!isPreviewMode)}
+                            className="flex items-center gap-2 px-3 py-1.5 bg-indigo-600/20 hover:bg-indigo-600/30 border border-indigo-500/30 text-indigo-300 rounded-lg text-sm font-medium transition-colors cursor-pointer"
+                        >
+                            <FontAwesomeIcon icon={isPreviewMode ? faEdit : faEye} className="w-4 h-4" />
+                            {isPreviewMode ? 'Edit' : 'Preview'}
+                        </button>
+                    </div>
                 </div>
                 {isPreviewMode ? (
                     <div className="w-full bg-white border border-gray-200 rounded-lg p-6 text-slate-900 min-h-[240px]">

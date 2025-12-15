@@ -11,6 +11,8 @@ import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
 import AlertModal from "../components/modals/AlertModal";
 import ActionModal from "../components/modals/ActionModal";
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faQuestion } from '@fortawesome/free-solid-svg-icons';
 
 // Lazy Markdown+KaTeX renderer
 const PreviewRenderer = React.lazy(async () => ({
@@ -627,6 +629,18 @@ export default function CourseEditPage() {
 
                     {/* CENTER: Editor */}
                     <div className="w-full bg-black/20 backdrop-blur-lg border border-white/10 rounded-2xl p-4 h-full flex flex-col">
+                        <div className="flex items-center justify-between mb-2">
+                            <h3 className="text-sm font-medium text-white">Introduction (Markdown/KaTeX)</h3>
+                            <a
+                                href="https://ashki23.github.io/markdown-latex.html"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center justify-center w-8 h-8 bg-slate-700/50 hover:bg-slate-600/50 border border-slate-600 text-slate-300 hover:text-white rounded-lg transition-colors"
+                                title="Markdown & LaTeX Guide"
+                            >
+                                <FontAwesomeIcon icon={faQuestion} className="w-4 h-4" />
+                            </a>
+                        </div>
                         <div className="flex-1 bg-transparent border border-white/5 rounded-md overflow-hidden">
                             <Editor
                                 height="100%"

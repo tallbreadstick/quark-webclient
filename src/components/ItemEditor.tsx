@@ -1,7 +1,7 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faChevronRight, faEye, faEdit } from '@fortawesome/free-solid-svg-icons';
+import { faChevronRight, faEye, faEdit, faQuestion } from '@fortawesome/free-solid-svg-icons';
 import Editor from "@monaco-editor/react";
 import PreviewRenderer from "./PreviewRenderer";
 import type { Chapter, Item } from "../types/ChapterEditorTypes";
@@ -103,13 +103,24 @@ export const ItemEditor: React.FC<ItemEditorProps> = ({
                 <div>
                     <div className="flex items-center justify-between mb-3">
                         <label className="text-sm font-medium text-slate-400">Finish Message (Markdown/KaTeX)</label>
-                        <button
-                            onClick={onPreviewModeToggle}
-                            className="flex items-center gap-2 px-3 py-1.5 bg-indigo-600/20 hover:bg-indigo-600/30 border border-indigo-500/30 text-indigo-300 rounded-lg text-sm font-medium transition-colors"
-                        >
-                            <FontAwesomeIcon icon={isPreviewMode ? faEdit : faEye} className="w-4 h-4" />
-                            {isPreviewMode ? 'Edit' : 'Preview'}
-                        </button>
+                        <div className="flex items-center gap-2">
+                            <a
+                                href="https://ashki23.github.io/markdown-latex.html"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center justify-center w-8 h-8 bg-slate-700/50 hover:bg-slate-600/50 border border-slate-600 text-slate-300 hover:text-white rounded-lg transition-colors"
+                                title="Markdown & LaTeX Guide"
+                            >
+                                <FontAwesomeIcon icon={faQuestion} className="w-4 h-4" />
+                            </a>
+                            <button
+                                onClick={onPreviewModeToggle}
+                                className="flex items-center gap-2 px-3 py-1.5 bg-indigo-600/20 hover:bg-indigo-600/30 border border-indigo-500/30 text-indigo-300 rounded-lg text-sm font-medium transition-colors"
+                            >
+                                <FontAwesomeIcon icon={isPreviewMode ? faEdit : faEye} className="w-4 h-4" />
+                                {isPreviewMode ? 'Edit' : 'Preview'}
+                            </button>
+                        </div>
                     </div>
                     {isPreviewMode ? (
                         <div className="w-full bg-white border border-gray-200 rounded-lg p-6 text-slate-900 min-h-[200px]">
